@@ -17636,15 +17636,6 @@ function SliderInput({min,max,step,value,onChange,color,prefix,suffix,formatFn})
           }}), suffix&&React.createElement("span", {style: {fontSize:12,color:"#9bb4cc",fontFamily:"sans-serif"}}, suffix)))
   );
 }
-// ── Chave API Anthropic (guardada em localStorage) ───────────────────────
-const APIKEY_STORAGE = "credCH_apikey_v1";
-function getApiKey() {
-  try { return localStorage.getItem(APIKEY_STORAGE)||""; } catch(_){ return ""; }
-}
-function saveApiKey(k) {
-  try { localStorage.setItem(APIKEY_STORAGE, k); } catch(_){}
-}
-
 // ── Euribor via BCE (sem chave, sempre funciona) ──────────────────────────
 async function fetchEuriborBCE() {
   const ECB_BASE = "https://data-api.ecb.europa.eu/service/data/FM/";
@@ -17682,18 +17673,13 @@ async function fetchEuriborBCE() {
   return {eur, dataLabel};
 }
 
-// ── Spreads via Anthropic API (com chave do utilizador) ───────────────────
-async function fetchSpreadsAnthropic(apiKey) {
+// ── Spreads via proxy Vercel → Anthropic API ─────────────────────────────
+async function fetchSpreadsAnthropic() {
   const hoje = new Date().toLocaleDateString("pt-PT",{month:"long",year:"numeric"});
   const prompt = "Dados actuais de "+hoje+". Qual é o spread mínimo de crédito habitação HPP (1.ª habitação) com produtos associados (domiciliação + seguros vida e multirriscos) para cada banco português: CA (Crédito Agrícola), CTT, Bankinter, Abanca, BCP (Millennium), ActivoBank, BPI, Montepio, Santander, NovoBanco, CGD (Caixa), UCI, BIC, BNI? Responde APENAS com JSON puro (sem texto, sem markdown, sem explicações): {\"CA\":{\"sCom\":0.65,\"sSem\":1.65},\"CTT\":{\"sCom\":0.70,\"sSem\":1.30},\"BNKTR\":{\"sCom\":0.70,\"sSem\":1.05},\"ABANCA\":{\"sCom\":0.70,\"sSem\":1.70},\"BCP\":{\"sCom\":0.70,\"sSem\":1.25},\"ACTVO\":{\"sCom\":0.75,\"sSem\":1.50},\"BPI\":{\"sCom\":0.75,\"sSem\":1.50},\"MNTPO\":{\"sCom\":0.70,\"sSem\":1.50},\"SANTR\":{\"sCom\":0.80,\"sSem\":1.90},\"NB\":{\"sCom\":0.80,\"sSem\":1.50},\"CGD\":{\"sCom\":0.85,\"sSem\":1.35},\"UCI\":{\"sCom\":0.85,\"sSem\":1.30},\"BIC\":{\"sCom\":1.00,\"sSem\":1.50},\"BNI\":{\"sCom\":1.00,\"sSem\":1.50}}";
   const resp = await fetch("/api/spreads",{
     method:"POST",
-    headers:{
-      "Content-Type":"application/json",
-      "x-api-key":apiKey,
-      "anthropic-version":"2023-06-01",
-      "anthropic-dangerous-direct-browser-access":"true"
-    },
+    headers:{"Content-Type":"application/json"},
     body:JSON.stringify({
       model:"claude-haiku-4-5-20251001",
       max_tokens:400,
@@ -17723,9 +17709,8 @@ async function fetchSpreadsAnthropic(apiKey) {
   return JSON.parse(m[0]);
 }
 
-async function fetchAllRates(apiKey) {
+async function fetchAllRates() {
   const results = {eur:null, spreads:null, eurLabel:"", eurOk:false, sprOk:false, sprErr:""};
-  // Sempre tenta BCE para Euribor
   try {
     const {eur, dataLabel} = await fetchEuriborBCE();
     results.eur = eur;
@@ -17734,14 +17719,11 @@ async function fetchAllRates(apiKey) {
   } catch(e) {
     throw new Error("BCE: "+e.message);
   }
-  // Spreads: só se tiver chave API
-  if(apiKey && apiKey.startsWith("sk-ant-")) {
-    try {
-      results.spreads = await fetchSpreadsAnthropic(apiKey);
-      results.sprOk = true;
-    } catch(e) {
-      results.sprErr = e.message;
-    }
+  try {
+    results.spreads = await fetchSpreadsAnthropic();
+    results.sprOk = true;
+  } catch(e) {
+    results.sprErr = e.message;
   }
   return results;
 }
@@ -17755,8 +17737,6 @@ function App(){
   const[status,setStatus]=useState("idle");
   const[msg,setMsg]=useState("");
   const[ts,setTs]=useState(null);
-  const[apiKey,setApiKey]=useState(()=>getApiKey());
-  const[showApiKey,setShowApiKey]=useState(false);
 
   // Parâmetros base
   const[valorImovel,setValorImovel]=useState(200000);
@@ -17803,10 +17783,9 @@ function App(){
         }
       }catch(_){}
     }
-    const key=getApiKey();
-    setStatus("loading"); setMsg("A actualizar Euribor"+(key.startsWith("sk-ant-")?" e spreads":"")+"...");
+    setStatus("loading"); setMsg("A actualizar Euribor e spreads...");
     try{
-      const raw=await fetchAllRates(key);
+      const raw=await fetchAllRates();
       const e=raw.eur||{};
       const newEUR={"3m":{valor:e["3m"]||FALLBACK_EUR["3m"].valor,data:raw.eurLabel},"6m":{valor:e["6m"]||FALLBACK_EUR["6m"].valor,data:raw.eurLabel},"12m":{valor:e["12m"]||FALLBACK_EUR["12m"].valor,data:raw.eurLabel}};
       const newSpr={...FALLBACK_SPREADS};
@@ -17822,7 +17801,6 @@ function App(){
       setEUR(newEUR); setSpreads(newSpr); setTs(new Date()); setStatus("ok");
       let statusMsg="Euribor BCE · "+raw.eurLabel;
       if(raw.sprOk) statusMsg+=" · "+nSpr+"/"+Object.keys(FALLBACK_SPREADS).length+" spreads actualizados ✓";
-      else if(!key.startsWith("sk-ant-")) statusMsg+=" · 💡 Adiciona chave API para actualizar spreads";
       else if(raw.sprErr) statusMsg+=" · Spreads: "+raw.sprErr.slice(0,50);
       setMsg(statusMsg);
       localStorage.setItem(CACHE_KEY,JSON.stringify({eur:newEUR,spr:newSpr,ts:Date.now()}));
@@ -18042,9 +18020,7 @@ function App(){
   const updatedCount=Object.values(spreads).filter(x=>x.updated).length;
 
   return(
-    React.createElement("div", {style: {fontFamily:"'Georgia','Times New Roman',serif",background:N,minHeight:"100vh",color:"#e8dcc8"}}, React.createElement("div", {style: {background:"linear-gradient(135deg,#0d1b2a 0%,#1a3a5c 55%,#0d1b2a 100%)",borderBottom:"1px solid "+Au,padding:"12px 16px 10px"}}, React.createElement("div", {style: {maxWidth:1150,margin:"0 auto"}}, React.createElement("div", {style: {display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8,marginBottom:7}}, React.createElement("div", null, React.createElement("div", {style: {fontSize:10,letterSpacing:4,color:Au,fontFamily:"monospace",marginBottom:2}}, "PORTUGAL · SIMULADOR COMPLETO · EURIBOR + SPREADS EM TEMPO REAL"), React.createElement("h1", {style: {margin:0,fontSize:19,fontWeight:700,color:"#fff"}}, "Simulador de Crédito Habitação")), React.createElement("button", {onClick: ()=>loadRates(true), disabled: status==="loading", style: {padding:"7px 14px",background:"rgba(201,168,76,0.12)",border:"1px solid "+Au,borderRadius:8,color:Au,fontSize:11,fontFamily:"sans-serif",cursor:status==="loading"?"not-allowed":"pointer",fontWeight:700}}, status==="loading"?"⏳ A actualizar...":"🔄 Actualizar taxas"), React.createElement("button", {onClick: ()=>setShowApiKey(v=>!v), style: {padding:"7px 12px",background:apiKey.startsWith("sk-ant-")?"rgba(74,222,128,0.1)":"rgba(255,255,255,0.05)",border:"1px solid "+(apiKey.startsWith("sk-ant-")?G:"rgba(255,255,255,0.18)"),borderRadius:8,color:apiKey.startsWith("sk-ant-")?G:"#9bb4cc",fontSize:11,fontFamily:"sans-serif",cursor:"pointer"}}, apiKey.startsWith("sk-ant-")?"🔑 API ✓":"🔑 API key")), showApiKey&&(
-            React.createElement("div", {style: {marginTop:8,padding:"10px 14px",background:"rgba(0,0,0,0.3)",border:"1px solid rgba(201,168,76,0.25)",borderRadius:9}}, React.createElement("div", {style: {fontSize:10,color:Au,fontFamily:"monospace",letterSpacing:1,marginBottom:6}}, "CHAVE API ANTHROPIC — actualiza spreads de todos os bancos via web search"), React.createElement("div", {style: {display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}, React.createElement("input", {type: "password", placeholder: "sk-ant-api03-...", value: apiKey, onChange: e=>setApiKey(e.target.value), style: {flex:1,minWidth:260,padding:"6px 10px",background:"#0d1b2a",border:"1px solid rgba(201,168,76,0.4)",borderRadius:6,color:"#e8dcc8",fontSize:12,fontFamily:"monospace",outline:"none"}}), React.createElement("button", {onClick: ()=>{saveApiKey(apiKey);setShowApiKey(false);loadRates(true);}, style: {padding:"6px 14px",background:"rgba(74,222,128,0.15)",border:"1px solid "+G,borderRadius:6,color:G,fontSize:11,fontFamily:"sans-serif",cursor:"pointer",fontWeight:700}}, "Guardar e actualizar"), apiKey&&(React.createElement("button", {onClick: ()=>{setApiKey("");saveApiKey("");}, style: {padding:"6px 10px",background:"rgba(248,113,113,0.1)",border:"1px solid rgba(248,113,113,0.3)",borderRadius:6,color:R,fontSize:11,fontFamily:"sans-serif",cursor:"pointer"}}, "Remover"))), React.createElement("div", {style: {fontSize:9,color:"#5a7a90",fontFamily:"sans-serif",marginTop:6,lineHeight:1.6}}, "🔒 A chave fica guardada apenas no teu browser (localStorage) — nunca sai do teu computador. Obtém a tua chave em ", React.createElement("span", {style: {color:Sky}}, "console.anthropic.com/settings/keys")), apiKey.startsWith("sk-ant-")&&(React.createElement("div", {style: {fontSize:10,color:G,fontFamily:"sans-serif",marginTop:4}}, "✅ Chave guardada — próxima actualização inclui Euribor (BCE) + spreads de 14 bancos (web search)")))
-          ), React.createElement("div", {style: {display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginTop:showApiKey?8:0}}, ["3m","6m","12m"].map(k=>{const v=EUR[k]||FALLBACK_EUR[k];const[c,bg]=EUR_COLORS[k];return(
+    React.createElement("div", {style: {fontFamily:"'Georgia','Times New Roman',serif",background:N,minHeight:"100vh",color:"#e8dcc8"}}, React.createElement("div", {style: {background:"linear-gradient(135deg,#0d1b2a 0%,#1a3a5c 55%,#0d1b2a 100%)",borderBottom:"1px solid "+Au,padding:"12px 16px 10px"}}, React.createElement("div", {style: {maxWidth:1150,margin:"0 auto"}}, React.createElement("div", {style: {display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8,marginBottom:7}}, React.createElement("div", null, React.createElement("div", {style: {fontSize:10,letterSpacing:4,color:Au,fontFamily:"monospace",marginBottom:2}}, "PORTUGAL · SIMULADOR COMPLETO · EURIBOR + SPREADS EM TEMPO REAL"), React.createElement("h1", {style: {margin:0,fontSize:19,fontWeight:700,color:"#fff"}}, "Simulador de Crédito Habitação")), React.createElement("button", {onClick: ()=>loadRates(true), disabled: status==="loading", style: {padding:"7px 14px",background:"rgba(201,168,76,0.12)",border:"1px solid "+Au,borderRadius:8,color:Au,fontSize:11,fontFamily:"sans-serif",cursor:status==="loading"?"not-allowed":"pointer",fontWeight:700}}, status==="loading"?"⏳ A actualizar...":"🔄 Actualizar taxas")), React.createElement("div", {style: {display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginTop:0}}, ["3m","6m","12m"].map(k=>{const v=EUR[k]||FALLBACK_EUR[k];const[c,bg]=EUR_COLORS[k];return(
               React.createElement("div", {key: k, style: {background:bg,border:"1px solid "+c,borderRadius:6,padding:"3px 10px",fontFamily:"monospace",fontSize:11}}, React.createElement("span", {style: {color:c,fontWeight:700}}, "Eur. "+k), React.createElement("span", {style: {color:"#fff",marginLeft:5,fontSize:13,fontWeight:700}}, v.valor.toFixed(3).replace(".",",")+"%"), v.data&&React.createElement("span", {style: {color:"#9bb4cc",fontSize:9,marginLeft:3}}, v.data))
             );}), React.createElement("div", {style: {background:"rgba(0,0,0,0.25)",border:"1px solid "+stColor,borderRadius:6,padding:"3px 9px",fontSize:10,color:stColor,fontFamily:"sans-serif"}}, stIcon+" "+msg, ts&&status!=="loading"&&React.createElement("span", {style: {color:"#5a7a90",marginLeft:5}}, ts.toLocaleTimeString("pt-PT",{hour:"2-digit",minute:"2-digit"})))))), React.createElement("div", {style: {maxWidth:1150,margin:"0 auto",padding:"10px 14px"}}, React.createElement("div", {style: {display:"flex",borderRadius:9,overflow:"hidden",border:"1px solid rgba(255,255,255,0.09)",marginBottom:10}}, [{id:false,icon:"🏠",label:"Crédito Normal",c:Au},{id:true,icon:"🎓",label:"Crédito Jovem ≤35 anos",c:G}].map(({id,icon,label,c})=>(
             React.createElement("button", {key: String(id), onClick: ()=>{setModoJovem(id);if(!id)setPct(Math.min(pct,90));}, style: {flex:1,padding:"9px",border:"none",background:modoJovem===id?"rgba("+(id?"74,222,128":"201,168,76")+",0.08)":"rgba(255,255,255,0.02)",borderBottom:"2px solid "+(modoJovem===id?c:"transparent"),color:modoJovem===id?c:"#9bb4cc",fontSize:13,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600}}, icon+" "+label)
