@@ -17660,7 +17660,7 @@ async function fetchEuriborBCE() {
   }
   const eur = {};
   let dataLabel = "";
-  await Promise.all(Object.entries(SERIES).map(async([key, series])=>{
+  const settled = await Promise.allSettled(Object.entries(SERIES).map(async([key, series])=>{
     const r = await fetch(ECB_BASE+series+"?format=csvdata&lastNObservations=1");
     if(!r.ok) throw new Error("BCE "+key+" HTTP "+r.status);
     const {val, date} = parseCSV(await r.text());
@@ -17670,6 +17670,7 @@ async function fetchEuriborBCE() {
       dataLabel = (MESES[parseInt(m,10)-1]||m)+". "+y;
     }
   }));
+  if(settled.every(r=>r.status==="rejected")) throw new Error(settled[0].reason?.message||"BCE indisponível");
   return {eur, dataLabel};
 }
 
@@ -17704,14 +17705,14 @@ async function fetchSpreadsAnthropic() {
 }
 
 async function fetchAllRates() {
-  const results = {eur:null, spreads:null, eurLabel:"", eurOk:false, sprOk:false, sprErr:""};
+  const results = {eur:null, spreads:null, eurLabel:"", eurOk:false, eurErr:"", sprOk:false, sprErr:""};
   try {
     const {eur, dataLabel} = await fetchEuriborBCE();
     results.eur = eur;
     results.eurLabel = dataLabel;
     results.eurOk = true;
   } catch(e) {
-    throw new Error("BCE: "+e.message);
+    results.eurErr = e.message;
   }
   try {
     results.spreads = await fetchSpreadsAnthropic();
@@ -17793,7 +17794,7 @@ function App(){
         });
       }
       setEUR(newEUR); setSpreads(newSpr); setTs(new Date()); setStatus("ok");
-      let statusMsg="Euribor BCE · "+raw.eurLabel;
+      let statusMsg = raw.eurOk ? "Euribor BCE · "+raw.eurLabel : "Euribor: fallback (BCE: "+raw.eurErr.slice(0,40)+")";
       if(raw.sprOk) statusMsg+=" · "+nSpr+"/"+Object.keys(FALLBACK_SPREADS).length+" spreads actualizados ✓";
       else if(raw.sprErr) statusMsg+=" · Spreads: "+raw.sprErr.slice(0,50);
       setMsg(statusMsg);
