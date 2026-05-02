@@ -7,6 +7,8 @@
   "background_color": "#0d1b2a",
   "theme_color": "#0d1b2a",
   "lang": "pt-PT",
+  "categories": ["finance"],
+  "prefer_related_applications": false,
   "icons": [
     { "src": "/icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
     { "src": "/icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "maskable" }
