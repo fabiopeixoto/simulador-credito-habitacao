@@ -1,4 +1,4 @@
-const CACHE = 'simulador-v1';
+const CACHE = 'simulador-v2';
 
 self.addEventListener('install', e => {
   e.waitUntil(
