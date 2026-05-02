@@ -17697,9 +17697,10 @@ async function fetchSpreadsAnthropic() {
   const data = await resp.json();
   const txt = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
   // Extrair JSON da resposta
+  if(txt.length>20000) throw new Error("Resposta demasiado longa");
   const m = txt.match(/\{[\s\S]*"CA"[\s\S]*\}/);
   if(!m) throw new Error("Formato inválido: "+txt.slice(0,60));
-  return JSON.parse(m[0]);
+  try{return JSON.parse(m[0]);}catch(_){throw new Error("JSON inválido: "+txt.slice(0,60));}
 }
 
 async function fetchAllRates() {
@@ -17796,7 +17797,7 @@ function App(){
       if(raw.sprOk) statusMsg+=" · "+nSpr+"/"+Object.keys(FALLBACK_SPREADS).length+" spreads actualizados ✓";
       else if(raw.sprErr) statusMsg+=" · Spreads: "+raw.sprErr.slice(0,50);
       setMsg(statusMsg);
-      localStorage.setItem(CACHE_KEY,JSON.stringify({eur:newEUR,spr:newSpr,ts:Date.now()}));
+      try{localStorage.setItem(CACHE_KEY,JSON.stringify({eur:newEUR,spr:newSpr,ts:Date.now()}));}catch(_){}
     }catch(err){setStatus("error");setMsg("Erro: "+err.message.slice(0,80));}
   },[]);
   useEffect(()=>{loadRates(false);},[loadRates]);

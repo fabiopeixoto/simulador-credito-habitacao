@@ -1,5 +1,21 @@
 {
   "rewrites": [
     { "source": "/api/spreads", "destination": "/api/spreads.js" }
+  ],
+  "headers": [
+    {
+      "source": "/api/spreads",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" }
+      ]
+    }
   ]
 }
