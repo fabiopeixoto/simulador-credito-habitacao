@@ -17,6 +17,13 @@ function isRateLimited(ip) {
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Método não suportado" });
 
+  const allowedOrigin = process.env.ALLOWED_ORIGIN;
+  if (allowedOrigin) {
+    const origin = req.headers.origin || "";
+    res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
+    if (origin !== allowedOrigin) return res.status(403).json({ error: "Origem não autorizada" });
+  }
+
   const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || "unknown";
   if (isRateLimited(ip)) return res.status(429).json({ error: "Demasiados pedidos — tenta mais tarde" });
 
