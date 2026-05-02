@@ -17717,18 +17717,20 @@ async function fetchSpreadsAnthropic() {
   if(!resp.ok){
     const errText = await resp.text().catch(()=>"");
     const errJson = (() => { try { return JSON.parse(errText); } catch(_) { return {}; } })();
-    const errMsg  = errJson.error?.message || errText.slice(0,120) || "HTTP "+resp.status;
+    const errMsg  = errJson.error?.message || errJson.error || errText.slice(0,120) || "HTTP "+resp.status;
     let errPT;
     if(errMsg.includes("credit balance")||errMsg.includes("insufficient")||errMsg.includes("balance is too low"))
       errPT="Saldo insuficiente — adiciona crédito em console.anthropic.com/settings/billing";
     else if(resp.status===401||errMsg.includes("invalid x-api-key")||errMsg.includes("invalid api key"))
       errPT="Chave API inválida — verifica em console.anthropic.com/settings/keys";
+    else if(errMsg.includes("Origem não autorizada"))
+      errPT="CORS bloqueado — verifica ALLOWED_ORIGIN nas env vars do Vercel";
     else if(resp.status===403||errMsg.includes("permission"))
       errPT="Sem permissões — verifica o plano em console.anthropic.com";
     else if(resp.status===429)
       errPT="Demasiados pedidos — aguarda alguns minutos";
     else
-      errPT="API "+resp.status+": "+errMsg.slice(0,70);
+      errPT="API "+resp.status+": "+String(errMsg).slice(0,70);
     throw new Error(errPT);
   }
   const data = await resp.json();

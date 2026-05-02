@@ -21,7 +21,9 @@ module.exports = async function handler(req, res) {
   if (allowedOrigin) {
     const origin = req.headers.origin || "";
     res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
-    if (origin !== allowedOrigin) return res.status(403).json({ error: "Origem não autorizada" });
+    // Only reject when Origin header is present but doesn't match (cross-origin).
+    // Absent Origin = same-origin or server-to-server — allow through.
+    if (origin && origin !== allowedOrigin) return res.status(403).json({ error: "Origem não autorizada" });
   }
 
   const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || "unknown";
