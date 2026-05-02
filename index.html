@@ -8,7 +8,15 @@
   input[type="checkbox"]{width:22px!important;height:22px!important;min-width:22px!important;flex-shrink:0!important}
   table td,table th{font-size:11px!important;padding:5px!important}
   ::-webkit-scrollbar{height:4px}
-}</style></head><body><div id="root"></div><script>(function(win) {
+}</style>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/icon.svg">
+<meta name="theme-color" content="#0d1b2a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Crédito Hab.">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"Simulador Crédito Habitação Portugal","description":"Simulador gratuito de crédito habitação em Portugal. Compare spreads de 14 bancos portugueses em tempo real.","applicationCategory":"FinanceApplication","operatingSystem":"Any","inLanguage":"pt-PT","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}}</script>
+</head><body><div id="root"></div><script>(function(win) {
   var _mods = {};
   function _def(id, factory) {
     var m = {exports: {}};
@@ -17318,7 +17326,7 @@ const FALLBACK_SPREADS = {
   BIC:{sCom:1.00,sSem:1.50}, BNI:{sCom:1.00,sSem:1.50},
 };
 const CACHE_KEY = "credito_cache_v5";
-const CACHE_H   = 24;
+const CACHE_H   = 8;
 
 // ── Seguros ───────────────────────────────────────────────────────────────
 const SEG = {
@@ -17735,6 +17743,11 @@ async function fetchAllRates() {
 
 const NAV=[{id:"comp",icon:"📋",label:"Comparação"},{id:"seg",icon:"🛡️",label:"Seguros"},{id:"cust",icon:"💰",label:"Custos"},{id:"viab",icon:"📊",label:"Viabilidade"},{id:"cen",icon:"⚡",label:"Cenários"},{id:"amort",icon:"🔄",label:"Amortização"}];
 
+const _Q=new URLSearchParams(location.search);
+const _qi=(k,d)=>{const n=parseInt(_Q.get(k),10);return Number.isFinite(n)?n:d;};
+const _qb=(k)=>_Q.get(k)==='1';
+const _qs=(k,d,o)=>{const v=_Q.get(k);return o.includes(v)?v:d;};
+
 function App(){
   // Euribor / spreads
   const[EUR,setEUR]=useState(FALLBACK_EUR);
@@ -17744,31 +17757,31 @@ function App(){
   const[ts,setTs]=useState(null);
 
   // Parâmetros base
-  const[valorImovel,setValorImovel]=useState(200000);
-  const[valorAvaliacao,setValorAvaliacao]=useState(0); // 0 = igual ao valor de aquisição
-  const[pct,setPct]=useState(80);
-  const[prazo,setPrazo]=useState(30);
-  const[tipoTaxa,setTipoTaxa]=useState("variável");
-  const[modoJovem,setModoJovem]=useState(false);
-  const[finalidade,setFinalidade]=useState("hpp");
-  const[certA,setCertA]=useState(false);
+  const[valorImovel,setValorImovel]=useState(()=>Math.max(50000,_qi('v',200000)));
+  const[valorAvaliacao,setValorAvaliacao]=useState(()=>Math.max(0,_qi('va',0)));
+  const[pct,setPct]=useState(()=>Math.min(100,Math.max(10,_qi('p',80))));
+  const[prazo,setPrazo]=useState(()=>Math.min(40,Math.max(10,_qi('pr',30))));
+  const[tipoTaxa,setTipoTaxa]=useState(()=>_qs('t',"variável",["variável","mista","fixa"]));
+  const[modoJovem,setModoJovem]=useState(()=>_qb('j'));
+  const[finalidade,setFinalidade]=useState(()=>_qs('f',"hpp",["hpp","hab2","arrendamento"]));
+  const[certA,setCertA]=useState(()=>_qb('ca'));
 
   // Titulares
-  const[titulares,setTitulares]=useState(1);
-  const[idade1,setIdade1]=useState(30);
-  const[rend1,setRend1]=useState(2500);
-  const[tipoC1,setTipoC1]=useState("efetivo");
-  const[idade2,setIdade2]=useState(28);
-  const[rend2,setRend2]=useState(2000);
-  const[tipoC2,setTipoC2]=useState("efetivo");
+  const[titulares,setTitulares]=useState(()=>_qi('t2',1)===2?2:1);
+  const[idade1,setIdade1]=useState(()=>Math.min(75,Math.max(18,_qi('i1',30))));
+  const[rend1,setRend1]=useState(()=>Math.max(500,_qi('r1',2500)));
+  const[tipoC1,setTipoC1]=useState(()=>_qs('c1',"efetivo",["efetivo","termo","parcial","recibo","pensao"]));
+  const[idade2,setIdade2]=useState(()=>Math.min(75,Math.max(18,_qi('i2',28))));
+  const[rend2,setRend2]=useState(()=>Math.max(500,_qi('r2',2000)));
+  const[tipoC2,setTipoC2]=useState(()=>_qs('c2',"efetivo",["efetivo","termo","parcial","recibo","pensao"]));
 
   // DSTI extras
-  const[dependentes,setDependentes]=useState(0);
-  const[outros,setOutros]=useState(0);
+  const[dependentes,setDependentes]=useState(()=>Math.min(10,Math.max(0,_qi('dep',0))));
+  const[outros,setOutros]=useState(()=>Math.max(0,_qi('out',0)));
 
   // Opções de crédito
-  const[carencia,setCarencia]=useState(0);
-  const[segProtecao,setSegProtecao]=useState(false);
+  const[carencia,setCarencia]=useState(()=>Math.min(24,Math.max(0,_qi('car',0))));
+  const[segProtecao,setSegProtecao]=useState(()=>_qb('sp'));
 
   // Amortização
   const[amortExtra,setAmortExtra]=useState(0);
@@ -18019,13 +18032,34 @@ function App(){
       .map(r=>({name:r.s,"Vida T1":Math.round(r.seg.v1),"Vida T2":Math.round(r.seg.v2),"Multirriscos":Math.round(r.seg.m)}));
   },[resultados]);
 
+  // Partilha por URL
+  function handleShare(){
+    const _p=new URLSearchParams();
+    _p.set('v',valorImovel);_p.set('p',pct);_p.set('pr',prazo);_p.set('t',tipoTaxa);
+    if(modoJovem)_p.set('j','1');
+    if(finalidade!=='hpp')_p.set('f',finalidade);
+    if(certA)_p.set('ca','1');
+    _p.set('t2',titulares);_p.set('i1',idade1);_p.set('r1',rend1);
+    if(tipoC1!=='efetivo')_p.set('c1',tipoC1);
+    if(titulares===2){_p.set('i2',idade2);_p.set('r2',rend2);if(tipoC2!=='efetivo')_p.set('c2',tipoC2);}
+    if(dependentes)_p.set('dep',dependentes);
+    if(outros)_p.set('out',outros);
+    if(carencia)_p.set('car',carencia);
+    if(segProtecao)_p.set('sp','1');
+    const url=location.origin+location.pathname+'?'+_p.toString();
+    if(navigator.share){navigator.share({title:'Simulação Crédito Habitação',url});}
+    else{navigator.clipboard.writeText(url).then(()=>setMsg('🔗 Link copiado!'),()=>prompt('Copia este link:',url));}
+  }
+
   // Status
   const stIcon=status==="loading"?"⏳":status==="ok"?"✅":status==="cached"?"🔄":"⚠️";
   const stColor=status==="ok"?G:status==="cached"?Sky:status==="error"?R:Au;
   const updatedCount=Object.values(spreads).filter(x=>x.updated).length;
 
   return(
-    React.createElement("div", {style: {fontFamily:"'Georgia','Times New Roman',serif",background:N,minHeight:"100vh",color:"#e8dcc8"}}, React.createElement("div", {style: {background:"linear-gradient(135deg,#0d1b2a 0%,#1a3a5c 55%,#0d1b2a 100%)",borderBottom:"1px solid "+Au,padding:"12px 16px 10px"}}, React.createElement("div", {style: {maxWidth:1150,margin:"0 auto"}}, React.createElement("div", {style: {display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8,marginBottom:7}}, React.createElement("div", null, React.createElement("div", {style: {fontSize:10,letterSpacing:4,color:Au,fontFamily:"monospace",marginBottom:2}}, "PORTUGAL · SIMULADOR COMPLETO · EURIBOR + SPREADS EM TEMPO REAL"), React.createElement("h1", {style: {margin:0,fontSize:19,fontWeight:700,color:"#fff"}}, "Simulador de Crédito Habitação")), React.createElement("button", {onClick: ()=>loadRates(true), disabled: status==="loading", style: {padding:"7px 14px",background:"rgba(201,168,76,0.12)",border:"1px solid "+Au,borderRadius:8,color:Au,fontSize:11,fontFamily:"sans-serif",cursor:status==="loading"?"not-allowed":"pointer",fontWeight:700}}, status==="loading"?"⏳ A actualizar...":"🔄 Actualizar taxas")), React.createElement("div", {style: {display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginTop:0}}, ["3m","6m","12m"].map(k=>{const v=EUR[k]||FALLBACK_EUR[k];const[c,bg]=EUR_COLORS[k];return(
+    React.createElement("div", {style: {fontFamily:"'Georgia','Times New Roman',serif",background:N,minHeight:"100vh",color:"#e8dcc8"}}, React.createElement("div", {style: {background:"linear-gradient(135deg,#0d1b2a 0%,#1a3a5c 55%,#0d1b2a 100%)",borderBottom:"1px solid "+Au,padding:"12px 16px 10px"}}, React.createElement("div", {style: {maxWidth:1150,margin:"0 auto"}}, React.createElement("div", {style: {display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8,marginBottom:7}}, React.createElement("div", null, React.createElement("div", {style: {fontSize:10,letterSpacing:4,color:Au,fontFamily:"monospace",marginBottom:2}}, "PORTUGAL · SIMULADOR COMPLETO · EURIBOR + SPREADS EM TEMPO REAL"), React.createElement("h1", {style: {margin:0,fontSize:19,fontWeight:700,color:"#fff"}}, "Simulador de Crédito Habitação")), React.createElement("div", {style:{display:"flex",gap:6,flexWrap:"wrap"}},
+            React.createElement("button", {onClick:handleShare,"aria-label":"Partilhar simulação", style:{padding:"7px 14px",background:"rgba(125,211,252,0.12)",border:"1px solid rgba(125,211,252,0.4)",borderRadius:8,color:"#7dd3fc",fontSize:11,fontFamily:"sans-serif",cursor:"pointer",fontWeight:700}}, "🔗 Partilhar"),
+            React.createElement("button", {onClick:()=>loadRates(true),disabled:status==="loading","aria-label":"Actualizar taxas", style:{padding:"7px 14px",background:"rgba(201,168,76,0.12)",border:"1px solid "+Au,borderRadius:8,color:Au,fontSize:11,fontFamily:"sans-serif",cursor:status==="loading"?"not-allowed":"pointer",fontWeight:700}}, status==="loading"?"⏳ A actualizar...":"🔄 Actualizar taxas"))), React.createElement("div", {style: {display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginTop:0}}, ["3m","6m","12m"].map(k=>{const v=EUR[k]||FALLBACK_EUR[k];const[c,bg]=EUR_COLORS[k];return(
               React.createElement("div", {key: k, style: {background:bg,border:"1px solid "+c,borderRadius:6,padding:"3px 10px",fontFamily:"monospace",fontSize:11}}, React.createElement("span", {style: {color:c,fontWeight:700}}, "Eur. "+k), React.createElement("span", {style: {color:"#fff",marginLeft:5,fontSize:13,fontWeight:700}}, v.valor.toFixed(3).replace(".",",")+"%"), v.data&&React.createElement("span", {style: {color:"#9bb4cc",fontSize:9,marginLeft:3}}, v.data))
             );}), React.createElement("div", {style: {background:"rgba(0,0,0,0.25)",border:"1px solid "+stColor,borderRadius:6,padding:"3px 9px",fontSize:10,color:stColor,fontFamily:"sans-serif"}}, stIcon+" "+msg, ts&&status!=="loading"&&React.createElement("span", {style: {color:"#5a7a90",marginLeft:5}}, ts.toLocaleTimeString("pt-PT",{hour:"2-digit",minute:"2-digit"})))))), React.createElement("div", {style: {maxWidth:1150,margin:"0 auto",padding:"10px 14px"}}, React.createElement("div", {style: {display:"flex",borderRadius:9,overflow:"hidden",border:"1px solid rgba(255,255,255,0.09)",marginBottom:10}}, [{id:false,icon:"🏠",label:"Crédito Normal",c:Au},{id:true,icon:"🎓",label:"Crédito Jovem ≤35 anos",c:G}].map(({id,icon,label,c})=>(
             React.createElement("button", {key: String(id), onClick: ()=>{setModoJovem(id);if(!id)setPct(Math.min(pct,90));}, style: {flex:1,padding:"9px",border:"none",background:modoJovem===id?"rgba("+(id?"74,222,128":"201,168,76")+",0.08)":"rgba(255,255,255,0.02)",borderBottom:"2px solid "+(modoJovem===id?c:"transparent"),color:modoJovem===id?c:"#9bb4cc",fontSize:13,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600}}, icon+" "+label)
@@ -18190,7 +18224,7 @@ function App(){
                 )))), amortExtra>0&&amCh.length>0&&(
               React.createElement("div", {style: {background:"rgba(255,255,255,0.02)",border:"1px solid rgba(74,222,128,0.15)",borderRadius:11,padding:14}}, React.createElement("div", {style: {fontSize:10,letterSpacing:2,color:G,fontFamily:"monospace",marginBottom:10}}, "CAPITAL EM DÍVIDA AO LONGO DO TEMPO"), React.createElement(ResponsiveContainer, {width: "100%", height: 220}, React.createElement(LineChart, {data: amCh, margin: {top:5,right:10,left:5,bottom:5}}, React.createElement(CartesianGrid, {strokeDasharray: "3 3", stroke: "rgba(255,255,255,0.04)"}), React.createElement(XAxis, {dataKey: "ano", tick: {fill:"#9bb4cc",fontSize:10}, axisLine: false, tickLine: false}), React.createElement(YAxis, {tick: {fill:"#9bb4cc",fontSize:10}, axisLine: false, tickLine: false, tickFormatter: v=>Math.round(v/1000)+"k€"}), React.createElement(Tooltip, {formatter: (v,n)=>[fE(v),n], contentStyle: {background:"#1a3a5c",border:"1px solid "+Au,borderRadius:8,color:"#e8dcc8",fontFamily:"sans-serif",fontSize:11}, labelFormatter: l=>"Ano "+l}), React.createElement(Legend, {wrapperStyle: {color:"#9bb4cc",fontSize:11,fontFamily:"sans-serif"}}), React.createElement(Line, {type: "monotone", dataKey: "Sem amort.", stroke: R, strokeWidth: 2, dot: false}), React.createElement(Line, {type: "monotone", dataKey: "Com amort.", stroke: G, strokeWidth: 2.5, dot: false}))))
             ))
-        ), React.createElement("div", {style: {marginTop:12,padding:"9px 12px",background:"rgba(255,255,255,0.01)",border:"1px solid rgba(255,255,255,0.05)",borderRadius:8,fontFamily:"sans-serif"}}, React.createElement("div", {style: {fontSize:10,color:"#5a7a90",lineHeight:1.7}}, React.createElement("div", {style: {fontSize:10,color:"#5a7a90",lineHeight:1.7}}, "🔄 Euribor actualizada via API (BCE) · Cache 24h. ", "📊 Spread inclui: LTV por escalão, finalidade e certificado energético. ", "🧮 TAEG calculada por fórmula EU Directiva 2014/17/UE (inclui comissões iniciais + prestação + seguros + conta banco). ", "💰 MTIC = total de tudo o que o cliente paga (comissões + prestações + seguros + conta). ", "🛡️ Seguro de vida calculado sobre capital médio em dívida (mais preciso que capital inicial). ", "⚡ Promo BCP/ActivoBank/Santander: PMT correcta por período — prestação promo + saldo residual + PMT pós-promo. ", "🏠 IS sobre juros HPP: €0 (art. 7º CIS). Arrendamento: IS decrescente calculado sobre juro médio mensal. ", "📅 Prazo: BdP Aviso 4/2022 + limite 75a. LTV real = min(aquisição, avaliação). Simulação indicativa — consulte a FINE.")))))
+        ), React.createElement("div", {style: {marginTop:12,padding:"9px 12px",background:"rgba(255,255,255,0.01)",border:"1px solid rgba(255,255,255,0.05)",borderRadius:8,fontFamily:"sans-serif"}}, React.createElement("div", {style: {fontSize:10,color:"#5a7a90",lineHeight:1.7}}, React.createElement("div", {style: {fontSize:10,color:"#5a7a90",lineHeight:1.7}}, "🔄 Euribor actualizada via API (BCE) · Cache 8h.", "📊 Spread inclui: LTV por escalão, finalidade e certificado energético. ", "🧮 TAEG calculada por fórmula EU Directiva 2014/17/UE (inclui comissões iniciais + prestação + seguros + conta banco). ", "💰 MTIC = total de tudo o que o cliente paga (comissões + prestações + seguros + conta). ", "🛡️ Seguro de vida calculado sobre capital médio em dívida (mais preciso que capital inicial). ", "⚡ Promo BCP/ActivoBank/Santander: PMT correcta por período — prestação promo + saldo residual + PMT pós-promo. ", "🏠 IS sobre juros HPP: €0 (art. 7º CIS). Arrendamento: IS decrescente calculado sobre juro médio mensal. ", "📅 Prazo: BdP Aviso 4/2022 + limite 75a. LTV real = min(aquisição, avaliação). Simulação indicativa — consulte a FINE.")))))
   );
 }
-;(function(){var c=document.getElementById('root');var r=ReactDOM.createRoot(c);r.render(React.createElement(App,null));})();}catch(e){document.getElementById("root").innerHTML="<div style=color:#f87171;padding:40px;background:#0d1b2a;min-height:100vh><h2>Erro ao iniciar</h2><p>"+e.message+"</p></div>";}})();</script></body></html>
+;(function(){var c=document.getElementById('root');var r=ReactDOM.createRoot(c);r.render(React.createElement(App,null));})();}catch(e){var _d=document.getElementById("root");_d.style.cssText="color:#f87171;padding:40px;background:#0d1b2a;min-height:100vh";var _h=document.createElement("h2");_h.textContent="Erro ao iniciar";var _p=document.createElement("p");_p.textContent=e.message;_d.appendChild(_h);_d.appendChild(_p);}})();</script><script>if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js');</script></body></html>
