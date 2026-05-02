@@ -17843,9 +17843,9 @@ function App(){
         });
       }
       setEUR(newEUR); setSpreads(newSpr); setTs(new Date()); setStatus("ok");
-      let statusMsg="✅ Euribor BCE · "+raw.eurLabel;
+      let statusMsg="Euribor BCE · "+raw.eurLabel;
       if(raw.sprOk) statusMsg+=" · "+nSpr+"/"+Object.keys(FALLBACK_SPREADS).length+" spreads actualizados ✓";
-      else if(!key==="vercel"||key.startsWith("sk-ant-")) statusMsg+=" · 💡 Adiciona chave API para actualizar spreads";
+      else if(key!=="vercel"&&!key.startsWith("sk-ant-")) statusMsg+=" · 💡 Adiciona chave API para actualizar spreads";
       else if(raw.sprErr) statusMsg+=" · Spreads: "+raw.sprErr.slice(0,50);
       setMsg(statusMsg);
       localStorage.setItem(CACHE_KEY,JSON.stringify({eur:newEUR,spr:newSpr,ts:Date.now()}));
