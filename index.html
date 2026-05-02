@@ -8,6 +8,13 @@
   input[type="checkbox"]{width:22px!important;height:22px!important;min-width:22px!important;flex-shrink:0!important}
   table td,table th{font-size:11px!important;padding:5px!important}
   ::-webkit-scrollbar{height:4px}
+}
+@media print{
+  button,select{display:none!important}
+  body{background:#fff!important;color:#000!important}
+  table{font-size:9pt!important}
+  th,td{color:#000!important;background:#fff!important;border:1px solid #ccc!important}
+  .no-print{display:none!important}
 }</style>
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/icon.svg">
@@ -17334,6 +17341,8 @@ const FALLBACK_SPREADS = {
 };
 const CACHE_KEY = "credito_cache_v5";
 const CACHE_H   = 8;
+const HIST_KEY  = 'simulador-hist-v1';
+const HIST_MAX  = 5;
 
 // ── Seguros ───────────────────────────────────────────────────────────────
 const SEG = {
@@ -17622,7 +17631,7 @@ function TCard({n,idade,setIdade,rend,setRend,tipoC,setTipoC,colorStr}){
 }
 
 // ── Componente: slider + input numérico em simultâneo ─────────────────────
-function SliderInput({min,max,step,value,onChange,color,prefix,suffix,formatFn}){
+function SliderInput({min,max,step,value,onChange,color,prefix,suffix,formatFn,ariaLabel}){
   const [inputVal, setInputVal] = React.useState(String(value));
   const [editing,  setEditing]  = React.useState(false);
 
@@ -17651,7 +17660,7 @@ function SliderInput({min,max,step,value,onChange,color,prefix,suffix,formatFn})
   const displayFn = formatFn || (v=>v.toLocaleString('pt-PT'));
 
   return (
-    React.createElement("div", null, React.createElement("input", {type: "range", min: min, max: max, step: step, value: value, onChange: e=>onChange(+e.target.value), style: {width:"100%",accentColor:color||"#c9a84c"}}), React.createElement("div", {style: {display:"flex",alignItems:"center",gap:6,marginTop:4}}, prefix&&React.createElement("span", {style: {fontSize:12,color:"#9bb4cc",fontFamily:"sans-serif"}}, prefix), React.createElement("input", {type: "text", inputMode: "numeric", value: editing ? inputVal : displayFn(value), onFocus: ()=>{ setEditing(true); setInputVal(String(value)); }, onChange: handleInputChange, onBlur: handleInputBlur, onKeyDown: handleKeyDown, style: {
+    React.createElement("div", null, React.createElement("input", {type: "range", min: min, max: max, step: step, value: value, onChange: e=>onChange(+e.target.value), "aria-label": ariaLabel||suffix||"valor", style: {width:"100%",accentColor:color||"#c9a84c"}}), React.createElement("div", {style: {display:"flex",alignItems:"center",gap:6,marginTop:4}}, prefix&&React.createElement("span", {style: {fontSize:12,color:"#9bb4cc",fontFamily:"sans-serif"}}, prefix), React.createElement("input", {type: "text", inputMode: "numeric", "aria-label": (ariaLabel||suffix||"valor")+" (editar)", value: editing ? inputVal : displayFn(value), onFocus: ()=>{ setEditing(true); setInputVal(String(value)); }, onChange: handleInputChange, onBlur: handleInputBlur, onKeyDown: handleKeyDown, style: {
             width:"120px",padding:"4px 8px",
             background:"rgba(201,168,76,0.08)",
             border:"1px solid rgba(201,168,76,0.35)",
@@ -17797,6 +17806,9 @@ function App(){
   const[sortBy,setSortBy]=useState(()=>_qs('s',"prestTotal",["prestTotal","comProd","semProd","taeg","mtic","poupanca","spread","esforco","seguros"]));
   const[nav,setNav]=useState("comp");
   const[shared,setShared]=useState(false);
+  const[saved,setSaved]=useState(false);
+  const[histSaved,setHistSaved]=useState(()=>{try{return JSON.parse(localStorage.getItem(HIST_KEY)||'[]');}catch(_){return[];}});
+  const[showHist,setShowHist]=useState(false);
   const[bancoCustos,setBancoCustos]=useState("");
   const[bancoAmort,setBancoAmort]=useState("");
 
@@ -18065,6 +18077,33 @@ function App(){
     else{navigator.clipboard.writeText(url).then(confirm,()=>prompt('Copia este link:',url));}
   }
 
+  function handleSave(){
+    const _p=new URLSearchParams();
+    _p.set('v',valorImovel);_p.set('p',pct);_p.set('pr',prazo);_p.set('t',tipoTaxa);
+    if(modoJovem)_p.set('j','1');
+    if(finalidade!=='hpp')_p.set('f',finalidade);
+    if(certA)_p.set('ca','1');
+    _p.set('t2',titulares);_p.set('i1',idade1);_p.set('r1',rend1);
+    if(tipoC1!=='efetivo')_p.set('c1',tipoC1);
+    if(titulares===2){_p.set('i2',idade2);_p.set('r2',rend2);if(tipoC2!=='efetivo')_p.set('c2',tipoC2);}
+    if(dependentes)_p.set('dep',dependentes);
+    if(outros)_p.set('out',outros);
+    if(carencia)_p.set('car',carencia);
+    if(segProtecao)_p.set('sp','1');
+    if(valorAvaliacao>0)_p.set('va',valorAvaliacao);
+    if(amortExtra)_p.set('ae',amortExtra);
+    if(sortBy!=='prestTotal')_p.set('s',sortBy);
+    const entry={
+      ts:Date.now(),
+      label:fE(valorImovel)+" · "+prazoR+"a · "+tipoTaxa+" · melhor: "+(melhor?melhor.name+" ("+fP(melhor.tanC)+")":"—"),
+      url:location.origin+location.pathname+'?'+_p.toString()
+    };
+    const next=[entry,...histSaved].slice(0,HIST_MAX);
+    try{localStorage.setItem(HIST_KEY,JSON.stringify(next));}catch(_){}
+    setHistSaved(next);
+    setSaved(true);setTimeout(()=>setSaved(false),2000);
+  }
+
   // Status
   const stIcon=status==="loading"?"⏳":status==="ok"?"✅":status==="cached"?"🔄":"⚠️";
   const stColor=status==="ok"?G:status==="cached"?Sky:status==="error"?R:Au;
@@ -18073,7 +18112,9 @@ function App(){
   return(
     React.createElement("div", {style: {fontFamily:"'Georgia','Times New Roman',serif",background:N,minHeight:"100vh",color:"#e8dcc8"}}, React.createElement("div", {style: {background:"linear-gradient(135deg,#0d1b2a 0%,#1a3a5c 55%,#0d1b2a 100%)",borderBottom:"1px solid "+Au,padding:"12px 16px 10px"}}, React.createElement("div", {style: {maxWidth:1150,margin:"0 auto"}}, React.createElement("div", {style: {display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8,marginBottom:7}}, React.createElement("div", null, React.createElement("div", {style: {fontSize:10,letterSpacing:4,color:Au,fontFamily:"monospace",marginBottom:2}}, "PORTUGAL · SIMULADOR COMPLETO · EURIBOR + SPREADS EM TEMPO REAL"), React.createElement("h1", {style: {margin:0,fontSize:19,fontWeight:700,color:"#fff"}}, "Simulador de Crédito Habitação")), React.createElement("div", {style:{display:"flex",gap:6,flexWrap:"wrap"}},
             React.createElement("button", {onClick:handleShare,"aria-label":"Partilhar simulação", style:{padding:"7px 14px",background:shared?"rgba(74,222,128,0.12)":"rgba(125,211,252,0.12)",border:"1px solid "+(shared?"rgba(74,222,128,0.5)":"rgba(125,211,252,0.4)"),borderRadius:8,color:shared?G:"#7dd3fc",fontSize:11,fontFamily:"sans-serif",cursor:"pointer",fontWeight:700,transition:"all 0.2s"}}, shared?"✓ Copiado!":"🔗 Partilhar"),
-            React.createElement("button", {onClick:()=>loadRates(true),disabled:status==="loading","aria-label":"Actualizar taxas", style:{padding:"7px 14px",background:"rgba(201,168,76,0.12)",border:"1px solid "+Au,borderRadius:8,color:Au,fontSize:11,fontFamily:"sans-serif",cursor:status==="loading"?"not-allowed":"pointer",fontWeight:700}}, status==="loading"?"⏳ A actualizar...":"🔄 Actualizar taxas"))), React.createElement("div", {style: {display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginTop:0}}, ["3m","6m","12m"].map(k=>{const v=EUR[k]||FALLBACK_EUR[k];const[c,bg]=EUR_COLORS[k];return(
+            React.createElement("button", {onClick:()=>loadRates(true),disabled:status==="loading","aria-label":"Actualizar taxas", style:{padding:"7px 14px",background:"rgba(201,168,76,0.12)",border:"1px solid "+Au,borderRadius:8,color:Au,fontSize:11,fontFamily:"sans-serif",cursor:status==="loading"?"not-allowed":"pointer",fontWeight:700}}, status==="loading"?"⏳ A actualizar...":"🔄 Actualizar taxas"),
+            React.createElement("button", {onClick:handleSave,"aria-label":"Guardar simulação no histórico", style:{padding:"7px 14px",background:saved?"rgba(74,222,128,0.12)":"rgba(255,255,255,0.06)",border:"1px solid "+(saved?"rgba(74,222,128,0.5)":"rgba(255,255,255,0.15)"),borderRadius:8,color:saved?G:"#9bb4cc",fontSize:11,fontFamily:"sans-serif",cursor:"pointer",fontWeight:700,transition:"all 0.2s"}}, saved?"✓ Guardado!":"💾 Guardar"),
+            React.createElement("button", {onClick:()=>setShowHist(h=>!h),"aria-label":"Ver histórico de simulações", style:{padding:"7px 14px",background:showHist?"rgba(125,211,252,0.12)":"rgba(255,255,255,0.06)",border:"1px solid "+(showHist?"rgba(125,211,252,0.4)":"rgba(255,255,255,0.15)"),borderRadius:8,color:showHist?Sky:"#9bb4cc",fontSize:11,fontFamily:"sans-serif",cursor:"pointer",fontWeight:700,transition:"all 0.2s"}}, "📋 Histórico"+(histSaved.length>0?" ("+histSaved.length+")":"")))), React.createElement("div", {style: {display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginTop:0}}, ["3m","6m","12m"].map(k=>{const v=EUR[k]||FALLBACK_EUR[k];const[c,bg]=EUR_COLORS[k];return(
               React.createElement("div", {key: k, style: {background:bg,border:"1px solid "+c,borderRadius:6,padding:"3px 10px",fontFamily:"monospace",fontSize:11}}, React.createElement("span", {style: {color:c,fontWeight:700}}, "Eur. "+k), React.createElement("span", {style: {color:"#fff",marginLeft:5,fontSize:13,fontWeight:700}}, v.valor.toFixed(3).replace(".",",")+"%"), v.data&&React.createElement("span", {style: {color:"#9bb4cc",fontSize:9,marginLeft:3}}, v.data))
             );}), React.createElement("div", {style: {background:"rgba(0,0,0,0.25)",border:"1px solid "+stColor,borderRadius:6,padding:"3px 9px",fontSize:10,color:stColor,fontFamily:"sans-serif"}}, stIcon+" "+msg, ts&&status!=="loading"&&React.createElement("span", {style: {color:"#5a7a90",marginLeft:5}}, ts.toLocaleTimeString("pt-PT",{hour:"2-digit",minute:"2-digit"})))))), React.createElement("div", {style: {maxWidth:1150,margin:"0 auto",padding:"10px 14px"}}, React.createElement("div", {style: {display:"flex",borderRadius:9,overflow:"hidden",border:"1px solid rgba(255,255,255,0.09)",marginBottom:10}}, [{id:false,icon:"🏠",label:"Crédito Normal",c:Au},{id:true,icon:"🎓",label:"Crédito Jovem ≤35 anos",c:G}].map(({id,icon,label,c})=>(
             React.createElement("button", {key: String(id), onClick: ()=>{setModoJovem(id);if(!id)setPct(Math.min(pct,90));}, style: {flex:1,padding:"9px",border:"none",background:modoJovem===id?"rgba("+(id?"74,222,128":"201,168,76")+",0.08)":"rgba(255,255,255,0.02)",borderBottom:"2px solid "+(modoJovem===id?c:"transparent"),color:modoJovem===id?c:"#9bb4cc",fontSize:13,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600}}, icon+" "+label)
@@ -18104,10 +18145,21 @@ function App(){
               {l:"Taxa esforço",v:melhor&&rendT>0?melhor.efC.toFixed(1)+"%":"—",c:melhor?ecC(melhor.efC):undefined},
             ].map(({l,v,c="#e8dcc8"})=>(
               React.createElement("div", {key: l, style: {background:"rgba(201,168,76,0.05)",border:"1px solid rgba(201,168,76,0.14)",borderRadius:7,padding:"3px 9px"}}, React.createElement("div", {style: {fontSize:9,color:"#9bb4cc",fontFamily:"monospace",letterSpacing:1}}, l.toUpperCase()), React.createElement("div", {style: {fontSize:11,fontWeight:700,color:c}}, v))
-            )))), React.createElement("div", {style: {display:"flex",gap:3,marginBottom:10,flexWrap:"wrap",alignItems:"center"}}, NAV.map(({id,icon,label})=>(
+            )))), showHist&&histSaved.length>0&&React.createElement("div", {style:{background:"rgba(0,0,0,0.4)",border:"1px solid rgba(125,211,252,0.25)",borderRadius:10,padding:12,marginBottom:10,fontFamily:"sans-serif"}},
+            React.createElement("div", {style:{fontSize:10,letterSpacing:2,color:Sky,fontFamily:"monospace",marginBottom:8}}, "HISTÓRICO — ÚLTIMAS "+histSaved.length+" SIMULAÇÕES"),
+            histSaved.map((h,i)=>React.createElement("div", {key:h.ts,style:{display:"flex",alignItems:"center",gap:8,padding:"5px 0",borderBottom:i<histSaved.length-1?"1px solid rgba(255,255,255,0.06)":"none"}},
+              React.createElement("div", {style:{flex:1,fontSize:10,color:"#e8dcc8"}},
+                React.createElement("div", null, h.label),
+                React.createElement("div", {style:{fontSize:9,color:"#5a7a90"}}, new Date(h.ts).toLocaleString("pt-PT"))
+              ),
+              React.createElement("a", {href:h.url,style:{padding:"3px 8px",background:"rgba(125,211,252,0.1)",border:"1px solid rgba(125,211,252,0.3)",borderRadius:5,color:Sky,fontSize:10,textDecoration:"none",cursor:"pointer"}}, "Restaurar"),
+              React.createElement("button", {onClick:()=>{const n=histSaved.filter((_,j)=>j!==i);setHistSaved(n);try{localStorage.setItem(HIST_KEY,JSON.stringify(n));}catch(_){}},style:{padding:"3px 8px",background:"rgba(248,113,113,0.1)",border:"1px solid rgba(248,113,113,0.3)",borderRadius:5,color:R,fontSize:10,cursor:"pointer"},"aria-label":"Apagar simulação"}, "✕")
+            ))
+          ),
+          React.createElement("div", {style: {display:"flex",gap:3,marginBottom:10,flexWrap:"wrap",alignItems:"center"}}, NAV.map(({id,icon,label})=>(
             React.createElement("button", {key: id, onClick: ()=>setNav(id), style: {padding:"5px 11px",border:"1px solid "+(nav===id?Au:"rgba(255,255,255,0.09)"),borderRadius:7,background:nav===id?"rgba(201,168,76,0.1)":"transparent",color:nav===id?Au:"#9bb4cc",fontSize:12,fontFamily:"sans-serif",cursor:"pointer",fontWeight:nav===id?700:400}}, icon+" "+label)
           )), nav==="comp"&&(
-            React.createElement("div", {style: {marginLeft:"auto",display:"flex",alignItems:"center",gap:6}}, React.createElement("select", {value: sortBy, onChange: e=>setSortBy(e.target.value), style: {background:"#1a3a5c",border:"1px solid rgba(201,168,76,0.26)",color:"#e8dcc8",borderRadius:6,padding:"3px 7px",fontSize:11,cursor:"pointer"}}, React.createElement("option", {value: "prestTotal"}, "Prestação TOTAL"), React.createElement("option", {value: "comProd"}, "Capital c/ produtos"), React.createElement("option", {value: "semProd"}, "Capital s/ produtos"), React.createElement("option", {value: "taeg"}, "TAEG (custo real)"), React.createElement("option", {value: "mtic"}, "MTIC (total pago)"), React.createElement("option", {value: "poupanca"}, "Maior poupança"), React.createElement("option", {value: "spread"}, "Spread"), React.createElement("option", {value: "esforco"}, "Taxa de Esforço"), React.createElement("option", {value: "seguros"}, "Seguros mais baratos")))
+            React.createElement("div", {style: {marginLeft:"auto",display:"flex",alignItems:"center",gap:6}}, React.createElement("select", {value: sortBy, onChange: e=>setSortBy(e.target.value), style: {background:"#1a3a5c",border:"1px solid rgba(201,168,76,0.26)",color:"#e8dcc8",borderRadius:6,padding:"3px 7px",fontSize:11,cursor:"pointer"}}, React.createElement("option", {value: "prestTotal"}, "Prestação TOTAL"), React.createElement("option", {value: "comProd"}, "Capital c/ produtos"), React.createElement("option", {value: "semProd"}, "Capital s/ produtos"), React.createElement("option", {value: "taeg"}, "TAEG (custo real)"), React.createElement("option", {value: "mtic"}, "MTIC (total pago)"), React.createElement("option", {value: "poupanca"}, "Maior poupança"), React.createElement("option", {value: "spread"}, "Spread"), React.createElement("option", {value: "esforco"}, "Taxa de Esforço"), React.createElement("option", {value: "seguros"}, "Seguros mais baratos")), React.createElement("button", {onClick:()=>window.print(),"aria-label":"Imprimir ou exportar PDF", style:{padding:"4px 10px",background:"rgba(201,168,76,0.1)",border:"1px solid rgba(201,168,76,0.3)",borderRadius:6,color:Au,fontSize:11,fontFamily:"sans-serif",cursor:"pointer"}}, "🖨️ Imprimir"))
           )), nav==="comp"&&(
           React.createElement("div", null, tipoTaxa==="variável"&&(
               React.createElement("div", {style: {padding:"7px 12px",background:"rgba(125,211,252,0.06)",border:"1px solid rgba(125,211,252,0.2)",borderRadius:8,marginBottom:8,fontSize:10,color:"#9bb4cc",fontFamily:"sans-serif"}}, "💡 Bancos com múltiplos indexantes aparecem em várias linhas consecutivas, ordenadas por Euribor crescente:", React.createElement("br", null), "• BCP e ActivoBank → 3 linhas (Eur.3m · Eur.6m · Eur.12m)", React.createElement("br", null), "• Crédito Agrícola → 2 linhas (Eur.6m · Eur.12m)", React.createElement("br", null), "As linhas do mesmo banco ficam sempre juntas. ✓ = spread confirmado pela API. Spread inclui ajuste LTV ("+pctR+"%) e finalidade.", carencia>0&&" · ⚡ Carência = só juros")
@@ -18238,7 +18290,7 @@ function App(){
                 )))), amortExtra>0&&amCh.length>0&&(
               React.createElement("div", {style: {background:"rgba(255,255,255,0.02)",border:"1px solid rgba(74,222,128,0.15)",borderRadius:11,padding:14}}, React.createElement("div", {style: {fontSize:10,letterSpacing:2,color:G,fontFamily:"monospace",marginBottom:10}}, "CAPITAL EM DÍVIDA AO LONGO DO TEMPO"), React.createElement(ResponsiveContainer, {width: "100%", height: 220}, React.createElement(LineChart, {data: amCh, margin: {top:5,right:10,left:5,bottom:5}}, React.createElement(CartesianGrid, {strokeDasharray: "3 3", stroke: "rgba(255,255,255,0.04)"}), React.createElement(XAxis, {dataKey: "ano", tick: {fill:"#9bb4cc",fontSize:10}, axisLine: false, tickLine: false}), React.createElement(YAxis, {tick: {fill:"#9bb4cc",fontSize:10}, axisLine: false, tickLine: false, tickFormatter: v=>Math.round(v/1000)+"k€"}), React.createElement(Tooltip, {formatter: (v,n)=>[fE(v),n], contentStyle: {background:"#1a3a5c",border:"1px solid "+Au,borderRadius:8,color:"#e8dcc8",fontFamily:"sans-serif",fontSize:11}, labelFormatter: l=>"Ano "+l}), React.createElement(Legend, {wrapperStyle: {color:"#9bb4cc",fontSize:11,fontFamily:"sans-serif"}}), React.createElement(Line, {type: "monotone", dataKey: "Sem amort.", stroke: R, strokeWidth: 2, dot: false}), React.createElement(Line, {type: "monotone", dataKey: "Com amort.", stroke: G, strokeWidth: 2.5, dot: false}))))
             ))
-        ), React.createElement("div", {style: {marginTop:12,padding:"9px 12px",background:"rgba(255,255,255,0.01)",border:"1px solid rgba(255,255,255,0.05)",borderRadius:8,fontFamily:"sans-serif"}}, React.createElement("div", {style: {fontSize:10,color:"#5a7a90",lineHeight:1.7}}, React.createElement("div", {style: {fontSize:10,color:"#5a7a90",lineHeight:1.7}}, "🔄 Euribor actualizada via API (BCE) · Cache 8h.", "📊 Spread inclui: LTV por escalão, finalidade e certificado energético. ", "🧮 TAEG calculada por fórmula EU Directiva 2014/17/UE (inclui comissões iniciais + prestação + seguros + conta banco). ", "💰 MTIC = total de tudo o que o cliente paga (comissões + prestações + seguros + conta). ", "🛡️ Seguro de vida calculado sobre capital médio em dívida (mais preciso que capital inicial). ", "⚡ Promo BCP/ActivoBank/Santander: PMT correcta por período — prestação promo + saldo residual + PMT pós-promo. ", "🏠 IS sobre juros HPP: €0 (art. 7º CIS). Arrendamento: IS decrescente calculado sobre juro médio mensal. ", "📅 Prazo: BdP Aviso 4/2022 + limite 75a. LTV real = min(aquisição, avaliação). Simulação indicativa — consulte a FINE.")))))
+        ), React.createElement("div", {style: {marginTop:14,padding:"10px 14px",background:"rgba(201,168,76,0.10)",border:"1px solid rgba(201,168,76,0.35)",borderRadius:9,fontFamily:"sans-serif"}}, React.createElement("div", {style: {fontSize:11,fontWeight:700,color:Au,marginBottom:4}}, "⚠️ Simulação indicativa — não substitui a FINE"), React.createElement("div", {style: {fontSize:10,color:"#c9b07a",lineHeight:1.7}}, "Os valores apresentados são estimativas com base em spreads e comissões publicadas. As condições efectivas dependem da análise de risco de cada banco. Consulte sempre a Ficha de Informação Normalizada Europeia (FINE) antes de contratar.")), React.createElement("div", {style: {marginTop:6,padding:"8px 12px",background:"rgba(255,255,255,0.01)",border:"1px solid rgba(255,255,255,0.05)",borderRadius:8,fontFamily:"sans-serif"}}, React.createElement("div", {style: {fontSize:9,color:"#5a7a90",lineHeight:1.7}}, "🔄 Euribor via BCE · Cache 8h. 📊 Spread: LTV + finalidade + cert. energético. 🧮 TAEG: Directiva 2014/17/UE. 💰 MTIC = total pago. 🛡️ Seg. vida sobre capital médio. ⚡ Promos BCP/ActivoBank/Santander: PMT correcta. 🏠 IS HPP: €0 (art. 7º CIS). 📅 Prazo: BdP Aviso 4/2022."))))
   );
 }
 ;(function(){var c=document.getElementById('root');var r=ReactDOM.createRoot(c);r.render(React.createElement(App,null));})();}catch(e){var _d=document.getElementById("root");_d.style.cssText="color:#f87171;padding:40px;background:#0d1b2a;min-height:100vh";var _h=document.createElement("h2");_h.textContent="Erro ao iniciar";var _p=document.createElement("p");_p.textContent=e.message;_d.appendChild(_h);_d.appendChild(_p);}})();</script><script>if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js');</script></body></html>
