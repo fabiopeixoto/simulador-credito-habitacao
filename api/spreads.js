@@ -23,13 +23,13 @@ module.exports = async function handler(req, res) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(503).json({ error: "ANTHROPIC_API_KEY nao configurada no Vercel" });
 
-  const prompt = `Com base no teu conhecimento de treino, indica o spread mínimo típico de crédito habitação HPP (1.ª habitação) com produtos associados (domiciliação + seguros vida e multirriscos) para cada banco português: CA (Crédito Agrícola), CTT, Bankinter, Abanca, BCP (Millennium), ActivoBank, BPI, Montepio, Santander, NovoBanco, CGD (Caixa), UCI, BIC, BNI. Se não souberes o valor exacto de algum banco, usa uma estimativa razoável. Responde APENAS com JSON puro (sem texto, sem markdown, sem explicações, sem comentários): {"CA":{"sCom":0.65,"sSem":1.65},"CTT":{"sCom":0.70,"sSem":1.30},"BNKTR":{"sCom":0.70,"sSem":1.05},"ABANCA":{"sCom":0.70,"sSem":1.70},"BCP":{"sCom":0.70,"sSem":1.25},"ACTVO":{"sCom":0.75,"sSem":1.50},"BPI":{"sCom":0.75,"sSem":1.50},"MNTPO":{"sCom":0.70,"sSem":1.50},"SANTR":{"sCom":0.80,"sSem":1.90},"NB":{"sCom":0.80,"sSem":1.50},"CGD":{"sCom":0.85,"sSem":1.35},"UCI":{"sCom":0.85,"sSem":1.30},"BIC":{"sCom":1.00,"sSem":1.50},"BNI":{"sCom":1.00,"sSem":1.50}}`;
+  const prompt = `Com base no teu conhecimento de treino, indica para cada banco português (CA, CTT, BNKTR, ABANCA, BCP, ACTVO, BPI, MNTPO, SANTR, NB, CGD, UCI, BIC, BNI): spread mínimo HPP com produtos (sCom) e sem produtos (sSem), prémio mensal de seguro vida para titular de 30 anos e capital de 150.000€ (vRef, em EUR), e prémio anual de seguro multirriscos para imóvel de 200.000€ (mAno, em EUR). Se não souberes algum valor exacto usa uma estimativa razoável. Responde APENAS com JSON puro (sem texto, sem markdown, sem explicações, sem comentários): {"CA":{"sCom":0.65,"sSem":1.65,"vRef":22.68,"mAno":160},"CTT":{"sCom":0.70,"sSem":1.30,"vRef":15.71,"mAno":170},"BNKTR":{"sCom":0.70,"sSem":1.05,"vRef":33.28,"mAno":196},"ABANCA":{"sCom":0.70,"sSem":1.70,"vRef":16.76,"mAno":154},"BCP":{"sCom":0.70,"sSem":1.25,"vRef":19.92,"mAno":256},"ACTVO":{"sCom":0.75,"sSem":1.50,"vRef":19.84,"mAno":256},"BPI":{"sCom":0.75,"sSem":1.50,"vRef":13.12,"mAno":195},"MNTPO":{"sCom":0.70,"sSem":1.50,"vRef":8.29,"mAno":79},"SANTR":{"sCom":0.80,"sSem":1.90,"vRef":22.55,"mAno":246},"NB":{"sCom":0.80,"sSem":1.50,"vRef":17.55,"mAno":98},"CGD":{"sCom":0.85,"sSem":1.35,"vRef":29.82,"mAno":110},"UCI":{"sCom":0.85,"sSem":1.30,"vRef":19.00,"mAno":150},"BIC":{"sCom":1.00,"sSem":1.50,"vRef":19.00,"mAno":150},"BNI":{"sCom":1.00,"sSem":1.50,"vRef":19.00,"mAno":150}}`;
 
   try {
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 400, messages: [{ role: "user", content: prompt }] }),
+      body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 800, messages: [{ role: "user", content: prompt }] }),
       signal: AbortSignal.timeout(30000)
     });
     if (!response.ok) {
