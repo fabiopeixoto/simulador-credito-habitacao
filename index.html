@@ -17505,18 +17505,25 @@ function calcP(C,tanA,anos) {
 
 // ── TAEG — Taxa Anual de Encargos Efectiva Global ─────────────────────────
 // Fórmula EU Directiva 2014/17/UE (transposta DL 74-A/2017):
-// Capital = comIniciais_t0 + Σ(encargo_mensal / (1+r)^t, t=1..n)
+// Capital = comIniciais_t0 + Σ(encargo_t / (1+r)^t, t=1..n)
 // onde r = TAEG/12 (taxa mensal). Resolve por bissecção.
-function calcTAEG(capital, comIniciais, encargo_mensal, n) {
+// promoCfg: {mPromo, encargoPromo, encargoPosPromo} para créditos com período promocional.
+function calcTAEG(capital, comIniciais, encargo_mensal, n, promoCfg) {
   if(!capital||!encargo_mensal||!n) return 0;
-  // Se encargo_mensal * n <= capital + comIniciais → taxa negativa, devolver 0
   if(encargo_mensal * n <= capital) return 0;
   let lo=0.00001, hi=0.05; // taxa mensal entre 0 e 5%
   for(let i=0;i<200;i++){
     const mid=(lo+hi)/2;
-    const pv=encargo_mensal*(1-Math.pow(1+mid,-n))/mid;
-    if(pv + comIniciais > capital) lo=mid;
-    else hi=mid;
+    let pv;
+    if(promoCfg){
+      const {mPromo,encargoPromo,encargoPosPromo}=promoCfg;
+      const pvP1=encargoPromo*(1-Math.pow(1+mid,-mPromo))/mid;
+      const pvP2=encargoPosPromo*(1-Math.pow(1+mid,-(n-mPromo)))/(mid*Math.pow(1+mid,mPromo));
+      pv=pvP1+pvP2;
+    } else {
+      pv=encargo_mensal*(1-Math.pow(1+mid,-n))/mid;
+    }
+    if(pv + comIniciais > capital) lo=mid; else hi=mid;
   }
   return Math.round((lo+hi)/2*12*10000)/100; // TAEG % com 2 decimais
 }
@@ -17527,19 +17534,11 @@ function calcMTIC(comIniciais, encargo_mensal, n) {
   return Math.round(comIniciais + encargo_mensal * n);
 }
 
-// ── IS sobre juros — isenção HPP, decrescente para arrendamento ───────────
-// Para HPP: IS = €0 (art. 7º CIS)
-// Para arrendamento: IS mensal médio = média dos juros mensais × 4%
-// Usando total de juros / n para aproximação do IS médio mensal
+// ── IS sobre juros — crédito hipotecário a prazo fixo ────────────────────
+// IS sobre a utilização de crédito (CIS Verba 17.1): 0,6% do capital em
+// contrato (pago na escritura, incluído em isCredTAEG). Não há IS adicional
+// sobre as prestações mensais para crédito hipotecário de prazo determinado.
 function isJurosMedioMensal(capital, tanA, anos, finalidade) {
-  if(!finalidade||finalidade==="hpp"||finalidade==="hab2") return 0;
-  if(finalidade==="arrendamento"){
-    const r=tanA/100/12, n=anos*12;
-    if(r===0) return 0;
-    const P=calcP(capital,tanA,anos);
-    const totalJuros=Math.max(0, P*n - capital);
-    return (totalJuros/n)*0.04; // IS médio mensal (decrescente ao longo do prazo)
-  }
   return 0;
 }
 
@@ -17587,12 +17586,25 @@ function calcPromo(capital, tanPromo, tanNormal, mesesPromo, prazoTotal) {
   return {pmtP1:Math.round(pmtP1*100)/100, pmtP2:Math.round(pmtP2*100)/100, saldoAposProm:Math.round(saldo), mPromo:mesesPromo, mNorm:mRestantes};
 }
 
+// IMT — tabelas Portaria 352/2024 (valores 2025)
 function calcIMT(v,j,finalidade) {
-  if(finalidade!=="hpp") return v*0.06; // 2.ª hab.: taxa fixa 6%
-  if(j&&v<=316772)return 0;
-  if(v<=97064)return 0; if(v<=132774)return v*0.02-1941.28;
-  if(v<=181034)return v*0.05-5924.50; if(v<=301688)return v*0.07-9545.18;
-  if(v<=603289)return v*0.08-12562.06; return v*0.06;
+  if(finalidade!=="hpp"){
+    // Tabela II 2025: 2ª habitação e arrendamento (progressiva 1%→8%, flat 6% acima)
+    if(v<=99407)  return v*0.01;
+    if(v<=136025) return v*0.02-994.07;
+    if(v<=185474) return v*0.05-5074.82;
+    if(v<=309140) return v*0.07-8784.30;
+    if(v<=618313) return v*0.08-11875.70;
+    return v*0.06;
+  }
+  // Tabela I 2025: HPP
+  if(j&&v<=324058)return 0; // Jovem: isenção até €324.058
+  if(v<=99407)  return 0;
+  if(v<=136025) return v*0.02-1988.14;
+  if(v<=185474) return v*0.05-6069.39;
+  if(v<=309140) return v*0.07-9778.87;
+  if(v<=618313) return v*0.08-12869.52;
+  return v*0.06;
 }
 
 function simA(C,tanA,anos,extra) {
@@ -17940,7 +17952,8 @@ function App(){
         const regHTAEG=modoJovem&&finalidade==="hpp"?0:Math.round(capital*0.0008+150);
         const comInic=comD2+(comB2.avaliacao||0)+(comB2.minutas||0)+200+isCredTAEG+regHTAEG;
         const encargoTAEG=pC+seg.tot+isM+segProtMensal+contaM;
-        const taeg=calcTAEG(capital,comInic,encargoTAEG,prazoCalc*12);
+        const promoCfgTAEG=hasPromo?{mPromo:b.promoPeriodo,encargoPromo:pPromo+seg.tot+isM+segProtMensal+contaM,encargoPosPromo:pPosPromo+seg.tot+isM+segProtMensal+contaM}:undefined;
+        const taeg=calcTAEG(capital,comInic,encargoTAEG,prazoCalc*12,promoCfgTAEG);
         const mtic=calcMTIC(comInic,encargoTAEG,prazoCalc*12);
 
         rows.push({
