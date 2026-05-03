@@ -14,11 +14,50 @@ function isRateLimited(ip) {
   return entry.count > MAX_REQ;
 }
 
+// Server-side cache — shared across all users on the same warm instance.
+// Allows at most MAX_CALLS_PER_DAY real API calls per calendar day (UTC).
+// All other requests are served from cache. Best-effort: each Vercel instance
+// maintains its own cache; cross-instance sharing requires @vercel/kv.
+const MAX_CALLS_PER_DAY = 2;
+const MIN_INTERVAL_MS   = Math.floor(24 / MAX_CALLS_PER_DAY) * 60 * 60 * 1000; // 12h
+
+const CACHE = {
+  data:       null,
+  fetchedAt:  0,
+  dayKey:     "",
+  callsToday: 0,
+};
+
+function utcDayKey() {
+  return new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+}
+
+function resetDayIfNeeded() {
+  const today = utcDayKey();
+  if (CACHE.dayKey !== today) {
+    CACHE.dayKey     = today;
+    CACHE.callsToday = 0;
+  }
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Método não suportado" });
 
   const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || "unknown";
   if (isRateLimited(ip)) return res.status(429).json({ error: "Demasiados pedidos — tenta mais tarde" });
+
+  resetDayIfNeeded();
+
+  const cacheAgeMs      = Date.now() - CACHE.fetchedAt;
+  const dailyLimitHit   = CACHE.callsToday >= MAX_CALLS_PER_DAY;
+  const tooRecentToCall = cacheAgeMs < MIN_INTERVAL_MS;
+
+  if (CACHE.data && (dailyLimitHit || tooRecentToCall)) {
+    res.setHeader("X-Cache",       "HIT");
+    res.setHeader("X-Cache-Age",   Math.floor(cacheAgeMs / 60000) + "min");
+    res.setHeader("X-Calls-Today", CACHE.callsToday + "/" + MAX_CALLS_PER_DAY);
+    return res.status(200).json(CACHE.data);
+  }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(503).json({ error: "ANTHROPIC_API_KEY nao configurada no Vercel" });
@@ -34,12 +73,28 @@ module.exports = async function handler(req, res) {
     });
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
+      // On API error, return stale cache rather than failing the user
+      if (CACHE.data) {
+        res.setHeader("X-Cache", "STALE");
+        return res.status(200).json(CACHE.data);
+      }
       return res.status(response.status).json({ error: err.error?.message || "Erro API", status: response.status });
     }
     const data = await response.json().catch(() => null);
     if (!data) return res.status(502).json({ error: "Resposta inválida da API" });
+
+    CACHE.data      = data;
+    CACHE.fetchedAt = Date.now();
+    CACHE.callsToday++;
+
+    res.setHeader("X-Cache",       "MISS");
+    res.setHeader("X-Calls-Today", CACHE.callsToday + "/" + MAX_CALLS_PER_DAY);
     return res.status(200).json(data);
   } catch (err) {
+    if (CACHE.data) {
+      res.setHeader("X-Cache", "STALE");
+      return res.status(200).json(CACHE.data);
+    }
     if (err.name === "TimeoutError") return res.status(504).json({ error: "Timeout: API demorou mais de 30s" });
     return res.status(500).json({ error: err.message });
   }
