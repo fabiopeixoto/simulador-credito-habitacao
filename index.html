@@ -17339,7 +17339,7 @@ const FALLBACK_SPREADS = {
   NB:{sCom:0.80,sSem:1.50}, CGD:{sCom:0.85,sSem:1.35}, UCI:{sCom:0.85,sSem:1.30},
   BIC:{sCom:1.00,sSem:1.50}, BNI:{sCom:1.00,sSem:1.50},
 };
-const CACHE_KEY = "credito_cache_v5";
+const CACHE_KEY = "credito_cache_v6";
 const CACHE_H   = 8;
 const HIST_KEY  = 'simulador-hist-v1';
 const HIST_MAX  = 5;
@@ -17545,15 +17545,16 @@ function capMedioFator(anos) {
   // Para 20a ≈ 0.58, 25a ≈ 0.60, 30a ≈ 0.62, 35a ≈ 0.64, 40a ≈ 0.66
   return Math.min(0.70, 0.55 + anos * 0.003);
 }
-function sVida(s,age,cap,anos) {
-  const g=SEG[s]; if(!g)return 0;
+function sVida(g,age,cap,anos) {
+  if(!g)return 0;
   const capMed = cap * capMedioFator(anos||30);
   return g.vRef*(capMed/g.vCap)*(vidaR(age)/vidaR(g.vAge));
 }
-function sTot(s,a1,a2,is2,cap,val,anos) {
+function sTot(g,a1,a2,is2,cap,val,anos) {
+  if(!g)return {v1:0,v2:0,vTot:0,m:0,tot:0};
   const prazoA=anos||30;
-  const v1=sVida(s,a1,cap,prazoA), v2=is2?sVida(s,a2,cap,prazoA):0;
-  const m=(SEG[s]?SEG[s].mAno*(val/SEG[s].pRef)/12:0);
+  const v1=sVida(g,a1,cap,prazoA), v2=is2?sVida(g,a2,cap,prazoA):0;
+  const m=g.mAno*(val/g.pRef)/12;
   return {v1,v2,vTot:v1+v2,m,tot:v1+v2+m};
 }
 
@@ -17774,6 +17775,7 @@ function App(){
   // Euribor / spreads
   const[EUR,setEUR]=useState(FALLBACK_EUR);
   const[spreads,setSpreads]=useState(FALLBACK_SPREADS);
+  const[segs,setSegs]=useState(SEG);
   const[status,setStatus]=useState("idle");
   const[msg,setMsg]=useState("");
   const[ts,setTs]=useState(null);
@@ -17822,7 +17824,7 @@ function App(){
       try{
         const cached=JSON.parse(localStorage.getItem(CACHE_KEY)||"null");
         if(cached&&cached.ts&&(Date.now()-cached.ts)/3600000<CACHE_H){
-          setEUR(cached.eur); setSpreads(cached.spr||FALLBACK_SPREADS); setTs(new Date(cached.ts));
+          setEUR(cached.eur); setSpreads(cached.spr||FALLBACK_SPREADS); setSegs(cached.seg||SEG); setTs(new Date(cached.ts));
           setStatus("cached"); setMsg("Cache válida · há "+Math.round((Date.now()-cached.ts)/3600000)+"h"); return;
         }
       }catch(_){}
@@ -17842,12 +17844,21 @@ function App(){
           else newSpr[k]={...FALLBACK_SPREADS[k],updated:false};
         });
       }
-      setEUR(newEUR); setSpreads(newSpr); setTs(new Date()); setStatus("ok");
+      const newSeg={...SEG};
+      if(raw.sprOk&&raw.spreads){
+        Object.keys(SEG).forEach(k=>{
+          const rv=raw.spreads[k]||{};
+          const vr=parseFloat(rv.vRef),ma=parseFloat(rv.mAno);
+          if(vr>0&&vr<500) newSeg[k]={...newSeg[k],vRef:vr};
+          if(ma>0&&ma<5000) newSeg[k]={...newSeg[k],mAno:ma};
+        });
+      }
+      setEUR(newEUR); setSpreads(newSpr); setSegs(newSeg); setTs(new Date()); setStatus("ok");
       let statusMsg = raw.eurOk ? "Euribor BCE · "+raw.eurLabel : "Euribor: fallback (BCE: "+raw.eurErr.slice(0,40)+")";
       if(raw.sprOk) statusMsg+=" · "+nSpr+"/"+Object.keys(FALLBACK_SPREADS).length+" spreads actualizados ✓";
       else if(raw.sprErr) statusMsg+=" · Spreads: "+raw.sprErr.slice(0,50);
       setMsg(statusMsg);
-      try{localStorage.setItem(CACHE_KEY,JSON.stringify({eur:newEUR,spr:newSpr,ts:Date.now()}));}catch(_){}
+      try{localStorage.setItem(CACHE_KEY,JSON.stringify({eur:newEUR,spr:newSpr,seg:newSeg,ts:Date.now()}));}catch(_){}
     }catch(err){setStatus("error");setMsg("Erro: "+err.message.slice(0,80));}
   },[]);
   useEffect(()=>{loadRates(false);},[loadRates]);
@@ -17947,7 +17958,7 @@ function App(){
         const pPosPromo=promoData?promoData.pmtP2:null;
 
         // Seguros sobre capital médio em dívida (mais preciso)
-        const seg=sTot(b.s,idade1,idade2,is2,capital,valorImovel,prazoR);
+        const seg=sTot(segs[b.s],idade1,idade2,is2,capital,valorImovel,prazoR);
 
         // IS sobre juros médio mensal (decrescente para arrendamento; 0 para HPP)
         const isM=isJurosMedioMensal(capital,tanC,prazoCalc,finalidade);
@@ -18006,7 +18017,7 @@ function App(){
       if(sortBy==="seguros")     return aR.seg.tot-bR.seg.tot;
       return 0;
     });
-  },[BANKS,modoJovem,tipoTaxa,EUR,capital,prazoR,carencia,idade1,idade2,is2,valorImovel,rendT,outros,sortBy,segProtMensal]);
+  },[BANKS,segs,modoJovem,tipoTaxa,EUR,capital,prazoR,carencia,idade1,idade2,is2,valorImovel,rendT,outros,sortBy,segProtMensal]);
 
   const melhor=resultados[0];
 
