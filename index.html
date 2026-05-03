@@ -17332,14 +17332,23 @@ const FALLBACK_EUR = {
   "6m":  { valor: 2.322, data: "março 2026" },
   "12m": { valor: 2.565, data: "março 2026" },
 };
-const FALLBACK_SPREADS = {
-  CA:{sCom:0.65,sSem:1.65}, CTT:{sCom:0.70,sSem:1.30}, BNKTR:{sCom:0.70,sSem:1.05},
-  ABANCA:{sCom:0.70,sSem:1.70}, BCP:{sCom:0.70,sSem:1.25}, ACTVO:{sCom:0.75,sSem:1.50},
-  BPI:{sCom:0.75,sSem:1.50}, MNTPO:{sCom:0.70,sSem:1.50}, SANTR:{sCom:0.80,sSem:1.90},
-  NB:{sCom:0.80,sSem:1.50}, CGD:{sCom:0.85,sSem:1.35}, UCI:{sCom:0.85,sSem:1.30},
-  BIC:{sCom:1.00,sSem:1.50}, BNI:{sCom:1.00,sSem:1.50},
+const FALLBACK_BANK_DATA = {
+  CA:    {sCom:0.65,sSem:1.65,mCom:2.45,mSem:3.35,fCom:3.00,fSem:3.80,jsCom:0.80,jsSem:1.65,promoPeriodo:0,promoSpread:null,dossier:250,avaliacao:200,contaMes:3.50,capMin:25000, capMax:2000000,vRef:22.68,mAno:160},
+  CTT:   {sCom:0.70,sSem:1.30,mCom:2.70,mSem:3.30,fCom:3.20,fSem:3.80,jsCom:0.70,jsSem:1.30,promoPeriodo:0,promoSpread:null,dossier:0,  avaliacao:200,contaMes:0,   capMin:25000, capMax:1000000,vRef:15.71,mAno:170},
+  BNKTR: {sCom:0.70,sSem:1.05,mCom:2.25,mSem:2.60,fCom:3.00,fSem:3.35,jsCom:0.70,jsSem:1.05,promoPeriodo:0,promoSpread:null,dossier:350,avaliacao:250,contaMes:0,   capMin:100000,capMax:3000000,vRef:33.28,mAno:196},
+  ABANCA:{sCom:0.70,sSem:1.70,mCom:2.70,mSem:3.70,fCom:3.10,fSem:4.10,jsCom:0.70,jsSem:1.70,promoPeriodo:0,promoSpread:null,dossier:300,avaliacao:230,contaMes:3.00,capMin:30000, capMax:2000000,vRef:16.76,mAno:154},
+  BCP:   {sCom:0.70,sSem:1.25,mCom:3.05,mSem:3.60,fCom:4.05,fSem:4.60,jsCom:0.70,jsSem:1.25,promoPeriodo:24,promoSpread:0,  dossier:300,avaliacao:250,contaMes:5.00,capMin:20000, capMax:3000000,vRef:19.92,mAno:256},
+  ACTVO: {sCom:0.75,sSem:1.50,mCom:3.10,mSem:3.85,fCom:3.85,fSem:4.85,jsCom:0.75,jsSem:1.50,promoPeriodo:24,promoSpread:0,  dossier:300,avaliacao:250,contaMes:0,   capMin:20000, capMax:3000000,vRef:19.84,mAno:256},
+  BPI:   {sCom:0.75,sSem:1.50,mCom:2.45,mSem:3.20,fCom:3.25,fSem:3.80,jsCom:0.75,jsSem:1.50,promoPeriodo:0,promoSpread:null,dossier:290,avaliacao:230,contaMes:4.90,capMin:25000, capMax:3000000,vRef:13.12,mAno:195},
+  MNTPO: {sCom:0.70,sSem:1.50,mCom:3.05,mSem:3.70,fCom:3.30,fSem:3.90,jsCom:0.70,jsSem:1.50,promoPeriodo:0,promoSpread:null,dossier:250,avaliacao:200,contaMes:4.50,capMin:20000, capMax:2000000,vRef:8.29, mAno:79},
+  SANTR: {sCom:0.80,sSem:1.90,mCom:2.85,mSem:4.75,fCom:3.20,fSem:4.40,jsCom:0.80,jsSem:1.90,promoPeriodo:36,promoSpread:0.50,dossier:350,avaliacao:250,contaMes:4.50,capMin:30000, capMax:3000000,vRef:22.55,mAno:246},
+  NB:    {sCom:0.80,sSem:1.50,mCom:2.84,mSem:3.64,fCom:3.64,fSem:4.24,jsCom:0.80,jsSem:1.50,promoPeriodo:0,promoSpread:null,dossier:0,  avaliacao:200,contaMes:0,   capMin:50000, capMax:3000000,vRef:17.55,mAno:98},
+  CGD:   {sCom:0.85,sSem:1.35,mCom:2.50,mSem:4.60,fCom:3.30,fSem:5.40,jsCom:0.65,jsSem:1.35,promoPeriodo:0,promoSpread:null,dossier:250,avaliacao:200,contaMes:6.81,capMin:25000, capMax:3000000,vRef:29.82,mAno:110},
+  UCI:   {sCom:0.85,sSem:1.30,mCom:2.90,mSem:3.40,fCom:3.40,fSem:3.90,jsCom:0.85,jsSem:1.30,promoPeriodo:0,promoSpread:null,dossier:300,avaliacao:230,contaMes:0,   capMin:30000, capMax:2000000,vRef:19.00,mAno:150},
+  BIC:   {sCom:1.00,sSem:1.50,mCom:3.00,mSem:3.50,fCom:3.60,fSem:4.10,jsCom:1.00,jsSem:1.50,promoPeriodo:0,promoSpread:null,dossier:400,avaliacao:250,contaMes:3.00,capMin:25000, capMax:1000000,vRef:19.00,mAno:150},
+  BNI:   {sCom:1.00,sSem:1.50,mCom:3.10,mSem:3.60,fCom:3.70,fSem:4.20,jsCom:1.00,jsSem:1.50,promoPeriodo:0,promoSpread:null,dossier:400,avaliacao:250,contaMes:3.00,capMin:25000, capMax:1000000,vRef:19.00,mAno:150},
 };
-const CACHE_KEY = "credito_cache_v6";
+const CACHE_KEY = "credito_cache_v7";
 const CACHE_H   = 8;
 const HIST_KEY  = 'simulador-hist-v1';
 const HIST_MAX  = 5;
@@ -17774,8 +17783,7 @@ const _qs=(k,d,o)=>{const v=_Q.get(k);return o.includes(v)?v:d;};
 function App(){
   // Euribor / spreads
   const[EUR,setEUR]=useState(FALLBACK_EUR);
-  const[spreads,setSpreads]=useState(FALLBACK_SPREADS);
-  const[segs,setSegs]=useState(SEG);
+  const[bankData,setBankData]=useState(FALLBACK_BANK_DATA);
   const[status,setStatus]=useState("idle");
   const[msg,setMsg]=useState("");
   const[ts,setTs]=useState(null);
@@ -17824,7 +17832,7 @@ function App(){
       try{
         const cached=JSON.parse(localStorage.getItem(CACHE_KEY)||"null");
         if(cached&&cached.ts&&(Date.now()-cached.ts)/3600000<CACHE_H){
-          setEUR(cached.eur); setSpreads(cached.spr||FALLBACK_SPREADS); setSegs(cached.seg||SEG); setTs(new Date(cached.ts));
+          setEUR(cached.eur); setBankData(cached.bd||FALLBACK_BANK_DATA); setTs(new Date(cached.ts));
           setStatus("cached"); setMsg("Cache válida · há "+Math.round((Date.now()-cached.ts)/3600000)+"h"); return;
         }
       }catch(_){}
@@ -17834,31 +17842,29 @@ function App(){
       const raw=await fetchAllRates();
       const e=raw.eur||{};
       const newEUR={"3m":{valor:e["3m"]||FALLBACK_EUR["3m"].valor,data:raw.eurLabel},"6m":{valor:e["6m"]||FALLBACK_EUR["6m"].valor,data:raw.eurLabel},"12m":{valor:e["12m"]||FALLBACK_EUR["12m"].valor,data:raw.eurLabel}};
-      const newSpr={...FALLBACK_SPREADS};
+      const newBD={};
       let nSpr=0;
-      if(raw.sprOk&&raw.spreads){
-        Object.keys(FALLBACK_SPREADS).forEach(k=>{
-          const rv=raw.spreads[k]||{};
-          const sc=parseFloat(rv.sCom),ss=parseFloat(rv.sSem);
-          if(sc>0&&sc<5&&ss>0&&ss<5){newSpr[k]={sCom:sc,sSem:ss,updated:true};nSpr++;}
-          else newSpr[k]={...FALLBACK_SPREADS[k],updated:false};
-        });
-      }
-      const newSeg={...SEG};
-      if(raw.sprOk&&raw.spreads){
-        Object.keys(SEG).forEach(k=>{
-          const rv=raw.spreads[k]||{};
-          const vr=parseFloat(rv.vRef),ma=parseFloat(rv.mAno);
-          if(vr>0&&vr<500) newSeg[k]={...newSeg[k],vRef:vr};
-          if(ma>0&&ma<5000) newSeg[k]={...newSeg[k],mAno:ma};
-        });
-      }
-      setEUR(newEUR); setSpreads(newSpr); setSegs(newSeg); setTs(new Date()); setStatus("ok");
+      const fn=(v,lo,hi)=>{const n=Number(v);return Number.isFinite(n)&&n>=lo&&n<hi?n:null;};
+      Object.keys(FALLBACK_BANK_DATA).forEach(k=>{
+        const fb=FALLBACK_BANK_DATA[k];
+        const rv=(raw.sprOk&&raw.spreads&&raw.spreads[k])||{};
+        const upd={};
+        const tryN=(key,lo,hi)=>{const v=fn(rv[key],lo,hi);if(v!==null)upd[key]=v;};
+        const sc=fn(rv.sCom,0,5);if(sc!==null){upd.sCom=sc;nSpr++;}
+        tryN('sSem',0,5);tryN('mCom',0,10);tryN('mSem',0,10);tryN('fCom',0,10);tryN('fSem',0,10);
+        tryN('jsCom',0,5);tryN('jsSem',0,5);tryN('promoPeriodo',0,120);
+        if('promoSpread' in rv){if(rv.promoSpread===null)upd.promoSpread=null;else{const v=fn(rv.promoSpread,0,5);if(v!==null)upd.promoSpread=v;}}
+        tryN('dossier',0,2000);tryN('avaliacao',0,2000);tryN('contaMes',0,100);
+        tryN('capMin',0,5000000);tryN('capMax',0,50000000);
+        tryN('vRef',0,500);tryN('mAno',0,5000);
+        newBD[k]={...fb,...upd,updated:sc!==null};
+      });
+      setEUR(newEUR); setBankData(newBD); setTs(new Date()); setStatus("ok");
       let statusMsg = raw.eurOk ? "Euribor BCE · "+raw.eurLabel : "Euribor: fallback (BCE: "+raw.eurErr.slice(0,40)+")";
-      if(raw.sprOk) statusMsg+=" · "+nSpr+"/"+Object.keys(FALLBACK_SPREADS).length+" spreads actualizados ✓";
-      else if(raw.sprErr) statusMsg+=" · Spreads: "+raw.sprErr.slice(0,50);
+      if(raw.sprOk) statusMsg+=" · "+nSpr+"/"+Object.keys(FALLBACK_BANK_DATA).length+" actualizado ✓";
+      else if(raw.sprErr) statusMsg+=" · Dados: "+raw.sprErr.slice(0,50);
       setMsg(statusMsg);
-      try{localStorage.setItem(CACHE_KEY,JSON.stringify({eur:newEUR,spr:newSpr,seg:newSeg,ts:Date.now()}));}catch(_){}
+      try{localStorage.setItem(CACHE_KEY,JSON.stringify({eur:newEUR,bd:newBD,ts:Date.now()}));}catch(_){}
     }catch(err){setStatus("error");setMsg("Erro: "+err.message.slice(0,80));}
   },[]);
   useEffect(()=>{loadRates(false);},[loadRates]);
@@ -17909,23 +17915,33 @@ function App(){
   // ── Banks com spread dinâmico + LTV + finalidade ─────────────────────────
   const BANKS=useMemo(()=>{
     return BANKS_STATIC.map(b=>{
-      const basesCom=spreads[b.s]?.sCom??FALLBACK_SPREADS[b.s]?.sCom??1;
-      const basesSem=spreads[b.s]?.sSem??FALLBACK_SPREADS[b.s]?.sSem??1.5;
+      const bd=bankData[b.s]||{};
+      const basesCom=bd.sCom??1;
+      const basesSem=bd.sSem??1.5;
       const ltvAddon=getLTVAddon(b.s,ltv);
       const finalAddon=FINALIDADE_ADDON[finalidade]||0;
+      const jsc=bd.jsCom??b.jsCom;
       return{
         ...b,
-        sCom:Math.max(0,(modoJovem?b.jsCom:basesCom)-certB+ltvAddon+finalAddon),
-        sComBase:modoJovem?b.jsCom:basesCom,
+        sCom:Math.max(0,(modoJovem?jsc:basesCom)-certB+ltvAddon+finalAddon),
+        sComBase:modoJovem?jsc:basesCom,
         sSem:basesSem+ltvAddon+finalAddon,
         ltvAddon,finalAddon,
-        spreadUpdated:spreads[b.s]?.updated??false,
-        capitalOk:capital>=(CAPITAL_LIMITS[b.s]?.min||0)&&capital<=(CAPITAL_LIMITS[b.s]?.max||9999999),
-        capitalMin:CAPITAL_LIMITS[b.s]?.min||0,
-        capitalMax:CAPITAL_LIMITS[b.s]?.max||9999999,
+        spreadUpdated:bd.updated??false,
+        capitalOk:capital>=(bd.capMin??0)&&capital<=(bd.capMax??9999999),
+        capitalMin:bd.capMin??0,
+        capitalMax:bd.capMax??9999999,
+        mCom:bd.mCom??b.mCom,
+        mSem:bd.mSem??b.mSem,
+        fCom:bd.fCom??b.fCom,
+        fSem:bd.fSem??b.fSem,
+        jsCom:jsc,
+        jsSem:bd.jsSem??b.jsSem,
+        promoPeriodo:bd.promoPeriodo??b.promoPeriodo,
+        promoSpread:bd.promoSpread!==undefined?bd.promoSpread:b.promoSpread,
       };
     });
-  },[spreads,certB,ltv,finalidade,modoJovem,capital]);
+  },[bankData,certB,ltv,finalidade,modoJovem,capital]);
 
   // ── Resultados ────────────────────────────────────────────────────────────
   const resultados=useMemo(()=>{
@@ -17958,13 +17974,13 @@ function App(){
         const pPosPromo=promoData?promoData.pmtP2:null;
 
         // Seguros sobre capital médio em dívida (mais preciso)
-        const seg=sTot(segs[b.s],idade1,idade2,is2,capital,valorImovel,prazoR);
+        const seg=sTot({...SEG[b.s],...bankData[b.s]},idade1,idade2,is2,capital,valorImovel,prazoR);
 
         // IS sobre juros médio mensal (decrescente para arrendamento; 0 para HPP)
         const isM=isJurosMedioMensal(capital,tanC,prazoCalc,finalidade);
 
         // Comissão mensal de conta do banco
-        const contaM=(CONTA_MES[b.s]?.val||0);
+        const contaM=bankData[b.s]?.contaMes??CONTA_MES[b.s]?.val??0;
 
         const ptC=pC+seg.tot+isM+segProtMensal+contaM;
         const ptS=pS+seg.tot+isM+segProtMensal+contaM;
@@ -17976,7 +17992,8 @@ function App(){
 
         // TAEG e MTIC — encargo mensal TAEG inclui prestação + seguros + IS + conta
         // Custos iniciais TAEG = dossier + avaliação + minutas + DPA + IS crédito
-        const comB2=COM[b.s]||{dossier:300,avaliacao:230,minutas:0,jovemIsenta:false};
+        const comB2base=COM[b.s]||{dossier:300,avaliacao:230,minutas:0,jovemIsenta:false};
+        const comB2={...comB2base,dossier:bankData[b.s]?.dossier??comB2base.dossier,avaliacao:bankData[b.s]?.avaliacao??comB2base.avaliacao};
         const comD2=modoJovem&&comB2.jovemIsenta?0:comB2.dossier;
         const isCredTAEG=modoJovem&&finalidade==="hpp"?0:Math.round(capital*0.006);
         const regHTAEG=modoJovem&&finalidade==="hpp"?0:Math.round(capital*0.0008+150);
@@ -18017,7 +18034,7 @@ function App(){
       if(sortBy==="seguros")     return aR.seg.tot-bR.seg.tot;
       return 0;
     });
-  },[BANKS,segs,modoJovem,tipoTaxa,EUR,capital,prazoR,carencia,idade1,idade2,is2,valorImovel,rendT,outros,sortBy,segProtMensal]);
+  },[BANKS,bankData,modoJovem,tipoTaxa,EUR,capital,prazoR,carencia,idade1,idade2,is2,valorImovel,rendT,outros,sortBy,segProtMensal]);
 
   const melhor=resultados[0];
 
@@ -18122,7 +18139,7 @@ function App(){
   // Status
   const stIcon=status==="loading"?"⏳":status==="ok"?"✅":status==="cached"?"🔄":"⚠️";
   const stColor=status==="ok"?G:status==="cached"?Sky:status==="error"?R:Au;
-  const updatedCount=Object.values(spreads).filter(x=>x.updated).length;
+  const updatedCount=Object.values(bankData).filter(x=>x.updated).length;
 
   return(
     React.createElement("div", {style: {fontFamily:"'Georgia','Times New Roman',serif",background:N,minHeight:"100vh",color:"#e8dcc8"}}, React.createElement("div", {style: {background:"linear-gradient(135deg,#0d1b2a 0%,#1a3a5c 55%,#0d1b2a 100%)",borderBottom:"1px solid "+Au,padding:"10px 16px 0"}}, React.createElement("div", {style: {maxWidth:1150,margin:"0 auto"}}, React.createElement("div", {style: {display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8,paddingBottom:10}}, React.createElement("div", null, React.createElement("h1", {style: {margin:0,fontSize:21,fontWeight:700,color:"#fff",letterSpacing:-0.3,fontFamily:"'Georgia','Times New Roman',serif"}}, "Simulador Crédito Habitação"), React.createElement("div", {style: {fontSize:10,color:"#7a9ab0",fontFamily:"sans-serif",marginTop:2}}, "Portugal · 14 bancos · Euribor em tempo real"), React.createElement("div", {style:{display:"flex",gap:5,marginTop:7,flexWrap:"wrap"}}, ["3m","6m","12m"].map(k=>{const v=EUR[k]||FALLBACK_EUR[k];const[c,bg]=EUR_COLORS[k];return React.createElement("div",{key:k,style:{display:"flex",alignItems:"center",gap:5,padding:"3px 9px",background:bg,borderRight:"1px solid rgba(255,255,255,0.05)",borderRadius:4}},React.createElement("span",{style:{color:c,fontWeight:700,fontSize:9,fontFamily:"monospace",letterSpacing:1}},"EUR "+k.toUpperCase()),React.createElement("span",{style:{color:"#fff",fontSize:12,fontWeight:700,fontFamily:"monospace"}},v.valor.toFixed(3).replace(".",",")+"%"),v.data&&React.createElement("span",{style:{color:"#5a7a90",fontSize:9,fontFamily:"sans-serif",marginLeft:2}},v.data));}),React.createElement("div",{style:{display:"flex",alignItems:"center",gap:4,marginLeft:6,paddingLeft:8,borderLeft:"1px solid rgba(255,255,255,0.1)",fontSize:10,color:stColor,fontFamily:"sans-serif"}},stIcon+" "+msg,ts&&status!=="loading"&&React.createElement("span",{style:{color:"#5a7a90",marginLeft:3}},ts.toLocaleTimeString("pt-PT",{hour:"2-digit",minute:"2-digit"}))))), React.createElement("div", {style:{display:"flex",gap:5,alignItems:"center",flexWrap:"wrap"}},
@@ -18246,8 +18263,10 @@ function App(){
               })), React.createElement("div", {style: {background:"rgba(255,255,255,0.03)",border:"1px solid rgba(74,222,128,0.2)",borderRadius:11,padding:16}}, React.createElement("div", {style: {fontSize:11,letterSpacing:2,color:G,fontFamily:"monospace",marginBottom:10}}, "COMISSÕES POR BANCO"+(bancoSCustos?" — "+bancoNomeCustos+" em destaque":"")), React.createElement("div", {style: {overflowX:"auto"}}, React.createElement("table", {style: {width:"100%",borderCollapse:"separate",borderSpacing:"0 3px",fontFamily:"sans-serif",fontSize:10}}, React.createElement("thead", null, React.createElement("tr", null, ["Banco","Capital Mín.","Capital Máx.","Dossier","Avaliação","Jovem?"].map(h=>(
                       React.createElement("th", {key: h, style: {...thS,textAlign:"center"}}, h.toUpperCase())
                     )))), React.createElement("tbody", null, BANKS_STATIC.filter(b=>modoJovem?b.jOk:true).map((b,i)=>{
-                      const lim=CAPITAL_LIMITS[b.s]||{min:0,max:999999};
-                      const com2=COM[b.s]||{dossier:300,avaliacao:230,minutas:0};
+                      const limFb=CAPITAL_LIMITS[b.s]||{min:0,max:999999};
+                      const lim={min:bankData[b.s]?.capMin??limFb.min,max:bankData[b.s]?.capMax??limFb.max};
+                      const com2Fb=COM[b.s]||{dossier:300,avaliacao:230,minutas:0};
+                      const com2={...com2Fb,dossier:bankData[b.s]?.dossier??com2Fb.dossier,avaliacao:bankData[b.s]?.avaliacao??com2Fb.avaliacao};
                       const capOk=capital>=(lim.min||0)&&capital<=(lim.max||9999999);
                       const isSelected=b.s===bancoSCustos;
                       const isBest=melhor&&b.s===melhor.s;
