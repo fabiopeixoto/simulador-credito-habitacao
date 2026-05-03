@@ -17979,7 +17979,7 @@ function App(){
     });
     // Pre-computar representante de cada banco (primeira linha de cada banco)
     const bankRep = {};
-    rows.forEach(r => { if (!bankRep[r.s]) bankRep[r.s] = r; });
+    rows.forEach(r => { if (!bankRep[r.s] || r.ptC < bankRep[r.s].ptC) bankRep[r.s] = r; });
 
     return rows.sort((a,bk)=>{
       if (a.s === bk.s) {
