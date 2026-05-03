@@ -17747,11 +17747,12 @@ async function fetchSpreadsAnthropic() {
   }
   const data = await resp.json();
   const txt = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
-  // Extrair JSON da resposta
+  // Extrair JSON da resposta (remove markdown code fences se presentes)
   if(txt.length>20000) throw new Error("Resposta demasiado longa");
-  const m = txt.match(/\{[\s\S]*"CA"[\s\S]*\}/);
+  const clean = txt.replace(/```(?:json)?/g,"").trim();
+  const m = clean.match(/\{[\s\S]*\}/);
   if(!m) throw new Error("Formato inválido: "+txt.slice(0,60));
-  try{return JSON.parse(m[0]);}catch(_){throw new Error("JSON inválido: "+txt.slice(0,60));}
+  try{return JSON.parse(m[0]);}catch(_){throw new Error("JSON inválido: "+m[0].slice(0,80));}
 }
 
 async function fetchAllRates() {
