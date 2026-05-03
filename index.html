@@ -17673,7 +17673,7 @@ function SliderInput({min,max,step,value,onChange,color,prefix,suffix,formatFn,a
 
   return (
     React.createElement("div", null, React.createElement("input", {type: "range", min: min, max: max, step: step, value: value, onChange: e=>onChange(+e.target.value), "aria-label": ariaLabel||suffix||"valor", style: {width:"100%",accentColor:color||"#c9a84c"}}), React.createElement("div", {style: {display:"flex",alignItems:"center",gap:6,marginTop:4,minWidth:0}}, prefix&&React.createElement("span", {style: {fontSize:13,color:"#9bb4cc",fontFamily:"sans-serif",flexShrink:0}}, prefix), React.createElement("input", {type: "text", inputMode: "numeric", "aria-label": (ariaLabel||suffix||"valor")+" (editar)", value: editing ? inputVal : displayFn(value), onFocus: ()=>{ setEditing(true); setInputVal(String(value)); }, onChange: handleInputChange, onBlur: handleInputBlur, onKeyDown: handleKeyDown, style: {
-            flex:"1 1 0",minWidth:"40px",width:0,padding:"4px 8px",
+            flex:"0 1 90px",minWidth:"40px",padding:"4px 8px",
             background:"rgba(201,168,76,0.08)",
             border:"1px solid rgba(201,168,76,0.35)",
             borderRadius:6,color:"#fff",fontSize:14,fontWeight:700,
