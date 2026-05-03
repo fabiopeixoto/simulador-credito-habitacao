@@ -17351,8 +17351,6 @@ const FALLBACK_BANK_DATA = {
 const CACHE_KEY   = "credito_cache_v7";
 const CACHE_H     = 8;
 const HIST_KEY    = 'simulador-hist-v1';
-const SPR_LIM_KEY = "credito_spr_v1";
-const MAX_SPR_DAY = 2;
 const HIST_MAX  = 5;
 
 // ── Seguros ───────────────────────────────────────────────────────────────
@@ -17685,44 +17683,7 @@ function SliderInput({min,max,step,value,onChange,color,prefix,suffix,formatFn,a
   );
 }
 // ── Euribor via BCE (sem chave, sempre funciona) ──────────────────────────
-async function fetchEuriborBCE() {
-  const ECB_BASE = "https://data-api.ecb.europa.eu/service/data/FM/";
-  const SERIES = {
-    "3m":  "M.U2.EUR.RT.MM.EURIBOR3MD_.HSTA",
-    "6m":  "M.U2.EUR.RT.MM.EURIBOR6MD_.HSTA",
-    "12m": "M.U2.EUR.RT.MM.EURIBOR1YD_.HSTA"
-  };
-  const MESES = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
-  function parseCSV(csv) {
-    const lines = csv.trim().split("\n").filter(l=>l.trim());
-    if(lines.length < 2) throw new Error("CSV vazio");
-    const headers = lines[0].split(",").map(h=>h.trim().replace(/"/g,""));
-    const dateIdx = headers.indexOf("TIME_PERIOD");
-    const valIdx  = headers.indexOf("OBS_VALUE");
-    if(dateIdx<0||valIdx<0) throw new Error("Colunas não encontradas");
-    const cols = lines[lines.length-1].split(",").map(c=>c.trim().replace(/"/g,""));
-    const val  = parseFloat(cols[valIdx]);
-    const date = cols[dateIdx]||"";
-    if(isNaN(val)) throw new Error("Valor inválido");
-    return {val, date};
-  }
-  const eur = {};
-  let dataLabel = "";
-  const settled = await Promise.allSettled(Object.entries(SERIES).map(async([key, series])=>{
-    const r = await fetch(ECB_BASE+series+"?format=csvdata&lastNObservations=1");
-    if(!r.ok) throw new Error("BCE "+key+" HTTP "+r.status);
-    const {val, date} = parseCSV(await r.text());
-    eur[key] = val;
-    if(!dataLabel && date) {
-      const [y,m] = date.split("-");
-      dataLabel = (MESES[parseInt(m,10)-1]||m)+". "+y;
-    }
-  }));
-  if(settled.every(r=>r.status==="rejected")) throw new Error(settled[0].reason?.message||"BCE indisponível");
-  return {eur, dataLabel};
-}
-
-// ── Spreads via proxy Vercel → Anthropic API ─────────────────────────────
+// ── Taxas via proxy Vercel (Euribor BCE + spreads) ───────────────────────
 async function fetchSpreadsAnthropic() {
   const resp = await fetch("/api/spreads",{
     method:"POST",
@@ -17747,44 +17708,9 @@ async function fetchSpreadsAnthropic() {
       errPT="API "+resp.status+": "+String(errMsg).slice(0,70);
     throw new Error(errPT);
   }
-  const data = await resp.json();
-  const txt = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
-  // Extrair JSON da resposta (remove markdown code fences se presentes)
-  if(txt.length>20000) throw new Error("Resposta demasiado longa");
-  const clean = txt.replace(/```(?:json)?/g,"").trim();
-  const m = clean.match(/\{[\s\S]*\}/);
-  if(!m) throw new Error("Formato inválido: "+txt.slice(0,60));
-  try{return JSON.parse(m[0]);}catch(_){throw new Error("JSON inválido: "+m[0].slice(0,80));}
+  return resp.json(); // {spreads, eur, eurLabel}
 }
 
-function getSprCount() {
-  try {
-    const d=JSON.parse(localStorage.getItem(SPR_LIM_KEY)||"{}");
-    const today=new Date().toISOString().slice(0,10);
-    return d.date===today?(d.count||0):0;
-  } catch(_) { return 0; }
-}
-function incSprCount() {
-  try {
-    const today=new Date().toISOString().slice(0,10);
-    const d=JSON.parse(localStorage.getItem(SPR_LIM_KEY)||"{}");
-    const count=(d.date===today?(d.count||0):0)+1;
-    localStorage.setItem(SPR_LIM_KEY,JSON.stringify({date:today,count}));
-  } catch(_) {}
-}
-
-async function fetchAllRates(skipSpreads) {
-  const results = {eur:null, spreads:null, eurLabel:"", eurOk:false, eurErr:"", sprOk:false, sprErr:""};
-  await Promise.all([
-    fetchEuriborBCE().then(({eur,dataLabel})=>{
-      results.eur=eur; results.eurLabel=dataLabel; results.eurOk=true;
-    }).catch(e=>{ results.eurErr=e.message; }),
-    skipSpreads ? Promise.resolve() : fetchSpreadsAnthropic().then(spreads=>{
-      results.spreads=spreads; results.sprOk=true;
-    }).catch(e=>{ results.sprErr=e.message; })
-  ]);
-  return results;
-}
 
 const NAV=[{id:"comp",icon:"📋",label:"Comparação"},{id:"seg",icon:"🛡️",label:"Seguros"},{id:"cust",icon:"💰",label:"Custos"},{id:"viab",icon:"📊",label:"Viabilidade"},{id:"cen",icon:"⚡",label:"Cenários"},{id:"amort",icon:"🔄",label:"Amortização"}];
 
@@ -17851,41 +17777,34 @@ function App(){
         }
       }catch(_){}
     }
-    const sprCount=getSprCount();
-    const skipSpreads=sprCount>=MAX_SPR_DAY;
-    setStatus("loading"); setMsg(skipSpreads?"A actualizar Euribor...":"A actualizar Euribor e spreads...");
+    setStatus("loading"); setMsg("A actualizar Euribor e spreads...");
     try{
-      const raw=await fetchAllRates(skipSpreads);
+      const raw=await fetchSpreadsAnthropic();
       const e=raw.eur||{};
-      const newEUR={"3m":{valor:e["3m"]||FALLBACK_EUR["3m"].valor,data:raw.eurLabel},"6m":{valor:e["6m"]||FALLBACK_EUR["6m"].valor,data:raw.eurLabel},"12m":{valor:e["12m"]||FALLBACK_EUR["12m"].valor,data:raw.eurLabel}};
+      const label=raw.eurLabel||"";
+      const newEUR={"3m":{valor:e["3m"]||FALLBACK_EUR["3m"].valor,data:label},"6m":{valor:e["6m"]||FALLBACK_EUR["6m"].valor,data:label},"12m":{valor:e["12m"]||FALLBACK_EUR["12m"].valor,data:label}};
       setEUR(newEUR); setTs(new Date()); setStatus("ok");
-      let statusMsg=raw.eurOk?"Euribor BCE · "+raw.eurLabel:"Euribor: fallback (BCE: "+raw.eurErr.slice(0,40)+")";
-      if(!skipSpreads){
-        const newBD={};
-        let nSpr=0;
-        const fn=(v,lo,hi)=>{const n=Number(v);return Number.isFinite(n)&&n>=lo&&n<hi?n:null;};
-        Object.keys(FALLBACK_BANK_DATA).forEach(k=>{
-          const fb=FALLBACK_BANK_DATA[k];
-          const rv=(raw.sprOk&&raw.spreads&&raw.spreads[k])||{};
-          const upd={};
-          const tryN=(key,lo,hi)=>{const v=fn(rv[key],lo,hi);if(v!==null)upd[key]=v;};
-          const sc=fn(rv.sCom,0,5);if(sc!==null){upd.sCom=sc;nSpr++;}
-          tryN('sSem',0,5);tryN('mCom',0,10);tryN('mSem',0,10);tryN('fCom',0,10);tryN('fSem',0,10);
-          tryN('jsCom',0,5);tryN('jsSem',0,5);tryN('promoPeriodo',0,120);
-          if('promoSpread' in rv){if(rv.promoSpread===null)upd.promoSpread=null;else{const v=fn(rv.promoSpread,0,5);if(v!==null)upd.promoSpread=v;}}
-          tryN('dossier',0,2000);tryN('avaliacao',0,2000);tryN('contaMes',0,100);
-          tryN('capMin',0,5000000);tryN('capMax',0,50000000);
-          tryN('vRef',0,500);tryN('mAno',0,5000);
-          newBD[k]={...fb,...upd,updated:sc!==null};
-        });
-        setBankData(newBD);
-        if(raw.sprOk){incSprCount();statusMsg+=" · "+nSpr+"/"+Object.keys(FALLBACK_BANK_DATA).length+" actualizado ✓";}
-        else if(raw.sprErr) statusMsg+=" · Dados: "+raw.sprErr.slice(0,50);
-        try{localStorage.setItem(CACHE_KEY,JSON.stringify({eur:newEUR,bd:newBD,ts:Date.now()}));}catch(_){}
-      } else {
-        statusMsg+=" · Spreads: limite diário ("+sprCount+"/"+MAX_SPR_DAY+")";
-        try{const ex=JSON.parse(localStorage.getItem(CACHE_KEY)||"{}");localStorage.setItem(CACHE_KEY,JSON.stringify({eur:newEUR,bd:ex.bd||FALLBACK_BANK_DATA,ts:Date.now()}));}catch(_){}
-      }
+      let statusMsg=label?"Euribor BCE · "+label:"Euribor: fallback";
+      const newBD={};
+      let nSpr=0;
+      const fn=(v,lo,hi)=>{const n=Number(v);return Number.isFinite(n)&&n>=lo&&n<hi?n:null;};
+      Object.keys(FALLBACK_BANK_DATA).forEach(k=>{
+        const fb=FALLBACK_BANK_DATA[k];
+        const rv=(raw.spreads&&raw.spreads[k])||{};
+        const upd={};
+        const tryN=(key,lo,hi)=>{const v=fn(rv[key],lo,hi);if(v!==null)upd[key]=v;};
+        const sc=fn(rv.sCom,0,5);if(sc!==null){upd.sCom=sc;nSpr++;}
+        tryN('sSem',0,5);tryN('mCom',0,10);tryN('mSem',0,10);tryN('fCom',0,10);tryN('fSem',0,10);
+        tryN('jsCom',0,5);tryN('jsSem',0,5);tryN('promoPeriodo',0,120);
+        if('promoSpread' in rv){if(rv.promoSpread===null)upd.promoSpread=null;else{const v=fn(rv.promoSpread,0,5);if(v!==null)upd.promoSpread=v;}}
+        tryN('dossier',0,2000);tryN('avaliacao',0,2000);tryN('contaMes',0,100);
+        tryN('capMin',0,5000000);tryN('capMax',0,50000000);
+        tryN('vRef',0,500);tryN('mAno',0,5000);
+        newBD[k]={...fb,...upd,updated:sc!==null};
+      });
+      setBankData(newBD);
+      if(raw.spreads) statusMsg+=" · "+nSpr+"/"+Object.keys(FALLBACK_BANK_DATA).length+" actualizado ✓";
+      try{localStorage.setItem(CACHE_KEY,JSON.stringify({eur:newEUR,bd:newBD,ts:Date.now()}));}catch(_){}
       setMsg(statusMsg);
     }catch(err){setStatus("error");setMsg("Erro: "+err.message.slice(0,80));}
   },[]);
