@@ -17959,7 +17959,7 @@ function App(){
         else if(tipoTaxa==="mista"){tanC=b.mCom;tanS=b.mSem;}
         else{tanC=b.fCom;tanS=b.fSem;}
 
-        const prazoEfetivo=prazoR-Math.round(carencia/12);
+        const prazoEfetivo=prazoR-carencia/12;
         const prazoCalc=prazoEfetivo>0?prazoEfetivo:prazoR;
         const pC=calcP(capital,tanC,prazoCalc);
         const pS=calcP(capital,tanS,prazoCalc);
