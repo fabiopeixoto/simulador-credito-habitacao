@@ -17982,21 +17982,15 @@ function App(){
     rows.forEach(r => { if (!bankRep[r.s]) bankRep[r.s] = r; });
 
     return rows.sort((a,bk)=>{
-      if (a.s === bk.s) {
-        const refOrder = {"3m":0,"6m":1,"12m":2};
-        return (refOrder[a.ref]||0) - (refOrder[bk.ref]||0);
-      }
-      const aR = bankRep[a.s] || a;
-      const bR = bankRep[bk.s] || bk;
-      if(sortBy==="prestTotal")  return aR.ptC-bR.ptC;
-      if(sortBy==="comProd")     return aR.pC-bR.pC;
-      if(sortBy==="semProd")     return aR.pS-bR.pS;
-      if(sortBy==="taeg")        return aR.taeg-bR.taeg;
-      if(sortBy==="mtic")        return aR.mtic-bR.mtic;
-      if(sortBy==="poupanca")    return bR.diff-aR.diff;
-      if(sortBy==="spread")      return aR.sCom-bR.sCom;
-      if(sortBy==="esforco")     return aR.efC-bR.efC;
-      if(sortBy==="seguros")     return aR.seg.tot-bR.seg.tot;
+      if(sortBy==="prestTotal")  return a.ptC-bk.ptC || a.s.localeCompare(bk.s);
+      if(sortBy==="comProd")     return a.pC-bk.pC   || a.s.localeCompare(bk.s);
+      if(sortBy==="semProd")     return a.pS-bk.pS   || a.s.localeCompare(bk.s);
+      if(sortBy==="taeg")        return a.taeg-bk.taeg || a.s.localeCompare(bk.s);
+      if(sortBy==="mtic")        return a.mtic-bk.mtic || a.s.localeCompare(bk.s);
+      if(sortBy==="poupanca")    return bk.diff-a.diff || a.s.localeCompare(bk.s);
+      if(sortBy==="spread")      return a.sCom-bk.sCom || a.s.localeCompare(bk.s);
+      if(sortBy==="esforco")     return a.efC-bk.efC  || a.s.localeCompare(bk.s);
+      if(sortBy==="seguros")     return a.seg.tot-bk.seg.tot || a.s.localeCompare(bk.s);
       return 0;
     });
   },[BANKS,bankData,modoJovem,tipoTaxa,EUR,capital,prazoR,carencia,idade1,idade2,is2,valorImovel,rendT,outros,sortBy,segProtMensal]);
