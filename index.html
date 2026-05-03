@@ -17950,7 +17950,17 @@ function App(){
         const encargoTAEG=pC+seg.tot+isM+segProtMensal+contaM;
         const promoCfgTAEG=hasPromo?{mPromo:b.promoPeriodo,encargoPromo:pPromo+seg.tot+isM+segProtMensal+contaM,encargoPosPromo:pPosPromo+seg.tot+isM+segProtMensal+contaM}:undefined;
         const taeg=calcTAEG(capital,comInic,encargoTAEG,prazoCalc*12,promoCfgTAEG);
-        const mtic=calcMTIC(comInic,encargoTAEG,prazoCalc*12);
+        // MTIC: comInic + TODOS os pagamentos mensais (carência + amortização + promo)
+        let mtic;
+        if(hasPromo){
+          const ep1=promoCfgTAEG.encargoPromo,ep2=promoCfgTAEG.encargoPosPromo;
+          mtic=Math.round(comInic+ep1*b.promoPeriodo+ep2*(prazoCalc*12-b.promoPeriodo));
+        } else if(carencia>0){
+          const encCar=(pCarenciaC||0)+seg.tot+isM+segProtMensal+contaM;
+          mtic=Math.round(comInic+encCar*carencia+encargoTAEG*prazoCalc*12);
+        } else {
+          mtic=calcMTIC(comInic,encargoTAEG,prazoCalc*12);
+        }
 
         rows.push({
           ...b,ref,ev,tanC,tanS,pC,pS,seg,isM,contaM,ptC,ptS,
