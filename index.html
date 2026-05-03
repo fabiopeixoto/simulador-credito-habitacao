@@ -17548,20 +17548,16 @@ function vidaR(a){
   if(a<=40)return 0.0028; if(a<=45)return 0.0040; if(a<=50)return 0.0060;
   if(a<=55)return 0.0090; if(a<=60)return 0.0130; return 0.0180;
 }
-function capMedioFator(anos) {
-  // Factor empírico: capital médio ponderado / capital inicial
-  // Para 20a ≈ 0.58, 25a ≈ 0.60, 30a ≈ 0.62, 35a ≈ 0.64, 40a ≈ 0.66
-  return Math.min(0.70, 0.55 + anos * 0.003);
-}
-function sVida(g,age,cap,anos) {
+// Prémio mensal do seguro de vida — escalado pelo capital inicial e idade do titular.
+// Usa capital inicial (não médio) para corresponder ao prémio da 1.ª prestação,
+// que é o que os simuladores oficiais dos bancos apresentam na tabela.
+function sVida(g,age,cap) {
   if(!g)return 0;
-  const capMed = cap * capMedioFator(anos||30);
-  return g.vRef*(capMed/g.vCap)*(vidaR(age)/vidaR(g.vAge));
+  return g.vRef*(cap/g.vCap)*(vidaR(age)/vidaR(g.vAge));
 }
 function sTot(g,a1,a2,is2,cap,val,anos) {
   if(!g)return {v1:0,v2:0,vTot:0,m:0,tot:0};
-  const prazoA=anos||30;
-  const v1=sVida(g,a1,cap,prazoA), v2=is2?sVida(g,a2,cap,prazoA):0;
+  const v1=sVida(g,a1,cap), v2=is2?sVida(g,a2,cap):0;
   const m=g.mAno*(val/g.pRef)/12;
   return {v1,v2,vTot:v1+v2,m,tot:v1+v2+m};
 }
