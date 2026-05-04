@@ -1,69 +1,46 @@
 # Simulador Crédito Habitação Portugal
 
-Simulador gratuito de crédito habitação em Portugal.  
-Compare 14 bancos com TAEG, MTIC, DSTI e Euribor actualizada.
-
-## Deploy no Vercel — Passo a Passo
-
-### 1. Criar conta GitHub
-- Vai a [github.com](https://github.com) e regista-te (gratuito)
-
-### 2. Criar repositório no GitHub
-- Clica em **New repository**
-- Nome: `simulador-credito`
-- Visibilidade: Public (necessário para Vercel gratuito)
-- Clica **Create repository**
-
-### 3. Fazer upload dos ficheiros
-- Na página do repositório, clica **uploading an existing file**
-- Faz upload de todos os ficheiros desta pasta:
-  - `index.html`
-  - `vercel.json`
-  - `api/spreads.js`  ← cria a pasta `api` primeiro
-- Clica **Commit changes**
-
-### 4. Ligar ao Vercel
-- Vai a [vercel.com](https://vercel.com) e regista-te com a conta GitHub
-- Clica **Add New → Project**
-- Selecciona o repositório `simulador-credito`
-- Clica **Deploy**
-
-### 5. Configurar a chave API (opcional, para spreads)
-- No dashboard do Vercel, vai ao projecto → **Settings → Environment Variables**
-- Adiciona:
-  - **Name:** `ANTHROPIC_API_KEY`
-  - **Value:** `sk-ant-api03-...` (a tua chave de console.anthropic.com/settings/keys)
-- Clica **Save**
-- Vai a **Deployments → Redeploy**
-
-### 6. O site está online!
-- URL automático: `https://simulador-credito-xyz.vercel.app`
-- Domínio personalizado: Settings → Domains → Add Domain
-
----
+Simulador gratuito de crédito habitação em Portugal para comparação de propostas entre bancos.
 
 ## Funcionalidades
-- 14 bancos portugueses (abril 2026)
-- Taxa variável / mista / fixa
-- Crédito Jovem (DL 44/2024)
-- 2 titulares com tipo de contrato
-- TAEG · MTIC · DSTI · Stress test BdP
-- Euribor actualizada via BCE (gratuito)
-- Spreads actualizados via API Anthropic (opcional)
-- 6 separadores: Comparação · Seguros · Custos · Viabilidade · Cenários · Amortização
+- Comparação entre 14 bancos portugueses.
+- Cálculo de prestação, TAEG, MTIC, DSTI e cenários de taxa.
+- Euribor obtida via BCE.
+- Atualização de spreads via função serverless (`api/spreads.js`) com cache e rate limiting.
+- PWA com Service Worker para melhor experiência de carregamento.
 
----
-
-## Estrutura do projecto
-```
+## Estrutura do projeto
+```text
 simulador-credito/
-├── index.html          # App completa (React compilado)
-├── vercel.json         # Configuração Vercel
+├── index.html          # App (bundle React compilado)
+├── sw.js               # Service Worker (cache offline)
+├── manifest.json       # Manifesto PWA
+├── icon.svg            # Ícone da aplicação
+├── og-image.svg        # Imagem Open Graph
+├── vercel.json         # Configuração de deploy (Vercel)
 ├── api/
-│   └── spreads.js      # Proxy seguro para API Anthropic
+│   └── spreads.js      # Proxy/API para spreads e Euribor
+├── AUDITORIA.md        # Template de auditoria de resultados
 └── README.md
 ```
 
----
+## Deploy no Vercel (rápido)
+1. Criar repositório no GitHub e enviar os ficheiros do projeto.
+2. Importar o repositório em [vercel.com](https://vercel.com).
+3. (Opcional) Definir variável de ambiente:
+   - `ANTHROPIC_API_KEY`
+4. Fazer redeploy.
 
-*Simulação indicativa. Consulte sempre a FINE antes de contratar.*
+## Variáveis de ambiente
+- `ANTHROPIC_API_KEY` (opcional): ativa atualização dinâmica de spreads via API Anthropic.
+
+## Auditoria de resultados
+Para validar se os resultados do simulador estão alinhados com os simuladores oficiais dos bancos:
+1. Abre `AUDITORIA.md`.
+2. Preenche os **mesmos inputs** usados em cada banco (montante, prazo, taxa, indexante, produtos, etc.).
+3. Regista prestação, TAEG e MTIC do simulador interno e oficial.
+4. Compara os desvios com as tolerâncias definidas no template.
+
+## Notas
+- Simulação meramente indicativa.
+- Confirmar sempre condições finais na FINE (Ficha de Informação Normalizada Europeia).

@@ -99,10 +99,26 @@ async function callAnthropicAPI(apiKey, prompt) {
 
 const PROMPT = `Com base no teu conhecimento de treino, indica para cada banco português (CA, CTT, BNKTR, ABANCA, BCP, ACTVO, BPI, MNTPO, SANTR, NB, CGD, UCI, BIC, BNI) os seguintes dados actuais de crédito habitação HPP: sCom/sSem (spread variável com/sem produtos), mCom/mSem (TAN misto com/sem produtos, em %), fCom/fSem (TAN fixo com/sem produtos, em %), jsCom/jsSem (spread Jovem com/sem produtos), promoPeriodo (meses de período promocional, 0 se não existir), promoSpread (spread durante promoção em % ou null se não existir), dossier/avaliacao (comissões iniciais em EUR), contaMes (comissão mensal de conta em EUR, 0 se inexistente), capMin/capMax (capital mínimo e máximo em EUR), vRef (prémio mensal seguro vida para titular de 30 anos e 150.000€ capital, em EUR), mAno (prémio anual seguro multirriscos para imóvel de 200.000€, em EUR). Usa estimativas razoáveis quando não souberes o valor exacto. Responde APENAS com JSON puro e compacto (sem espaços, sem newlines, sem markdown, sem explicações): {"CA":{"sCom":0.65,"sSem":1.65,"mCom":2.45,"mSem":3.35,"fCom":3.00,"fSem":3.80,"jsCom":0.80,"jsSem":1.65,"promoPeriodo":0,"promoSpread":null,"dossier":250,"avaliacao":200,"contaMes":3.50,"capMin":25000,"capMax":2000000,"vRef":22.68,"mAno":160},"CTT":{"sCom":0.70,"sSem":1.30,"mCom":2.70,"mSem":3.30,"fCom":3.20,"fSem":3.80,"jsCom":0.70,"jsSem":1.30,"promoPeriodo":0,"promoSpread":null,"dossier":0,"avaliacao":200,"contaMes":0,"capMin":25000,"capMax":1000000,"vRef":15.71,"mAno":170},"BNKTR":{"sCom":0.70,"sSem":1.05,"mCom":2.25,"mSem":2.60,"fCom":3.00,"fSem":3.35,"jsCom":0.70,"jsSem":1.05,"promoPeriodo":24,"promoSpread":null,"dossier":350,"avaliacao":250,"contaMes":0,"capMin":100000,"capMax":3000000,"vRef":33.28,"mAno":196},"ABANCA":{"sCom":0.70,"sSem":1.70,"mCom":2.70,"mSem":3.70,"fCom":3.10,"fSem":4.10,"jsCom":0.70,"jsSem":1.70,"promoPeriodo":0,"promoSpread":null,"dossier":300,"avaliacao":230,"contaMes":3.00,"capMin":30000,"capMax":2000000,"vRef":16.76,"mAno":154},"BCP":{"sCom":0.70,"sSem":1.25,"mCom":3.05,"mSem":3.60,"fCom":4.05,"fSem":4.60,"jsCom":0.70,"jsSem":1.25,"promoPeriodo":24,"promoSpread":0,"dossier":300,"avaliacao":250,"contaMes":5.00,"capMin":20000,"capMax":3000000,"vRef":19.92,"mAno":256},"ACTVO":{"sCom":0.75,"sSem":1.50,"mCom":3.10,"mSem":3.85,"fCom":3.85,"fSem":4.85,"jsCom":0.75,"jsSem":1.50,"promoPeriodo":24,"promoSpread":0,"dossier":300,"avaliacao":250,"contaMes":0,"capMin":20000,"capMax":3000000,"vRef":19.84,"mAno":256},"BPI":{"sCom":0.75,"sSem":1.50,"mCom":2.45,"mSem":3.20,"fCom":3.25,"fSem":3.80,"jsCom":0.75,"jsSem":1.50,"promoPeriodo":0,"promoSpread":null,"dossier":290,"avaliacao":230,"contaMes":4.90,"capMin":25000,"capMax":3000000,"vRef":13.12,"mAno":195},"MNTPO":{"sCom":0.70,"sSem":1.50,"mCom":3.05,"mSem":3.70,"fCom":3.30,"fSem":3.90,"jsCom":0.70,"jsSem":1.50,"promoPeriodo":0,"promoSpread":null,"dossier":250,"avaliacao":200,"contaMes":4.50,"capMin":20000,"capMax":2000000,"vRef":8.29,"mAno":79},"SANTR":{"sCom":0.80,"sSem":1.90,"mCom":2.85,"mSem":4.75,"fCom":3.20,"fSem":4.40,"jsCom":0.80,"jsSem":1.90,"promoPeriodo":36,"promoSpread":0,"dossier":350,"avaliacao":250,"contaMes":4.50,"capMin":30000,"capMax":3000000,"vRef":22.55,"mAno":246},"NB":{"sCom":0.80,"sSem":1.50,"mCom":2.84,"mSem":3.64,"fCom":3.64,"fSem":4.24,"jsCom":0.80,"jsSem":1.50,"promoPeriodo":0,"promoSpread":null,"dossier":0,"avaliacao":200,"contaMes":0,"capMin":50000,"capMax":3000000,"vRef":17.55,"mAno":98},"CGD":{"sCom":0.85,"sSem":1.35,"mCom":2.50,"mSem":4.60,"fCom":3.30,"fSem":5.40,"jsCom":0.65,"jsSem":1.35,"promoPeriodo":24,"promoSpread":null,"dossier":250,"avaliacao":200,"contaMes":6.81,"capMin":25000,"capMax":3000000,"vRef":29.82,"mAno":110},"UCI":{"sCom":0.85,"sSem":1.30,"mCom":2.90,"mSem":3.40,"fCom":3.40,"fSem":3.90,"jsCom":0.85,"jsSem":1.30,"promoPeriodo":0,"promoSpread":null,"dossier":300,"avaliacao":230,"contaMes":0,"capMin":30000,"capMax":2000000,"vRef":19.00,"mAno":150},"BIC":{"sCom":1.00,"sSem":1.50,"mCom":3.00,"mSem":3.50,"fCom":3.60,"fSem":4.10,"jsCom":1.00,"jsSem":1.50,"promoPeriodo":0,"promoSpread":null,"dossier":400,"avaliacao":250,"contaMes":3.00,"capMin":25000,"capMax":1000000,"vRef":19.00,"mAno":150},"BNI":{"sCom":1.00,"sSem":1.50,"mCom":3.10,"mSem":3.60,"fCom":3.70,"fSem":4.20,"jsCom":1.00,"jsSem":1.50,"promoPeriodo":0,"promoSpread":null,"dossier":400,"avaliacao":250,"contaMes":3.00,"capMin":25000,"capMax":1000000,"vRef":19.00,"mAno":150}}`;
 
+
+function withMeta(payload, source) {
+  return {
+    ...payload,
+    meta: {
+      updatedAt: CACHE.fetchedAt ? new Date(CACHE.fetchedAt).toISOString() : null,
+      source,
+      callsToday: CACHE.callsToday,
+      maxCallsPerDay: MAX_CALLS_PER_DAY,
+      note: "Prestação/TAEG/MTIC podem diferir do oficial se o cenário não for exatamente igual (prazo, comissões, seguros, idade, finalidade, LTV e tipo de taxa)."
+    }
+  };
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Método não suportado" });
 
-  const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || "unknown";
+  const forwardedFor = req.headers["x-forwarded-for"] || "";
+  const realIp       = req.headers["x-real-ip"] || "";
+  const ip = forwardedFor.split(",")[0]?.trim() || realIp || req.socket?.remoteAddress || "unknown";
   if (isRateLimited(ip)) return res.status(429).json({ error: "Demasiados pedidos — tenta mais tarde" });
 
   resetDayIfNeeded();
@@ -115,7 +131,8 @@ module.exports = async function handler(req, res) {
     res.setHeader("X-Cache",       "HIT");
     res.setHeader("X-Cache-Age",   Math.floor(cacheAgeMs / 60000) + "min");
     res.setHeader("X-Calls-Today", CACHE.callsToday + "/" + MAX_CALLS_PER_DAY);
-    return res.status(200).json(CACHE.data);
+    res.setHeader("X-Data-Updated-At", CACHE.fetchedAt ? new Date(CACHE.fetchedAt).toISOString() : "");
+    return res.status(200).json(withMeta(CACHE.data, "cache"));
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -133,7 +150,7 @@ module.exports = async function handler(req, res) {
     if (spreadsResult.status === "rejected") {
       if (CACHE.data) {
         res.setHeader("X-Cache", "STALE");
-        return res.status(200).json(eur ? { ...CACHE.data, eur, eurLabel } : CACHE.data);
+        return res.status(200).json(withMeta(eur ? { ...CACHE.data, eur, eurLabel } : CACHE.data, "stale-cache"));
       }
       const err = spreadsResult.reason;
       return res.status(err.httpStatus || 500).json({ error: err.message });
@@ -145,11 +162,12 @@ module.exports = async function handler(req, res) {
 
     res.setHeader("X-Cache",       "MISS");
     res.setHeader("X-Calls-Today", CACHE.callsToday + "/" + MAX_CALLS_PER_DAY);
-    return res.status(200).json(CACHE.data);
+    res.setHeader("X-Data-Updated-At", CACHE.fetchedAt ? new Date(CACHE.fetchedAt).toISOString() : "");
+    return res.status(200).json(withMeta(CACHE.data, "fresh"));
   } catch (err) {
     if (CACHE.data) {
       res.setHeader("X-Cache", "STALE");
-      return res.status(200).json(CACHE.data);
+      return res.status(200).json(withMeta(CACHE.data, "stale-cache"));
     }
     if (err.name === "TimeoutError") return res.status(504).json({ error: "Timeout: API demorou mais de 30s" });
     return res.status(500).json({ error: err.message });
