@@ -102,7 +102,9 @@ const PROMPT = `Com base no teu conhecimento de treino, indica para cada banco p
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Método não suportado" });
 
-  const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || "unknown";
+  const forwardedFor = req.headers["x-forwarded-for"] || "";
+  const realIp       = req.headers["x-real-ip"] || "";
+  const ip = forwardedFor.split(",")[0]?.trim() || realIp || req.socket?.remoteAddress || "unknown";
   if (isRateLimited(ip)) return res.status(429).json({ error: "Demasiados pedidos — tenta mais tarde" });
 
   resetDayIfNeeded();
