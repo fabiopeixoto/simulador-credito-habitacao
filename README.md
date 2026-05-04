@@ -24,23 +24,10 @@ simulador-credito/
 └── README.md
 ```
 
-## Deploy no Vercel (rápido)
-1. Criar repositório no GitHub e enviar os ficheiros do projeto.
-2. Importar o repositório em [vercel.com](https://vercel.com).
-3. (Opcional) Definir variável de ambiente:
-   - `ANTHROPIC_API_KEY`
-4. Fazer redeploy.
+---
 
-## Variáveis de ambiente
-- `ANTHROPIC_API_KEY` (opcional): ativa atualização dinâmica de spreads via API Anthropic.
+*Simulação indicativa. Consulte sempre a FINE antes de contratar.*
+
 
 ## Auditoria de resultados
-Para validar se os resultados do simulador estão alinhados com os simuladores oficiais dos bancos:
-1. Abre `AUDITORIA.md`.
-2. Preenche os **mesmos inputs** usados em cada banco (montante, prazo, taxa, indexante, produtos, etc.).
-3. Regista prestação, TAEG e MTIC do simulador interno e oficial.
-4. Compara os desvios com as tolerâncias definidas no template.
-
-## Notas
-- Simulação meramente indicativa.
-- Confirmar sempre condições finais na FINE (Ficha de Informação Normalizada Europeia).
+- Usa o template `AUDITORIA.md` para comparar o simulador interno com simuladores oficiais de bancos e registar desvios de prestação, TAEG e MTIC.
