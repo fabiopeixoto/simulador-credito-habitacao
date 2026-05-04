@@ -67,3 +67,7 @@ simulador-credito/
 ---
 
 *Simulação indicativa. Consulte sempre a FINE antes de contratar.*
+
+
+## Auditoria de resultados
+- Usa o template `AUDITORIA.md` para comparar o simulador interno com simuladores oficiais de bancos e registar desvios de prestação, TAEG e MTIC.
