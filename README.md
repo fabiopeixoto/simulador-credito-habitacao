@@ -24,6 +24,7 @@ simulador-credito/
 └── README.md
 ```
 
+<<<<<<< codex/review-code-and-suggest-improvements-adz028
 ## Deploy no Vercel (rápido)
 1. Criar repositório no GitHub e enviar os ficheiros do projeto.
 2. Importar o repositório em [vercel.com](https://vercel.com).
@@ -44,3 +45,12 @@ Para validar se os resultados do simulador estão alinhados com os simuladores o
 ## Notas
 - Simulação meramente indicativa.
 - Confirmar sempre condições finais na FINE (Ficha de Informação Normalizada Europeia).
+=======
+---
+
+*Simulação indicativa. Consulte sempre a FINE antes de contratar.*
+
+
+## Auditoria de resultados
+- Usa o template `AUDITORIA.md` para comparar o simulador interno com simuladores oficiais de bancos e registar desvios de prestação, TAEG e MTIC.
+>>>>>>> main
