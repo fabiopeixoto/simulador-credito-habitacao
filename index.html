@@ -17507,25 +17507,16 @@ function calcP(C,tanA,anos) {
 // Fórmula EU Directiva 2014/17/UE (transposta DL 74-A/2017):
 // Capital = comIniciais_t0 + Σ(encargo_t / (1+r)^t, t=1..n)
 // onde r = TAEG/12 (taxa mensal). Resolve por bissecção.
-// promoCfg: {mPromo, encargoPromo, encargoPosPromo} para créditos com período promocional.
-function calcTAEG(capital, comIniciais, encargo_mensal, n, promoCfg) {
+function calcTAEG(capital, comIniciais, encargo_mensal, n) {
   if(!capital||!encargo_mensal||!n) return 0;
   if(encargo_mensal * n <= capital) return 0;
-  let lo=0.00001, hi=0.05; // taxa mensal entre 0 e 5%
+  let lo=0.00001, hi=0.05;
   for(let i=0;i<200;i++){
     const mid=(lo+hi)/2;
-    let pv;
-    if(promoCfg){
-      const {mPromo,encargoPromo,encargoPosPromo}=promoCfg;
-      const pvP1=encargoPromo*(1-Math.pow(1+mid,-mPromo))/mid;
-      const pvP2=encargoPosPromo*(1-Math.pow(1+mid,-(n-mPromo)))/(mid*Math.pow(1+mid,mPromo));
-      pv=pvP1+pvP2;
-    } else {
-      pv=encargo_mensal*(1-Math.pow(1+mid,-n))/mid;
-    }
+    const pv=encargo_mensal*(1-Math.pow(1+mid,-n))/mid;
     if(pv + comIniciais > capital) lo=mid; else hi=mid;
   }
-  return Math.round((lo+hi)/2*12*10000)/100; // TAEG % com 2 decimais
+  return Math.round((lo+hi)/2*12*10000)/100;
 }
 
 // ── MTIC — Montante Total Imputado ao Consumidor ─────────────────────────
@@ -17562,25 +17553,6 @@ function sTot(g,a1,a2,is2,cap,val,anos) {
   return {v1,v2,vTot:v1+v2,m,tot:v1+v2+m};
 }
 
-// ── Produto misto com período promocional correcto ────────────────────────
-// Calcula: PMT durante promo (P1), saldo residual após promo, PMT pós-promo (P2)
-function calcPromo(capital, tanPromo, tanNormal, mesesPromo, prazoTotal) {
-  if(!mesesPromo||tanPromo===null) return null;
-  const mTotal=prazoTotal*12;
-  // Prestação durante promo: calculada para o prazo total completo à taxa promo
-  const pmtP1=calcP(capital, tanPromo, prazoTotal);
-  // Saldo residual após mesesPromo prestações
-  const rP=tanPromo/100/12;
-  let saldo=capital;
-  for(let m=0;m<Math.min(mesesPromo,mTotal);m++){
-    const juros=saldo*rP;
-    saldo=Math.max(0, saldo-(pmtP1-juros));
-  }
-  const mRestantes=mTotal-mesesPromo;
-  // Prestação pós-promo sobre o saldo residual
-  const pmtP2=mRestantes>0?calcP(saldo, tanNormal, mRestantes/12):0;
-  return {pmtP1:Math.round(pmtP1*100)/100, pmtP2:Math.round(pmtP2*100)/100, saldoAposProm:Math.round(saldo), mPromo:mesesPromo, mNorm:mRestantes};
-}
 
 // IMT — tabelas Portaria 352/2024 (valores 2025)
 function calcIMT(v,j,finalidade) {
@@ -17803,8 +17775,7 @@ function App(){
         const tryN=(key,lo,hi)=>{const v=fn(rv[key],lo,hi);if(v!==null)upd[key]=v;};
         const sc=fn(rv.sCom,0,5);if(sc!==null){upd.sCom=sc;nSpr++;}
         tryN('sSem',0,5);tryN('mCom',0,10);tryN('mSem',0,10);tryN('fCom',0,10);tryN('fSem',0,10);
-        tryN('jsCom',0,5);tryN('jsSem',0,5);tryN('promoPeriodo',0,120);
-        if('promoSpread' in rv){if(rv.promoSpread===null)upd.promoSpread=null;else{const v=fn(rv.promoSpread,0,5);if(v!==null)upd.promoSpread=v;}}
+        tryN('jsCom',0,5);tryN('jsSem',0,5);
         tryN('dossier',0,2000);tryN('avaliacao',0,2000);tryN('contaMes',0,100);
         tryN('capMin',0,5000000);tryN('capMax',0,50000000);
         tryN('vRef',0,500);tryN('mAno',0,5000);
@@ -17886,8 +17857,6 @@ function App(){
         fSem:bd.fSem??b.fSem,
         jsCom:jsc,
         jsSem:bd.jsSem??b.jsSem,
-        promoPeriodo:bd.promoPeriodo??b.promoPeriodo,
-        promoSpread:bd.promoSpread!==undefined?bd.promoSpread:b.promoSpread,
       };
     });
   },[bankData,certB,ltv,finalidade,modoJovem,capital]);
@@ -17915,18 +17884,6 @@ function App(){
         const pCarenciaC=carencia>0?prestacaoCarencia(capital,tanC):null;
         const pCarenciaS=carencia>0?prestacaoCarencia(capital,tanS):null;
 
-        // Produto misto com promo — cálculo correcto de 2 fases
-        // hasVarPromo: variável com spread promocional (Euribor+promoSpread → Euribor+sCom)
-        // hasMistaPromo: taxa mista genuína (TAN fixo=mCom → Euribor+sCom)
-        const hasVarPromo=b.promoPeriodo>0&&b.promoSpread!==null&&tipoTaxa==="variável";
-        const hasMistaPromo=b.promoPeriodo>0&&tipoTaxa==="mista";
-        const hasPromo=hasVarPromo||hasMistaPromo;
-        const tanPromo=hasVarPromo?(ev+b.promoSpread):hasMistaPromo?b.mCom:null;
-        const tanNormalPromo=hasVarPromo?tanC:hasMistaPromo?(ev+b.sCom):null;
-        const promoData=hasPromo?calcPromo(capital,tanPromo,tanNormalPromo,b.promoPeriodo,prazoR):null;
-        const pPromo=promoData?promoData.pmtP1:null;
-        const pPosPromo=promoData?promoData.pmtP2:null;
-
         // Seguros sobre capital médio em dívida (mais preciso)
         const seg=sTot({...SEG[b.s],...bankData[b.s]},idade1,idade2,is2,capital,valorImovel,prazoR);
 
@@ -17953,14 +17910,9 @@ function App(){
         const regHTAEG=modoJovem&&finalidade==="hpp"?0:Math.round(capital*0.0008+150);
         const comInic=comD2+(comB2.avaliacao||0)+(comB2.minutas||0)+200+isCredTAEG+regHTAEG;
         const encargoTAEG=pC+seg.tot+isM+segProtMensal+contaM;
-        const promoCfgTAEG=hasPromo?{mPromo:b.promoPeriodo,encargoPromo:pPromo+seg.tot+isM+segProtMensal+contaM,encargoPosPromo:pPosPromo+seg.tot+isM+segProtMensal+contaM}:undefined;
-        const taeg=calcTAEG(capital,comInic,encargoTAEG,prazoCalc*12,promoCfgTAEG);
-        // MTIC: comInic + TODOS os pagamentos mensais (carência + amortização + promo)
+        const taeg=calcTAEG(capital,comInic,encargoTAEG,prazoCalc*12);
         let mtic;
-        if(hasPromo){
-          const ep1=promoCfgTAEG.encargoPromo,ep2=promoCfgTAEG.encargoPosPromo;
-          mtic=Math.round(comInic+ep1*b.promoPeriodo+ep2*(prazoCalc*12-b.promoPeriodo));
-        } else if(carencia>0){
+        if(carencia>0){
           const encCar=(pCarenciaC||0)+seg.tot+isM+segProtMensal+contaM;
           mtic=Math.round(comInic+encCar*carencia+encargoTAEG*prazoCalc*12);
         } else {
@@ -17969,7 +17921,7 @@ function App(){
 
         rows.push({
           ...b,ref,ev,tanC,tanS,pC,pS,seg,isM,contaM,ptC,ptS,
-          pCarenciaC,pCarenciaS,pPromo,pPosPromo,tanPromo,hasPromo,promoData,
+          pCarenciaC,pCarenciaS,
           taeg,mtic,comInic,encargoTAEG,
           diff:pS-pC,diffTot:(pS-pC)*prazoR*12,efC,efSt,pSt,
           isMulti:b.refs.length>1&&tipoTaxa==="variável",
@@ -18156,7 +18108,7 @@ function App(){
           )), nav==="comp"&&(
           React.createElement("div", null, tipoTaxa==="variável"&&(
               React.createElement("div", {style: {padding:"7px 12px",background:"rgba(2,132,199,0.06)",border:"1px solid rgba(2,132,199,0.2)",borderRadius:8,marginBottom:8,fontSize:11,color:"#4b5563",fontFamily:"sans-serif"}}, "💡 Bancos com múltiplos indexantes aparecem em várias linhas consecutivas, ordenadas por Euribor crescente:", React.createElement("br", null), "• BCP e ActivoBank → 3 linhas (Eur.3m · Eur.6m · Eur.12m)", React.createElement("br", null), "• Crédito Agrícola → 2 linhas (Eur.6m · Eur.12m)", React.createElement("br", null), "As linhas do mesmo banco ficam sempre juntas. ✓ = spread confirmado pela API. Spread inclui ajuste LTV ("+pctR+"%) e finalidade.", carencia>0&&" · ⚡ Carência = só juros")
-            ), React.createElement("div", {style: {overflowX:"auto"}}, React.createElement("table", {style: {width:"100%",borderCollapse:"separate",borderSpacing:"0 3px",fontFamily:"sans-serif",fontSize:12}}, React.createElement("thead", null, React.createElement("tr", null, React.createElement("th", {rowSpan: 2, style: thS}, "#"), React.createElement("th", {rowSpan: 2, style: thS}, "BANCO"), React.createElement("th", {rowSpan: 2, style: {...thS,color:"#4b5563"}}, "EUR."), React.createElement("th", {colSpan: 2, style: {...thS,textAlign:"center"}}, "SPREAD"), React.createElement("th", {colSpan: 2, style: {...thS,textAlign:"center"}}, "TAN"), carencia>0&&React.createElement("th", {rowSpan: 2, style: {...thS,color:Sky,textAlign:"center"}}, "⚡CARÊNCIA", React.createElement("br", null), "/mês"), resultados.some(b=>b.hasPromo)&&React.createElement("th", {rowSpan: 2, style: {...thS,color:G,textAlign:"center"}}, "PROMO", React.createElement("br", null), "/mês"), React.createElement("th", {colSpan: 2, style: {...thS,textAlign:"center"}}, "PRESTAÇÃO CAPITAL"), React.createElement("th", {rowSpan: 2, style: {...thS,color:"#14532d"}}, "SEGUROS+IS"), React.createElement("th", {rowSpan: 2, style: {...thS,color:"#4b5563"}}, "CONTA"), React.createElement("th", {rowSpan: 2, style: {...thS,color:Au,fontWeight:700}}, "★ TOTAL"), React.createElement("th", {rowSpan: 2, style: {...thS,color:G}}, "POUPAR"), React.createElement("th", {rowSpan: 2, style: {...thS,color:Au}}, "DSTI"), React.createElement("th", {rowSpan: 2, style: {...thS,color:"#f97316"}}, "STRESS"), React.createElement("th", {rowSpan: 2, style: {...thS,color:Sky,fontWeight:700}}, "TAEG"), React.createElement("th", {rowSpan: 2, style: {...thS,color:"#4b5563"}}, "MTIC"), React.createElement("th", {rowSpan: 2, style: {...thS,color:"#4b5563"}}, "CAPITAL", React.createElement("br", null), "OK?")), React.createElement("tr", null, React.createElement("th", {style: {...thS,color:G,textAlign:"center"}}, "c/prod."), React.createElement("th", {style: {...thS,color:R,textAlign:"center"}}, "s/prod."), React.createElement("th", {style: {...thS,color:G,textAlign:"center"}}, "c/prod."), React.createElement("th", {style: {...thS,color:R,textAlign:"center"}}, "s/prod."), React.createElement("th", {style: {...thS,color:G,textAlign:"center"}}, "c/prod."), React.createElement("th", {style: {...thS,color:R,textAlign:"center"}}, "s/prod."))), React.createElement("tbody", null, resultados.map((b,i)=>{
+            ), React.createElement("div", {style: {overflowX:"auto"}}, React.createElement("table", {style: {width:"100%",borderCollapse:"separate",borderSpacing:"0 3px",fontFamily:"sans-serif",fontSize:12}}, React.createElement("thead", null, React.createElement("tr", null, React.createElement("th", {rowSpan: 2, style: thS}, "#"), React.createElement("th", {rowSpan: 2, style: thS}, "BANCO"), React.createElement("th", {rowSpan: 2, style: {...thS,color:"#4b5563"}}, "EUR."), React.createElement("th", {colSpan: 2, style: {...thS,textAlign:"center"}}, "SPREAD"), React.createElement("th", {colSpan: 2, style: {...thS,textAlign:"center"}}, "TAN"), carencia>0&&React.createElement("th", {rowSpan: 2, style: {...thS,color:Sky,textAlign:"center"}}, "⚡CARÊNCIA", React.createElement("br", null), "/mês"), React.createElement("th", {colSpan: 2, style: {...thS,textAlign:"center"}}, "PRESTAÇÃO CAPITAL"), React.createElement("th", {rowSpan: 2, style: {...thS,color:"#14532d"}}, "SEGUROS+IS"), React.createElement("th", {rowSpan: 2, style: {...thS,color:"#4b5563"}}, "CONTA"), React.createElement("th", {rowSpan: 2, style: {...thS,color:Au,fontWeight:700}}, "★ TOTAL"), React.createElement("th", {rowSpan: 2, style: {...thS,color:G}}, "POUPAR"), React.createElement("th", {rowSpan: 2, style: {...thS,color:Au}}, "DSTI"), React.createElement("th", {rowSpan: 2, style: {...thS,color:"#f97316"}}, "STRESS"), React.createElement("th", {rowSpan: 2, style: {...thS,color:Sky,fontWeight:700}}, "TAEG"), React.createElement("th", {rowSpan: 2, style: {...thS,color:"#4b5563"}}, "MTIC"), React.createElement("th", {rowSpan: 2, style: {...thS,color:"#4b5563"}}, "CAPITAL", React.createElement("br", null), "OK?")), React.createElement("tr", null, React.createElement("th", {style: {...thS,color:G,textAlign:"center"}}, "c/prod."), React.createElement("th", {style: {...thS,color:R,textAlign:"center"}}, "s/prod."), React.createElement("th", {style: {...thS,color:G,textAlign:"center"}}, "c/prod."), React.createElement("th", {style: {...thS,color:R,textAlign:"center"}}, "s/prod."), React.createElement("th", {style: {...thS,color:G,textAlign:"center"}}, "c/prod."), React.createElement("th", {style: {...thS,color:R,textAlign:"center"}}, "s/prod."))), React.createElement("tbody", null, resultados.map((b,i)=>{
                     const prevBank = i>0 ? resultados[i-1].s : null;
                     const isContinuation = prevBank === b.s;
                     const distinctBanks = new Set(resultados.slice(0,i).map(r=>r.s)).size;
@@ -18172,11 +18124,7 @@ function App(){
                     }
                     const top=i===0;
                     return(
-                      React.createElement("tr", {key: b.rowKey, style: {background:bg}}, React.createElement("td", {style: {...tdB,borderRadius:"6px 0 0 6px",background:bg,borderLeft:top?"3px solid "+Au:undefined}}, React.createElement("span", {style: {width:22,height:22,borderRadius:"50%",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,background:i===0?Au:i===1?"rgba(192,192,192,0.85)":i===2?"rgba(160,108,50,0.85)":"rgba(0,0,0,0.06)",color:i<=2?N:"#111827"}}, i+1)), React.createElement("td", {style: {...tdB,background:bg,whiteSpace:"nowrap"}}, React.createElement("div", {style: {display:"flex",alignItems:"center",gap:5}}, React.createElement("div", {style:{width:28,height:24,borderRadius:4,background:"rgba(0,0,0,0.05)",border:"1px solid "+b.color+"55",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,overflow:"hidden"}}, React.createElement("img", {src:"https://www.google.com/s2/favicons?domain="+(BANK_DOMAINS[b.s]||"bank.pt")+"&sz=32",width:20,height:20,style:{objectFit:"contain",display:"block"},alt:b.s,onError:function(e){const d=e.currentTarget.parentElement;d.innerHTML='<span style="font-size:8px;font-weight:700;font-family:monospace;color:'+b.color+'">'+b.s+'</span>';e.currentTarget.onError=null;}})), React.createElement("div", null, React.createElement("span", {style: {fontWeight:700,color:top?"#2563eb":"#111827",fontSize:13}}, b.name), b.spreadUpdated&&React.createElement("span", {style: {fontSize:8,color:G,marginLeft:3}}, "✓"), modoJovem&&React.createElement("span", {style: {fontSize:10,background:"rgba(74,222,128,0.12)",border:"1px solid rgba(74,222,128,0.25)",color:G,borderRadius:3,padding:"1px 4px",marginLeft:3}}, "JOVEM"), !b.capitalOk&&React.createElement("div", {style: {fontSize:8,color:R}}, capital<b.capitalMin?"⚠️ mín. "+fE(b.capitalMin):"⚠️ máx. "+fE(b.capitalMax)))), b.ltvAddon>0&&React.createElement("div", {style: {fontSize:8,color:Au,fontFamily:"monospace"}}, "LTV +"+b.ltvAddon.toFixed(2)+"pp")), React.createElement("td", {style: {...tdB,background:bg,textAlign:"center"}}, React.createElement(RefBadge, {refKey: b.ref}), React.createElement("div", {style: {fontSize:8,color:"#4b5563",marginTop:1}}, b.ev.toFixed(3).replace(".",",")+"%")), React.createElement("td", {style: {...tdG(i),fontWeight:700}}, fP(b.sCom)), React.createElement("td", {style: tdR(i)}, fP(b.sSem)), React.createElement("td", {style: {...tdG(i),fontWeight:700}}, fP(b.tanC)), React.createElement("td", {style: tdR(i)}, fP(b.tanS)), carencia>0&&React.createElement("td", {style: {...tdB,background:bg,textAlign:"center",color:Sky,fontWeight:600}}, b.pCarenciaC?fE(b.pCarenciaC)+"/mês":"—"), resultados.some(bk=>bk.hasPromo)&&(
-                          React.createElement("td", {style: {...tdB,background:bg,textAlign:"center",color:G,fontWeight:600}}, b.hasPromo&&b.promoData?(
-                              React.createElement("div", null, React.createElement("div", {style: {fontSize:12}}, fE(b.promoData.pmtP1||0)+"/mês"), React.createElement("div", {style: {fontSize:8,color:"#4b5563"}}, (b.promoData.mPromo||0)+"m promo"), React.createElement("div", {style: {fontSize:11,color:Au}}, fE(b.promoData.pmtP2||0)+" depois"))
-                            ):"—")
-                        ), React.createElement("td", {style: {...tdG(i),fontSize:13,fontWeight:700,color:top?Au:G}}, fE(b.pC)), React.createElement("td", {style: {...tdR(i),fontSize:13,fontWeight:700,color:R}}, fE(b.pS)), React.createElement("td", {style: {...tdB,background:bg,textAlign:"center",color:"#14532d"}}, React.createElement("div", {style: {fontWeight:600,fontSize:12}}, fE(b.seg.tot+b.isM+(segProtecao?segProtMensal:0))+"/mês"), is2&&React.createElement("div", {style: {fontSize:8,color:"#4b5563"}}, "V1:"+fE(b.seg.v1)+" V2:"+fE(b.seg.v2)), b.isM>0&&React.createElement("div", {style: {fontSize:8,color:"#f97316"}}, "IS juros: "+fE(b.isM)+"/mês")), React.createElement("td", {style: {...tdB,background:bg,textAlign:"center",color:"#4b5563"}}, React.createElement("div", {style: {fontSize:12}}, fE(b.contaM||0)+"/mês"), b.contaM>0&&React.createElement("div", {style: {fontSize:8,color:"#4b5563"}}, CONTA_MES[b.s]?.nota?.split(" ")[0]||"")), React.createElement("td", {style: {...tdB,background:top?"rgba(37,99,235,0.1)":bg,textAlign:"center",borderLeft:"2px solid "+(top?Au:"rgba(37,99,235,0.15)"),borderRight:"2px solid "+(top?Au:"rgba(37,99,235,0.15)")}}, React.createElement("div", {style: {fontSize:top?18:14,fontWeight:700,color:top?Au:"#111827"}}, fE(b.ptC)+"/mês"), !b.capitalOk&&React.createElement("div", {style: {fontSize:8,color:R}}, capital<b.capitalMin?"Capital abaixo do mín.":"Capital acima do máx.")), React.createElement("td", {style: {...tdB,background:bg,textAlign:"center"}}, React.createElement("div", {style: {fontWeight:700,color:G,fontSize:13}}, "+" + fE(b.diff)+"/mês"), React.createElement("div", {style: {fontSize:10,color:"#4b5563"}}, fE(b.diffTot)+" total")), React.createElement("td", {style: {...tdB,background:bg,textAlign:"center"}}, rendT>0?React.createElement("div", null, React.createElement("div", {style: {fontWeight:700,color:ecC(b.efC),fontSize:13}}, b.efC.toFixed(1)+"%"), React.createElement("div", {style: {fontSize:10,color:ecC(b.efC)}}, ecL(b.efC))):React.createElement("span", {style: {color:"#4b5563"}}, "—")), React.createElement("td", {style: {...tdB,background:bg,textAlign:"center"}}, rendT>0?React.createElement("div", null, React.createElement("div", {style: {fontWeight:700,color:ecC(b.efSt),fontSize:13}}, b.efSt.toFixed(1)+"%"), React.createElement("div", {style: {fontSize:10,color:"#f97316"}}, fE(b.pSt)+"/mês")):React.createElement("span", {style: {color:"#4b5563"}}, "—")), React.createElement("td", {style: {...tdB,background:top?"rgba(2,132,199,0.08)":bg,textAlign:"center"}}, React.createElement("div", {style: {fontWeight:700,color:top?Sky:ecC((b.taeg||0)*8),fontSize:top?15:12}}, (b.taeg||0).toFixed(2).replace(".",",")+"%")), React.createElement("td", {style: {...tdB,background:bg,textAlign:"center",color:"#4b5563"}}, React.createElement("div", {style: {fontSize:12}}, fE(b.mtic||0))), React.createElement("td", {style: {...tdB,borderRadius:"0 6px 6px 0",background:bg,textAlign:"center"}}, b.capitalOk?React.createElement("span", {style: {color:G,fontSize:13}}, "✅"):React.createElement("span", {style: {color:R,fontSize:11}}, capital<b.capitalMin?"⚠️ mín."+fE(b.capitalMin):"⚠️ máx."+fE(b.capitalMax))))
+                      React.createElement("tr", {key: b.rowKey, style: {background:bg}}, React.createElement("td", {style: {...tdB,borderRadius:"6px 0 0 6px",background:bg,borderLeft:top?"3px solid "+Au:undefined}}, React.createElement("span", {style: {width:22,height:22,borderRadius:"50%",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,background:i===0?Au:i===1?"rgba(192,192,192,0.85)":i===2?"rgba(160,108,50,0.85)":"rgba(0,0,0,0.06)",color:i<=2?N:"#111827"}}, i+1)), React.createElement("td", {style: {...tdB,background:bg,whiteSpace:"nowrap"}}, React.createElement("div", {style: {display:"flex",alignItems:"center",gap:5}}, React.createElement("div", {style:{width:28,height:24,borderRadius:4,background:"rgba(0,0,0,0.05)",border:"1px solid "+b.color+"55",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,overflow:"hidden"}}, React.createElement("img", {src:"https://www.google.com/s2/favicons?domain="+(BANK_DOMAINS[b.s]||"bank.pt")+"&sz=32",width:20,height:20,style:{objectFit:"contain",display:"block"},alt:b.s,onError:function(e){const d=e.currentTarget.parentElement;d.innerHTML='<span style="font-size:8px;font-weight:700;font-family:monospace;color:'+b.color+'">'+b.s+'</span>';e.currentTarget.onError=null;}})), React.createElement("div", null, React.createElement("span", {style: {fontWeight:700,color:top?"#2563eb":"#111827",fontSize:13}}, b.name), b.spreadUpdated&&React.createElement("span", {style: {fontSize:8,color:G,marginLeft:3}}, "✓"), modoJovem&&React.createElement("span", {style: {fontSize:10,background:"rgba(74,222,128,0.12)",border:"1px solid rgba(74,222,128,0.25)",color:G,borderRadius:3,padding:"1px 4px",marginLeft:3}}, "JOVEM"), !b.capitalOk&&React.createElement("div", {style: {fontSize:8,color:R}}, capital<b.capitalMin?"⚠️ mín. "+fE(b.capitalMin):"⚠️ máx. "+fE(b.capitalMax)))), b.ltvAddon>0&&React.createElement("div", {style: {fontSize:8,color:Au,fontFamily:"monospace"}}, "LTV +"+b.ltvAddon.toFixed(2)+"pp")), React.createElement("td", {style: {...tdB,background:bg,textAlign:"center"}}, React.createElement(RefBadge, {refKey: b.ref}), React.createElement("div", {style: {fontSize:8,color:"#4b5563",marginTop:1}}, b.ev.toFixed(3).replace(".",",")+"%")), React.createElement("td", {style: {...tdG(i),fontWeight:700}}, fP(b.sCom)), React.createElement("td", {style: tdR(i)}, fP(b.sSem)), React.createElement("td", {style: {...tdG(i),fontWeight:700}}, fP(b.tanC)), React.createElement("td", {style: tdR(i)}, fP(b.tanS)), carencia>0&&React.createElement("td", {style: {...tdB,background:bg,textAlign:"center",color:Sky,fontWeight:600}}, b.pCarenciaC?fE(b.pCarenciaC)+"/mês":"—"), React.createElement("td", {style: {...tdG(i),fontSize:13,fontWeight:700,color:top?Au:G}}, fE(b.pC)), React.createElement("td", {style: {...tdR(i),fontSize:13,fontWeight:700,color:R}}, fE(b.pS)), React.createElement("td", {style: {...tdB,background:bg,textAlign:"center",color:"#14532d"}}, React.createElement("div", {style: {fontWeight:600,fontSize:12}}, fE(b.seg.tot+b.isM+(segProtecao?segProtMensal:0))+"/mês"), is2&&React.createElement("div", {style: {fontSize:8,color:"#4b5563"}}, "V1:"+fE(b.seg.v1)+" V2:"+fE(b.seg.v2)), b.isM>0&&React.createElement("div", {style: {fontSize:8,color:"#f97316"}}, "IS juros: "+fE(b.isM)+"/mês")), React.createElement("td", {style: {...tdB,background:bg,textAlign:"center",color:"#4b5563"}}, React.createElement("div", {style: {fontSize:12}}, fE(b.contaM||0)+"/mês"), b.contaM>0&&React.createElement("div", {style: {fontSize:8,color:"#4b5563"}}, CONTA_MES[b.s]?.nota?.split(" ")[0]||"")), React.createElement("td", {style: {...tdB,background:top?"rgba(37,99,235,0.1)":bg,textAlign:"center",borderLeft:"2px solid "+(top?Au:"rgba(37,99,235,0.15)"),borderRight:"2px solid "+(top?Au:"rgba(37,99,235,0.15)")}}, React.createElement("div", {style: {fontSize:top?18:14,fontWeight:700,color:top?Au:"#111827"}}, fE(b.ptC)+"/mês"), !b.capitalOk&&React.createElement("div", {style: {fontSize:8,color:R}}, capital<b.capitalMin?"Capital abaixo do mín.":"Capital acima do máx.")), React.createElement("td", {style: {...tdB,background:bg,textAlign:"center"}}, React.createElement("div", {style: {fontWeight:700,color:G,fontSize:13}}, "+" + fE(b.diff)+"/mês"), React.createElement("div", {style: {fontSize:10,color:"#4b5563"}}, fE(b.diffTot)+" total")), React.createElement("td", {style: {...tdB,background:bg,textAlign:"center"}}, rendT>0?React.createElement("div", null, React.createElement("div", {style: {fontWeight:700,color:ecC(b.efC),fontSize:13}}, b.efC.toFixed(1)+"%"), React.createElement("div", {style: {fontSize:10,color:ecC(b.efC)}}, ecL(b.efC))):React.createElement("span", {style: {color:"#4b5563"}}, "—")), React.createElement("td", {style: {...tdB,background:bg,textAlign:"center"}}, rendT>0?React.createElement("div", null, React.createElement("div", {style: {fontWeight:700,color:ecC(b.efSt),fontSize:13}}, b.efSt.toFixed(1)+"%"), React.createElement("div", {style: {fontSize:10,color:"#f97316"}}, fE(b.pSt)+"/mês")):React.createElement("span", {style: {color:"#4b5563"}}, "—")), React.createElement("td", {style: {...tdB,background:top?"rgba(2,132,199,0.08)":bg,textAlign:"center"}}, React.createElement("div", {style: {fontWeight:700,color:top?Sky:ecC((b.taeg||0)*8),fontSize:top?15:12}}, (b.taeg||0).toFixed(2).replace(".",",")+"%")), React.createElement("td", {style: {...tdB,background:bg,textAlign:"center",color:"#4b5563"}}, React.createElement("div", {style: {fontSize:12}}, fE(b.mtic||0))), React.createElement("td", {style: {...tdB,borderRadius:"0 6px 6px 0",background:bg,textAlign:"center"}}, b.capitalOk?React.createElement("span", {style: {color:G,fontSize:13}}, "✅"):React.createElement("span", {style: {color:R,fontSize:11}}, capital<b.capitalMin?"⚠️ mín."+fE(b.capitalMin):"⚠️ máx."+fE(b.capitalMax))))
                     );
                   })))))
         ), nav==="seg"&&(
