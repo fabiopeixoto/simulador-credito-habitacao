@@ -106,8 +106,6 @@ function withMeta(payload, source) {
     meta: {
       updatedAt: CACHE.fetchedAt ? new Date(CACHE.fetchedAt).toISOString() : null,
       source,
-      callsToday: CACHE.callsToday,
-      maxCallsPerDay: MAX_CALLS_PER_DAY,
       note: "Prestação/TAEG/MTIC podem diferir do oficial se o cenário não for exatamente igual (prazo, comissões, seguros, idade, finalidade, LTV e tipo de taxa)."
     }
   };
