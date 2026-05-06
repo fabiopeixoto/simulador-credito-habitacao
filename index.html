@@ -18130,7 +18130,7 @@ function App(){
         ,React.createElement("div",{style:{marginTop:8,padding:"8px 12px",background:"rgba(0,0,0,0.03)",border:"1px solid rgba(0,0,0,0.08)",borderRadius:7,fontSize:10,color:"#6b7280",fontFamily:"sans-serif",lineHeight:1.6}},
           "⚠️ ",React.createElement("strong",{style:{color:"#374151"}},"Precisão: "),
           "A prestação real pode variar ±€50 face ao simulador oficial de cada banco, principalmente devido aos seguros de vida (dependem de saúde e tabagismo) e ao multirriscos (avaliação de risco do imóvel). A parcela capital+juros (PMT) é calculada com precisão. O intervalo indicado na coluna ★ TOTAL representa esta margem de tolerância."
-        )
+        ))
         ), nav==="seg"&&(
           React.createElement("div", null, React.createElement("div", {style: {background:"rgba(255,255,255,1)",border:"1px solid rgba(74,222,128,0.2)",borderRadius:11,padding:16,marginBottom:14}}, React.createElement("div", {style: {fontSize:12,letterSpacing:2,color:G,fontFamily:"monospace",marginBottom:10}}, "SEGUROS POR BANCO — "+titulares+" TITULAR"+(is2?"ES":"")+" · T1:"+idade1+"a"+(is2?" · T2:"+idade2+"a":"")+" · Capital: "+fE(capital)), React.createElement("div", {style: {overflowX:"auto"}}, React.createElement("table", {style: {width:"100%",borderCollapse:"separate",borderSpacing:"0 6px",fontFamily:"sans-serif",fontSize:13}}, React.createElement("thead", null, React.createElement("tr", null, ["Banco","Vida T1","Vida T2","Total Vida","Multirriscos","IS Juros/mês","Seg. Prot.","TOTAL/mês","Seguradoras"].map(h=>React.createElement("th", {key: h, style: {...thS,textAlign:"center"}}, h.toUpperCase())))), React.createElement("tbody", null, segChart.map((b,i)=>{
                       const bk=BANKS_STATIC.find(x=>x.s===b.name)||{};
