@@ -17487,7 +17487,7 @@ const BANKS_STATIC = [
   {name:"Novo Banco",       s:"NB",    color:"#00a651", refs:["12m"],           sCom:0.80,sSem:1.50, promos:["Cashback 1%","Mudum — multirriscos mais barato"], prod:"Pack 1.º Banco (dom.) + GamaLife + Mudum", tipos:["variável","mista","fixa"], mCom:2.84,mSem:3.64,fCom:3.64,fSem:4.24, jOk:true,jsCom:0.80,jsSem:1.50,jProd:"100% financiamento; cashback 1%", promoPeriodo:0, promoSpread:null, carenciaMax:24},
   {name:"CGD",              s:"CGD",   color:"#006633", refs:["6m"],            sCom:0.85,sSem:1.35, promos:["Banco público","TAN fixa 2 anos → Eur.6M+0,85%","Jovem: spread 0,65%","Cert. A/B: -0,15%"], prod:"Pack Vinculação + Pack Ligação (Fidelidade Vida + Multi)", tipos:["variável","mista","fixa"], mCom:2.50,mSem:4.60,fCom:3.30,fSem:5.40, jOk:true,jsCom:0.65,jsSem:1.35,jProd:"Spread 0,65% TAEG 3,26% — MELHOR JOVEM", promoPeriodo:24, promoSpread:null, carenciaMax:0},
   {name:"UCI",              s:"UCI",   color:"#1a3a6b", refs:["6m"],           sCom:0.85,sSem:1.30, promos:["Especialista habitação","Sem dom. obrigatória"], prod:"Seg. Vida + Multirriscos", tipos:["variável","mista"], mCom:2.90,mSem:3.40,fCom:3.40,fSem:3.90, jOk:true,jsCom:0.85,jsSem:1.30,jProd:"100% c/ garantia Estado", promoPeriodo:0, promoSpread:null, carenciaMax:0},
-  {name:"Banco BIC",        s:"BIC",   color:"#e67e00", refs:["12m"],           sCom:1.00,sSem:1.50, promos:[], prod:"Domiciliação + Seguros", tipos:["variável"], mCom:3.00,mSem:3.50,fCom:3.60,fSem:4.10, jOk:false,jsCom:1.00,jsSem:1.50,jProd:"", promoPeriodo:0, promoSpread:null, carenciaMax:0},
+  {name:"Banco BIC",        s:"BIC",   color:"#e67e00", refs:["12m"],           sCom:1.00,sSem:1.50, promos:[], prod:"Domiciliação + Seguros", tipos:["variável"], mCom:3.00,mSem:3.50,fCom:3.60,fSem:4.10, jOk:true, jsCom:1.00,jsSem:1.50,jProd:"Garantia Estado (Despacho 14916/2024)", promoPeriodo:0, promoSpread:null, carenciaMax:0},
   {name:"BNI Europa",       s:"BNI",   color:"#4a235a", refs:["12m"],           sCom:1.00,sSem:1.50, promos:[], prod:"Domiciliação + Seguros", tipos:["variável"], mCom:3.10,mSem:3.60,fCom:3.70,fSem:4.20, jOk:false,jsCom:1.00,jsSem:1.50,jProd:"", promoPeriodo:0, promoSpread:null, carenciaMax:0},
 ];
 
@@ -17566,7 +17566,7 @@ function calcIMT(v,j,finalidade) {
     return v*0.06;
   }
   // Tabela I 2025: HPP
-  if(j&&v<=324058)return 0; // Jovem: isenção até €324.058
+  if(j&&v<=330539)return 0; // Jovem: isenção até €330.539 (2026)
   if(v<=99407)  return 0;
   if(v<=136025) return v*0.02-1988.14;
   if(v<=185474) return v*0.05-6069.39;
@@ -17906,8 +17906,8 @@ function App(){
         const comB2base=COM[b.s]||{dossier:300,avaliacao:230,minutas:0,jovemIsenta:false};
         const comB2={...comB2base,dossier:bankData[b.s]?.dossier??comB2base.dossier,avaliacao:bankData[b.s]?.avaliacao??comB2base.avaliacao};
         const comD2=modoJovem&&comB2.jovemIsenta?0:comB2.dossier;
-        const isCredTAEG=modoJovem&&finalidade==="hpp"?0:Math.round(capital*0.006);
-        const regHTAEG=modoJovem&&finalidade==="hpp"?0:Math.round(capital*0.0008+150);
+        const isCredTAEG=Math.round(capital*0.006);
+        const regHTAEG=Math.round(capital*0.0008+150);
         const comInic=comD2+(comB2.avaliacao||0)+(comB2.minutas||0)+200+isCredTAEG+regHTAEG;
         const encargoTAEG=pC+seg.tot+isM+segProtMensal+contaM;
         const taeg=calcTAEG(capital,comInic,encargoTAEG,prazoCalc*12);
@@ -17952,7 +17952,7 @@ function App(){
   // Custos detalhados
   const imt=calcIMT(valorImovel,modoJovem,finalidade);
   const isEsc=modoJovem&&finalidade==="hpp"?0:valorImovel*0.008;
-  const isCred=modoJovem&&finalidade==="hpp"?0:capital*0.006;
+  const isCred=capital*0.006;
   // IS escritura sobre a prestação (0,6% do capital em vigor — já incluído no isCred)
   const registoHipoteca=modoJovem&&finalidade==="hpp"?0:Math.round(capital*0.0008+150); // emolumentos
   // Banco seleccionado para custos (usa o melhor como default)
@@ -18149,9 +18149,9 @@ function App(){
                 {k:"capital",  l:"Capital Emprestado",                    v:capital,      note:"LTV "+pctR+"%"},
                 {k:"entrada",  l:"Entrada necessária",                    v:entrada,      c:entrada===0?G:Au, note:entrada===0?"100% financiado (garantia Estado)":null},
                 {k:"sep1",     l:null},
-                {k:"imt",      l:"IMT",                                   v:imt,          c:imt===0?G:R,  note:modoJovem&&imt===0?"Isento ≤35a (HPP ≤324.058€)":imt===0?"Isento":finalidade!=="hpp"?"Taxa progressiva 1-8% (Portaria 352/2024)":null},
+                {k:"imt",      l:"IMT",                                   v:imt,          c:imt===0?G:R,  note:modoJovem&&imt===0?"Isento ≤35a (HPP ≤330.539€)":imt===0?"Isento":finalidade!=="hpp"?"Taxa progressiva 1-8% (Portaria 352/2024)":null},
                 {k:"isesc",    l:"Imp. Selo escritura (0,8%)",            v:isEsc,        c:isEsc===0?G:undefined, note:modoJovem&&isEsc===0?"✅ Isento ≤35a":null},
-                {k:"iscred",   l:"Imp. Selo crédito (0,6%)",             v:isCred,       c:isCred===0?G:undefined, note:modoJovem&&isCred===0?"✅ Isento ≤35a":null},
+                {k:"iscred",   l:"Imp. Selo crédito (0,6%)",             v:isCred,       c:undefined, note:modoJovem?"ℹ️ Não isento (só IS escritura é isento ≤35a)":null},
                 {k:"sep2",     l:null},
                 {k:"dossier",  l:"Comissão de dossier",                  v:comDossier,   c:comDossier===0?G:"#4b5563", note:comDossier===0?"✅ Banco isenta (jovem/promoção)":null},
                 {k:"aval",     l:"Comissão de avaliação",                 v:comAval,      c:"#4b5563", note:"Perito independente (CMVM) — obrigatório"},
