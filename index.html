@@ -18295,7 +18295,7 @@ function App(){
 <!-- ═══════════════════ STICKY FOOTER AD ═══════════════════ -->
 <div id="sticky-ad" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9998;background:#f9fafb;border-top:1px solid #e5e7eb;text-align:center;padding:4px 0 2px;">
   <button id="close-sticky-ad" style="position:absolute;top:4px;right:8px;background:none;border:none;color:#9ca3af;cursor:pointer;font-size:18px;line-height:1;padding:0 4px;" title="Fechar anúncio">✕</button>
-  <ins class="adsbygoogle" id="adsense-ins" style="display:block" data-ad-client="ca-pub-5782697147722140" data-ad-slot="6100287333" data-ad-format="auto" data-full-width-responsive="true"></ins>
+  <ins class="adsbygoogle" id="adsense-ins" style="display:inline-block;width:728px;height:90px;max-width:100%" data-ad-client="ca-pub-5782697147722140" data-ad-slot="6100287333"></ins>
   <p style="font-size:9px;color:#9ca3af;margin:1px 0 0;font-family:sans-serif">Publicidade</p>
 </div>
 
@@ -18310,7 +18310,16 @@ function App(){
   var btnReject = document.getElementById('btn-reject-consent');
   var btnClose  = document.getElementById('close-sticky-ad');
 
+  function applyAdSize() {
+    var ins = document.getElementById('adsense-ins');
+    var mobile = window.innerWidth < 728;
+    ins.style.width  = mobile ? '320px' : '728px';
+    ins.style.height = mobile ? '50px'  : '90px';
+    document.body.style.paddingBottom = mobile ? '62px' : '102px';
+  }
+
   function loadAdSense() {
+    applyAdSize();
     if (window.__adsenseLoaded) { stickyAd.style.display = 'block'; return; }
     window.__adsenseLoaded = true;
     var s = document.createElement('script');
@@ -18320,7 +18329,6 @@ function App(){
     document.head.appendChild(s);
     s.onload = function() { (window.adsbygoogle = window.adsbygoogle || []).push({}); };
     stickyAd.style.display = 'block';
-    document.body.style.paddingBottom = '100px';
   }
 
   function hideBanner() { banner.style.display = 'none'; }
