@@ -18283,32 +18283,18 @@ function App(){
 }
 ;(function(){var c=document.getElementById('root');var r=ReactDOM.createRoot(c);r.render(React.createElement(App,null));})();}catch(e){var _d=document.getElementById("root");_d.style.cssText="color:#f87171;padding:40px;background:#e5e7eb;min-height:100vh";var _h=document.createElement("h2");_h.textContent="Erro ao iniciar";var _p=document.createElement("p");_p.textContent=e.message;_d.appendChild(_h);_d.appendChild(_p);}})();</script><script>if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js');</script>
 
-<!-- ═══════════════════ GDPR CONSENT BANNER ═══════════════════ -->
-<div id="consent-banner" style="position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#1e3a5f;color:#e5e7eb;font-family:sans-serif;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;box-shadow:0 -2px 12px rgba(0,0,0,0.18);font-size:13px;">
-  <span>🍪 Este site usa <strong>cookies de publicidade</strong> para financiar os custos operacionais (API de dados financeiros). Podes aceitar ou recusar.</span>
-  <div style="display:flex;gap:8px;flex-shrink:0">
-    <button id="btn-accept-consent" style="padding:7px 16px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600">Aceitar</button>
-    <button id="btn-reject-consent" style="padding:7px 16px;background:transparent;color:#9bb4cc;border:1px solid #9bb4cc;border-radius:6px;cursor:pointer;font-size:13px">Recusar</button>
-  </div>
-</div>
-
 <!-- ═══════════════════ STICKY FOOTER AD ═══════════════════ -->
-<div id="sticky-ad" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9998;background:#f9fafb;border-top:1px solid #e5e7eb;text-align:center;padding:4px 0 2px;">
+<div id="sticky-ad" style="position:fixed;bottom:0;left:0;right:0;z-index:9998;background:#f9fafb;border-top:1px solid #e5e7eb;text-align:center;padding:4px 0 2px;">
   <button id="close-sticky-ad" style="position:absolute;top:4px;right:8px;background:none;border:none;color:#9ca3af;cursor:pointer;font-size:18px;line-height:1;padding:0 4px;" title="Fechar anúncio">✕</button>
   <ins class="adsbygoogle" id="adsense-ins" style="display:inline-block;width:728px;height:90px;max-width:100%" data-ad-client="ca-pub-5782697147722140" data-ad-slot="6100287333"></ins>
   <p style="font-size:9px;color:#9ca3af;margin:1px 0 0;font-family:sans-serif">Publicidade</p>
 </div>
 
-<!-- ═══════════════════ CONSENT MANAGEMENT ═══════════════════ -->
+<!-- ═══════════════════ AD INIT (consentimento gerido pela CMP do Google) ═══════════════════ -->
 <script>
 (function() {
-  var CONSENT_KEY = 'simulador_ad_consent';
-  var PUBLISHER   = 'ca-pub-5782697147722140';
-  var banner    = document.getElementById('consent-banner');
-  var stickyAd  = document.getElementById('sticky-ad');
-  var btnAccept = document.getElementById('btn-accept-consent');
-  var btnReject = document.getElementById('btn-reject-consent');
-  var btnClose  = document.getElementById('close-sticky-ad');
+  var stickyAd = document.getElementById('sticky-ad');
+  var btnClose = document.getElementById('close-sticky-ad');
 
   function applyAdSize() {
     var ins = document.getElementById('adsense-ins');
@@ -18318,29 +18304,9 @@ function App(){
     document.body.style.paddingBottom = mobile ? '62px' : '102px';
   }
 
-  function loadAdSense() {
-    applyAdSize();
-    if (window.__adsenseLoaded) { stickyAd.style.display = 'block'; return; }
-    window.__adsenseLoaded = true;
-    (window.adsbygoogle = window.adsbygoogle || []).push({});
-    stickyAd.style.display = 'block';
-  }
+  applyAdSize();
+  (window.adsbygoogle = window.adsbygoogle || []).push({});
 
-  function hideBanner() { banner.style.display = 'none'; }
-
-  var stored = localStorage.getItem(CONSENT_KEY);
-  if (stored === 'accepted') { hideBanner(); loadAdSense(); }
-  else if (stored === 'rejected') { hideBanner(); }
-
-  btnAccept.addEventListener('click', function() {
-    localStorage.setItem(CONSENT_KEY, 'accepted');
-    hideBanner();
-    loadAdSense();
-  });
-  btnReject.addEventListener('click', function() {
-    localStorage.setItem(CONSENT_KEY, 'rejected');
-    hideBanner();
-  });
   btnClose.addEventListener('click', function() {
     stickyAd.style.display = 'none';
     document.body.style.paddingBottom = '';
