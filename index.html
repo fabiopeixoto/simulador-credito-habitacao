@@ -18295,7 +18295,7 @@ function App(){
 <!-- ═══════════════════ STICKY FOOTER AD ═══════════════════ -->
 <div id="sticky-ad" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9998;background:#f9fafb;border-top:1px solid #e5e7eb;text-align:center;padding:4px 0 2px;">
   <button id="close-sticky-ad" style="position:absolute;top:4px;right:8px;background:none;border:none;color:#9ca3af;cursor:pointer;font-size:18px;line-height:1;padding:0 4px;" title="Fechar anúncio">✕</button>
-  <ins class="adsbygoogle" id="adsense-ins" style="display:inline-block;" data-ad-client="ca-pub-5782697147722140" data-ad-slot="XXXXXXXXXX"></ins>
+  <ins class="adsbygoogle" id="adsense-ins" style="display:block" data-ad-client="ca-pub-5782697147722140" data-ad-slot="6100287333" data-ad-format="auto" data-full-width-responsive="true"></ins>
   <p style="font-size:9px;color:#9ca3af;margin:1px 0 0;font-family:sans-serif">Publicidade</p>
 </div>
 
@@ -18306,25 +18306,12 @@ function App(){
   var PUBLISHER   = 'ca-pub-5782697147722140';
   var banner    = document.getElementById('consent-banner');
   var stickyAd  = document.getElementById('sticky-ad');
-  var adIns     = document.getElementById('adsense-ins');
   var btnAccept = document.getElementById('btn-accept-consent');
   var btnReject = document.getElementById('btn-reject-consent');
   var btnClose  = document.getElementById('close-sticky-ad');
 
-  function setAdSize() {
-    var w = window.innerWidth;
-    adIns.style.width  = (w >= 728 ? '728' : '320') + 'px';
-    adIns.style.height = (w >= 728 ? '90'  : '50')  + 'px';
-  }
-
-  function showStickyAd() {
-    setAdSize();
-    stickyAd.style.display = 'block';
-    document.body.style.paddingBottom = (window.innerWidth >= 728 ? 102 : 62) + 'px';
-  }
-
   function loadAdSense() {
-    if (window.__adsenseLoaded) { showStickyAd(); return; }
+    if (window.__adsenseLoaded) { stickyAd.style.display = 'block'; return; }
     window.__adsenseLoaded = true;
     var s = document.createElement('script');
     s.async = true;
@@ -18332,7 +18319,8 @@ function App(){
     s.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + PUBLISHER;
     document.head.appendChild(s);
     s.onload = function() { (window.adsbygoogle = window.adsbygoogle || []).push({}); };
-    showStickyAd();
+    stickyAd.style.display = 'block';
+    document.body.style.paddingBottom = '100px';
   }
 
   function hideBanner() { banner.style.display = 'none'; }
@@ -18353,12 +18341,6 @@ function App(){
   btnClose.addEventListener('click', function() {
     stickyAd.style.display = 'none';
     document.body.style.paddingBottom = '';
-  });
-  window.addEventListener('resize', function() {
-    if (stickyAd.style.display !== 'none') {
-      setAdSize();
-      document.body.style.paddingBottom = (window.innerWidth >= 728 ? 102 : 62) + 'px';
-    }
   });
 })();
 </script>
