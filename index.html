@@ -18350,6 +18350,9 @@ function App(){
     stickyAd.style.display = 'none';
     document.body.style.paddingBottom = '';
   });
+  window.addEventListener('resize', function() {
+    if (stickyAd.style.display !== 'none') applyAdSize();
+  });
 })();
 </script>
 
