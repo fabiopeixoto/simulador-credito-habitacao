@@ -18141,7 +18141,7 @@ function App(){
   if(!maxT)maxT=1;
   return React.createElement("div",null,
     React.createElement("div",{style:{display:"flex",gap:16,marginBottom:10,flexWrap:"wrap",alignItems:"center"}},
-      React.createElement("span",{style:{display:"inline-flex",alignItems:"center",gap:5,fontSize:11,color:"#4b5563",fontFamily:"sans-serif"}},React.createElement("span",{style:{display:"inline-block",width:12,height:12,background:Au,borderRadius:2,opacity:0.85}}),"Vida T1"),
+      React.createElement("span",{style:{display:"inline-flex",alignItems:"center",gap:5,fontSize:11,color:"#4b5563",fontFamily:"sans-serif"}},React.createElement("span",{style:{display:"inline-block",width:12,height:12,background:"#c9a84c",borderRadius:2,opacity:0.85}}),"Vida T1"),
       is2&&React.createElement("span",{style:{display:"inline-flex",alignItems:"center",gap:5,fontSize:11,color:"#4b5563",fontFamily:"sans-serif"}},React.createElement("span",{style:{display:"inline-block",width:12,height:12,background:G,borderRadius:2,opacity:0.85}}),"Vida T2"),
       React.createElement("span",{style:{display:"inline-flex",alignItems:"center",gap:5,fontSize:11,color:"#4b5563",fontFamily:"sans-serif"}},React.createElement("span",{style:{display:"inline-block",width:12,height:12,background:Sky,borderRadius:2,opacity:0.8}}),"Multirriscos")
     ),
@@ -18161,7 +18161,7 @@ function App(){
           ),
           React.createElement("div",{style:{flex:1,height:18,background:"rgba(0,0,0,0.06)",borderRadius:4,overflow:"hidden"}},
             React.createElement("div",{style:{width:bw+"%",height:"100%",display:"flex"}},
-              v1>0&&React.createElement("div",{style:{width:p1+"%",background:Au,opacity:0.85,height:"100%"}}),
+              v1>0&&React.createElement("div",{style:{width:p1+"%",background:"#c9a84c",opacity:0.9,height:"100%"}}),
               v2>0&&React.createElement("div",{style:{width:p2+"%",background:G,opacity:0.85,height:"100%"}}),
               vm>0&&React.createElement("div",{style:{width:pm+"%",background:Sky,opacity:0.8,height:"100%"}})
             )
@@ -18175,7 +18175,7 @@ function App(){
     ),
     React.createElement("div",{style:{marginTop:10,fontSize:11,color:"#6b7280",fontFamily:"sans-serif",lineHeight:1.6,background:"rgba(37,99,235,0.04)",border:"1px solid rgba(37,99,235,0.12)",borderRadius:6,padding:"6px 10px"}},
       "📊 ",React.createElement("strong",{style:{color:"#374151"}},"Como ler: "),
-      "Cada barra representa o prémio mensal total de seguros obrigatórios do banco, proporcional ao máximo da lista. A parte ",React.createElement("strong",{style:{color:Au}},"azul")," é o seguro de vida T1",is2&&React.createElement("span",null," (e ",React.createElement("strong",{style:{color:G}},"verde")," para T2)")," e a parte ",React.createElement("strong",{style:{color:Sky}},"azul-celeste")," é o seguro multirriscos. Os valores são estimativas baseadas nos prémios de referência de cada banco — variam com a idade dos titulares, capital seguro e valor de avaliação do imóvel."
+      "Cada barra representa o prémio mensal total de seguros obrigatórios do banco, proporcional ao máximo da lista. A parte ",React.createElement("strong",{style:{color:"#c9a84c"}},"dourada")," é o seguro de vida T1",is2&&React.createElement("span",null," (e ",React.createElement("strong",{style:{color:G}},"verde")," para T2)")," e a parte ",React.createElement("strong",{style:{color:Sky}},"azul-celeste")," é o seguro multirriscos. Os valores são estimativas baseadas nos prémios de referência de cada banco — variam com a idade dos titulares, capital seguro e valor de avaliação do imóvel."
     )
   );
 })()))
