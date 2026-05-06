@@ -18151,7 +18151,14 @@ function App(){
         var bw=tot/maxT*100;
         var p1=tot?v1/tot*100:0,p2=tot?v2/tot*100:0,pm=tot?vm/tot*100:0;
         return React.createElement("div",{key:b.name,style:{display:"flex",alignItems:"center",gap:8}},
-          React.createElement("span",{style:{width:46,textAlign:"right",fontSize:11,fontFamily:"monospace",fontWeight:700,color:"#374151",flexShrink:0}},b.name),
+          React.createElement("div",{style:{width:130,display:"flex",alignItems:"center",justifyContent:"flex-end",gap:5,flexShrink:0}},
+            React.createElement("span",{style:{fontSize:11,color:"#374151",fontFamily:"sans-serif",fontWeight:600,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},
+              (BANKS_STATIC.find(function(bk){return bk.s===b.name;})||{name:b.name}).name
+            ),
+            React.createElement("div",{style:{width:18,height:18,borderRadius:3,background:"rgba(0,0,0,0.05)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,overflow:"hidden"}},
+              React.createElement("img",{src:"https://www.google.com/s2/favicons?domain="+(BANK_DOMAINS[b.name]||"bank.pt")+"&sz=32",width:16,height:16,style:{objectFit:"contain",display:"block"},alt:b.name,onError:function(e){var d=e.currentTarget.parentElement;d.innerHTML='<span style="font-size:7px;font-weight:700;font-family:monospace;color:#666">'+b.name+'</span>';e.currentTarget.onError=null;}})
+            )
+          ),
           React.createElement("div",{style:{flex:1,height:18,background:"rgba(0,0,0,0.06)",borderRadius:4,overflow:"hidden"}},
             React.createElement("div",{style:{width:bw+"%",height:"100%",display:"flex"}},
               v1>0&&React.createElement("div",{style:{width:p1+"%",background:Au,opacity:0.85,height:"100%"}}),
@@ -18163,7 +18170,7 @@ function App(){
         );
       })
     ),
-    React.createElement("div",{style:{display:"flex",justifyContent:"space-between",marginLeft:54,paddingRight:64,marginTop:5,fontSize:10,color:"#9bb4cc",fontFamily:"monospace"}},
+    React.createElement("div",{style:{display:"flex",justifyContent:"space-between",marginLeft:146,paddingRight:64,marginTop:5,fontSize:10,color:"#9bb4cc",fontFamily:"monospace"}},
       [0,0.25,0.5,0.75,1].map(function(f,i){return React.createElement("span",{key:i},Math.round(maxT*f)+"€");})
     ),
     React.createElement("div",{style:{marginTop:10,fontSize:11,color:"#6b7280",fontFamily:"sans-serif",lineHeight:1.6,background:"rgba(37,99,235,0.04)",border:"1px solid rgba(37,99,235,0.12)",borderRadius:6,padding:"6px 10px"}},
