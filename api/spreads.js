@@ -172,23 +172,28 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  // ── 3. Verificar limite diário em KV antes de chamar a API
-  const kvCallsNow = Number(await kvGet(KV_CALLS_PFX + today) || 0);
-  if (kvCallsNow >= MAX_CALLS_PER_DAY) {
-    // Limite atingido — servir de cache mesmo que L1 esteja frio
-    if (kvCached) {
-      MEM.data       = kvCached.data;
-      MEM.fetchedAt  = kvCached.fetchedAt || 0;
-      MEM.callsToday = kvCallsNow;
-      MEM.dayKey     = today;
+  // ── 3. Reservar slot atomicamente com INCR antes de chamar a API.
+  // Assim pedidos concorrentes em instâncias diferentes não ultrapassam o limite.
+  const kvSlot = await kvIncr(KV_CALLS_PFX + today, KV_CALLS_TTL);
+
+  if (kvSlot !== null && kvSlot > MAX_CALLS_PER_DAY) {
+    // Slot acima do limite — reverter o INCR e servir cache
+    if (kvClient) kvClient.decr(KV_CALLS_PFX + today).catch(() => {});
+    const staleD  = kvCached?.data || MEM.data || null;
+    const staleTs = kvCached?.fetchedAt || MEM.fetchedAt || 0;
+    if (staleD) {
       res.setHeader("X-Cache",       "KV-LIMIT");
-      res.setHeader("X-Calls-Today", kvCallsNow + "/" + MAX_CALLS_PER_DAY);
-      return res.status(200).json(withMeta(kvCached.data, "kv-cache", MEM.fetchedAt));
+      res.setHeader("X-Calls-Today", (kvSlot - 1) + "/" + MAX_CALLS_PER_DAY);
+      return res.status(200).json(withMeta(staleD, "kv-cache", staleTs));
     }
-    if (MEM.data) {
+  }
+  if (kvSlot === null && MEM.callsToday >= MAX_CALLS_PER_DAY) {
+    // KV indisponível — fallback para contador in-memory
+    const staleD = MEM.data || null;
+    if (staleD) {
       res.setHeader("X-Cache",       "MEM-LIMIT");
-      res.setHeader("X-Calls-Today", kvCallsNow + "/" + MAX_CALLS_PER_DAY);
-      return res.status(200).json(withMeta(MEM.data, "mem-cache", MEM.fetchedAt));
+      res.setHeader("X-Calls-Today", MEM.callsToday + "/" + MAX_CALLS_PER_DAY);
+      return res.status(200).json(withMeta(staleD, "mem-cache", MEM.fetchedAt));
     }
   }
 
@@ -224,11 +229,12 @@ module.exports = async function handler(req, res) {
     MEM.data       = freshData;
     MEM.fetchedAt  = fetchedAt;
     MEM.dayKey     = today;
-    MEM.callsToday = kvCallsNow + 1;
+    MEM.callsToday = kvSlot !== null ? Number(kvSlot) : MEM.callsToday + 1;
 
     // Actualizar L2 (KV) — fire-and-forget, não bloqueia a resposta
     kvSet(KV_CACHE_KEY, { data: freshData, fetchedAt }, KV_CACHE_TTL).catch(() => {});
-    kvIncr(KV_CALLS_PFX + today, KV_CALLS_TTL).catch(() => {});
+    // kvIncr já foi chamado atomicamente em ── 3 (se KV disponível); só repetir em fallback
+    if (kvSlot === null) kvIncr(KV_CALLS_PFX + today, KV_CALLS_TTL).catch(() => {});
 
     res.setHeader("X-Cache",           "MISS");
     res.setHeader("X-Calls-Today",     MEM.callsToday + "/" + MAX_CALLS_PER_DAY);
