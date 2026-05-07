@@ -1,4 +1,7 @@
 {
+  "functions": {
+    "api/spreads.js": { "maxDuration": 45 }
+  },
   "rewrites": [
     { "source": "/api/spreads", "destination": "/api/spreads.js" }
   ],
