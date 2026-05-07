@@ -17751,7 +17751,7 @@ function App(){
     if(!force){
       try{
         const cached=JSON.parse(localStorage.getItem(CACHE_KEY)||"null");
-        if(cached&&cached.ts&&(Date.now()-cached.ts)/3600000<CACHE_H){
+        if(cached&&cached.ts&&cached.ts<=Date.now()&&(Date.now()-cached.ts)/3600000<CACHE_H){
           setEUR(cached.eur); setBankData(cached.bd||FALLBACK_BANK_DATA); setTs(new Date(cached.ts));
           setStatus("cached"); setMsg("Cache válida · há "+Math.round((Date.now()-cached.ts)/3600000)+"h"); return;
         }
