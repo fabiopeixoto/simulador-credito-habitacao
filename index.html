@@ -17390,8 +17390,10 @@ const COM = {
   BNI:   {dossier:400,  avaliacao:250, minutas:0,   total2hab:650,  jovemIsenta:false},
 };
 
-// ── Escalões de spread por LTV (validados por banco) ─────────────────────
+// ── Escalões de spread por LTV (verificados Mai.2026) ────────────────────
 // spread adicional sobre o spread base conforme o LTV
+// padrão de mercado: ≤80%→+0, 80-90%→+0.05pp, >90%→+0.10pp
+// BIC/BNI: não financiam acima de 90%; BNKTR: escalonamento mais conservador a partir de 75%
 const LTV_BRACKETS = {
   CA:    [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
   CTT:   [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
@@ -17402,7 +17404,7 @@ const LTV_BRACKETS = {
   BPI:   [{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
   MNTPO: [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
   SANTR: [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
-  NB:    [{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],   // NB: +0.10pp acima de 80%
+  NB:    [{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
   CGD:   [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
   UCI:   [{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
   BIC:   [{max:80,add:0},{max:90,add:0.10}],
