@@ -17751,6 +17751,7 @@ function App(){
   const[commentSubmit,setCommentSubmit]=useState(false);
   const[commentErr,setCommentErr]=useState("");
   const[commentOk,setCommentOk]=useState(false);
+  const[adminToken]=useState(()=>new URLSearchParams(window.location.search).get('admin')||"");
   const[bancoCustos,setBancoCustos]=useState("");
   const[bancoAmort,setBancoAmort]=useState("");
   const[bancoCen,setBancoCen]=useState("");
@@ -18024,6 +18025,10 @@ function App(){
   },[resultados]);
 
   // Comentários
+  async function deleteComment(id){
+    if(!adminToken)return;
+    try{const r=await fetch("/api/comments?id="+id,{method:"DELETE",headers:{"x-admin-token":adminToken}});if(r.ok)setComments(c=>c.filter(x=>x.id!==id));}catch(_){}
+  }
   const loadComments=useCallback(async()=>{
     setCommentLoad(true);
     try{const r=await fetch("/api/comments");if(r.ok)setComments(await r.json());}catch(_){}
@@ -18196,7 +18201,8 @@ function App(){
                     React.createElement("div", {style:{display:"flex",alignItems:"baseline",gap:8,marginBottom:4}},
                       React.createElement("span", {style:{fontWeight:700,fontSize:13,color:"#111827"}}, c.name),
                       c.bank&&React.createElement("span", {style:{fontSize:11,background:"rgba(37,99,235,0.08)",border:"1px solid rgba(37,99,235,0.2)",color:"#2563eb",borderRadius:4,padding:"1px 6px"}}, c.bank),
-                      React.createElement("span", {style:{fontSize:11,color:"#9ca3af",marginLeft:"auto"}}, new Date(c.ts).toLocaleDateString("pt-PT"))
+                      React.createElement("span", {style:{fontSize:11,color:"#9ca3af",marginLeft:"auto"}}, new Date(c.ts).toLocaleDateString("pt-PT")),
+                      adminToken&&React.createElement("button",{onClick:()=>deleteComment(c.id),title:"Apagar comentário",style:{background:"none",border:"none",cursor:"pointer",color:"#ef4444",fontSize:13,padding:"0 0 0 6px",lineHeight:1,flexShrink:0}},"✕")
                     ),
                     (c.simPt||c.realPt)&&React.createElement("div", {style:{display:"flex",gap:10,marginBottom:6}},
                       c.simPt&&React.createElement("div", {style:{fontSize:11,background:"rgba(201,168,76,0.1)",border:"1px solid rgba(201,168,76,0.3)",borderRadius:5,padding:"2px 8px",color:"#92400e"}}, "🧮 Simulado: "+c.simPt.toFixed(2).replace(".",",")+"/mês"),
