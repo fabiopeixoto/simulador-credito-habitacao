@@ -37,6 +37,8 @@ module.exports = async function handler(req, res) {
 
   if (req.method === "GET") {
     if (req.query && req.query.debug === "1") {
+      const secret = process.env.DEBUG_SECRET;
+      if (!secret || req.query.secret !== secret) return res.status(403).end();
       let testErr = null;
       if (kvClient) {
         try { await kvClient.ping(); } catch (e) { testErr = e.message; }
