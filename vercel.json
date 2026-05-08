@@ -3,7 +3,8 @@
     "api/spreads.js": { "maxDuration": 45 }
   },
   "rewrites": [
-    { "source": "/api/spreads", "destination": "/api/spreads.js" }
+    { "source": "/api/spreads", "destination": "/api/spreads.js" },
+    { "source": "/api/comments", "destination": "/api/comments.js" }
   ],
   "headers": [
     {
