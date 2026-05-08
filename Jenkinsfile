@@ -1,5 +1,10 @@
 pipeline {
-  agent any
+  agent {
+    docker {
+      image 'node:20-slim'
+      args '-v /var/run/docker.sock:/var/run/docker.sock'
+    }
+  }
 
   triggers {
     githubPush()
