@@ -45,20 +45,16 @@ pipeline {
       withCredentials([string(credentialsId: 'discord-webhook-url', variable: 'WEBHOOK_URL')]) {
         script {
           def buildStatus = currentBuild.currentResult
-          def message = """
-            **Build ${buildStatus}**
-            Project: ${env.JOB_NAME}
-            Build: #${env.BUILD_NUMBER}
-            Branch: ${env.GIT_BRANCH ?: 'unknown'}
-            Commit: ${env.GIT_COMMIT ?: 'unknown'}
-            Duration: ${currentBuild.durationString}
-          """.stripIndent()
+          def message = "**Build ${buildStatus}**\nProject: ${env.JOB_NAME}\nBuild: #${env.BUILD_NUMBER}\nBranch: ${env.GIT_BRANCH ?: 'unknown'}\nCommit: ${env.GIT_COMMIT ?: 'unknown'}\nDuration: ${currentBuild.durationString}"
+
+          def jsonBody = "{\"content\": \"${message}\"}"
 
           httpRequest(
-            url: "${WEBHOOK_URL}",
+            url: WEBHOOK_URL,
             httpMode: 'POST',
             contentType: 'APPLICATION_JSON',
-            requestBody: "{\"content\": \"${message}\"}"
+            requestBody: jsonBody,
+            validResponseCodes: '200,204'
           )
         }
       }
