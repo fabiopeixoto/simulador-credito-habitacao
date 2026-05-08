@@ -76,14 +76,6 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: "Comentário inválido (5–500 caracteres)" });
     }
 
-    // Rate limit: 1 comentário por 30 min por IP
-    const ip = ((req.headers["x-forwarded-for"] || "").split(",")[0].trim()) || "unknown";
-    const rateKey = "comment:rate:" + Buffer.from(ip).toString("base64").slice(0, 24);
-    const lastTs = await kvGet(rateKey);
-    if (lastTs && Date.now() - Number(lastTs) < 30 * 60 * 1000) {
-      return res.status(429).json({ error: "Aguarde 30 minutos antes de comentar novamente" });
-    }
-
     const cleanNum = (v) => {
       const n = parseFloat(String(v).replace(",", "."));
       return isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : null;
@@ -102,7 +94,6 @@ module.exports = async function handler(req, res) {
     const existing = (await kvGet(COMMENTS_KEY)) || [];
     const updated = [comment, ...existing].slice(0, MAX_COMMENTS);
     await kvSet(COMMENTS_KEY, updated, { ex: 365 * 24 * 3600 });
-    await kvSet(rateKey, String(Date.now()), { ex: 30 * 60 });
 
     return res.status(201).json(comment);
   }
