@@ -12,6 +12,7 @@ pipeline {
 
   stages {
     stage('Checkout') {
+      agent any
       when {
         branch 'main'
       }
@@ -21,41 +22,60 @@ pipeline {
     }
 
     stage('Validate') {
+      agent any
       when {
         branch 'main'
       }
       steps {
-        sh 'node --check server.js'
+        script {
+          node {
+            sh 'node --check server.js'
+          }
+        }
       }
     }
 
     stage('Build Docker Image') {
+      agent any
       when {
         branch 'main'
       }
       steps {
-        sh 'docker build -t "${DEPLOY_IMAGE}" .'
+        script {
+          node {
+            sh 'docker build -t "${DEPLOY_IMAGE}" .'
+          }
+        }
       }
     }
 
     stage('Deploy Container') {
+      agent any
       when {
         branch 'main'
       }
       steps {
-        sh '''
-          docker rm -f simulador-credito-habitacao || true
-          docker run -d --name simulador-credito-habitacao -p 3999:3000 \
-            -e ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY}" \
-            "${DEPLOY_IMAGE}"
-        '''
+        script {
+          node {
+            sh '''
+              docker rm -f simulador-credito-habitacao || true
+              docker run -d --name simulador-credito-habitacao -p 3999:3000 \
+                -e ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY}" \
+                "${DEPLOY_IMAGE}"
+            '''
+          }
+        }
       }
     }
   }
 
   post {
     always {
-      sh 'docker ps --filter name=simulador-credito-habitacao --format "table {{.Names}}\t{{.Status}}\t{{.Image}}"'
+      script {
+        node {
+          sh 'docker ps --filter name=simulador-credito-habitacao --format "table {{.Names}}\t{{.Status}}\t{{.Image}}"'
+        }
+      }
     }
   }
 }
