@@ -46,10 +46,7 @@ pipeline {
         script {
           def buildStatus = currentBuild.currentResult
           def message = "**Build ${buildStatus}**\nProject: ${env.JOB_NAME}\nBuild: #${env.BUILD_NUMBER}\nBranch: ${env.GIT_BRANCH ?: 'unknown'}\nCommit: ${env.GIT_COMMIT ?: 'unknown'}\nDuration: ${currentBuild.durationString}"
-
-          def json = new groovy.json.JsonBuilder()
-          json content: message
-          def jsonBody = json.toString()
+          def jsonBody = new groovy.json.JsonBuilder([content: message]).toString()
 
           httpRequest(
             url: WEBHOOK_URL,
