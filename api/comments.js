@@ -117,7 +117,8 @@ module.exports = async function handler(req, res) {
     if (!id) return res.status(400).json({ error: "ID em falta" });
     const existing = (await kvGet(COMMENTS_KEY)) || [];
     const updated = existing.filter(c => c.id !== id);
-    await kvSet(COMMENTS_KEY, updated, { ex: 365 * 24 * 3600 });
+    const saved = await kvSet(COMMENTS_KEY, updated, { ex: 365 * 24 * 3600 });
+    if (!saved) return res.status(500).json({ error: "Erro ao guardar" });
     return res.status(200).json({ ok: true });
   }
 
