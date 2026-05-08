@@ -31,8 +31,8 @@ const MAX_COMMENTS = 100;
 
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-admin-token");
   if (req.method === "OPTIONS") return res.status(200).end();
 
   if (req.method === "GET") {
@@ -105,6 +105,20 @@ module.exports = async function handler(req, res) {
     await kvSet(rateKey, String(Date.now()), { ex: 30 * 60 });
 
     return res.status(201).json(comment);
+  }
+
+  if (req.method === "DELETE") {
+    const token = req.headers["x-admin-token"] || "";
+    const adminToken = process.env.ADMIN_TOKEN;
+    if (!adminToken || token !== adminToken) {
+      return res.status(403).json({ error: "Não autorizado" });
+    }
+    const id = (req.query && req.query.id) || "";
+    if (!id) return res.status(400).json({ error: "ID em falta" });
+    const existing = (await kvGet(COMMENTS_KEY)) || [];
+    const updated = existing.filter(c => c.id !== id);
+    await kvSet(COMMENTS_KEY, updated, { ex: 365 * 24 * 3600 });
+    return res.status(200).json({ ok: true });
   }
 
   return res.status(405).json({ error: "Method not allowed" });
