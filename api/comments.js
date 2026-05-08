@@ -1,9 +1,13 @@
-// ── KV (Vercel KV) — mesma abordagem que api/spreads.js ──────────────────
+// ── KV (Vercel KV) ────────────────────────────────────────────────────────
+const kvAvailable = !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+
 let kvClient = null;
-try {
-  const mod = require("@vercel/kv");
-  kvClient = mod.kv || mod.default || mod;
-} catch (_) {}
+if (kvAvailable) {
+  try {
+    const mod = require("@vercel/kv");
+    kvClient = mod.kv || mod.default || mod;
+  } catch (_) {}
+}
 
 async function kvGet(key) {
   if (!kvClient) return null;
@@ -11,8 +15,8 @@ async function kvGet(key) {
 }
 
 async function kvSet(key, value, opts = {}) {
-  if (!kvClient) return;
-  try { await kvClient.set(key, value, opts); } catch (_) {}
+  if (!kvClient) return false;
+  try { await kvClient.set(key, value, opts); return true; } catch (_) { return false; }
 }
 
 const COMMENTS_KEY = "site:comments:v1";
@@ -30,6 +34,9 @@ module.exports = async function handler(req, res) {
   }
 
   if (req.method === "POST") {
+    if (!kvClient) {
+      return res.status(503).json({ error: "Base de dados não configurada. Ligue o Vercel KV no dashboard do projecto." });
+    }
     const { name, text, bank, simPt, realPt } = req.body || {};
     const t = typeof text === "string" ? text.trim() : "";
     if (t.length < 5 || t.length > 500) {
