@@ -1,9 +1,14 @@
-// ── KV (Vercel KV / Redis) — cache partilhada entre todas as instâncias.
-// Fallback automático para in-memory quando KV_REST_API_URL não está configurado.
+// ── Upstash Redis — cache partilhada entre todas as instâncias.
+// Fallback automático para in-memory quando env vars não estão configuradas.
 let kvClient = null;
 try {
-  const mod = require("@vercel/kv");
-  kvClient = mod.kv || mod.default || mod;
+  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+    const { Redis } = require("@upstash/redis");
+    kvClient = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    });
+  }
 } catch (_) {}
 
 const KV_CACHE_KEY   = "spreads:cache:v1";

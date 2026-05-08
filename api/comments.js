@@ -1,11 +1,14 @@
-// ── KV (Vercel KV) ────────────────────────────────────────────────────────
-const kvAvailable = !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+// ── Upstash Redis ─────────────────────────────────────────────────────────
+const kvAvailable = !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
 
 let kvClient = null;
 if (kvAvailable) {
   try {
-    const mod = require("@vercel/kv");
-    kvClient = mod.kv || mod.default || mod;
+    const { Redis } = require("@upstash/redis");
+    kvClient = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    });
   } catch (_) {}
 }
 
@@ -16,7 +19,11 @@ async function kvGet(key) {
 
 async function kvSet(key, value, opts = {}) {
   if (!kvClient) return false;
-  try { await kvClient.set(key, value, opts); return true; } catch (_) { return false; }
+  try {
+    if (opts.ex) await kvClient.set(key, value, { ex: opts.ex });
+    else await kvClient.set(key, value);
+    return true;
+  } catch (_) { return false; }
 }
 
 const COMMENTS_KEY = "site:comments:v1";
@@ -35,7 +42,7 @@ module.exports = async function handler(req, res) {
 
   if (req.method === "POST") {
     if (!kvClient) {
-      return res.status(503).json({ error: "Base de dados não configurada. Ligue o Vercel KV no dashboard do projecto." });
+      return res.status(503).json({ error: "Base de dados não configurada. Adicione UPSTASH_REDIS_REST_URL e UPSTASH_REDIS_REST_TOKEN nas env vars do Vercel." });
     }
     const { name, text, bank, simPt, realPt } = req.body || {};
     const t = typeof text === "string" ? text.trim() : "";
