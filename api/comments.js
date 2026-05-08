@@ -39,16 +39,27 @@ module.exports = async function handler(req, res) {
     if (req.query && req.query.debug === "1") {
       const secret = process.env.DEBUG_SECRET;
       if (!secret || req.query.secret !== secret) return res.status(403).end();
-      let testErr = null;
+      let pingErr = null, writeErr = null, readBack = null, currentCount = null;
       if (kvClient) {
-        try { await kvClient.ping(); } catch (e) { testErr = e.message; }
+        try { await kvClient.ping(); } catch (e) { pingErr = e.message; }
+        try {
+          await kvClient.set("debug:test", "ok", { ex: 60 });
+          readBack = await kvClient.get("debug:test");
+        } catch (e) { writeErr = e.message; }
+        try {
+          const list = await kvClient.get(COMMENTS_KEY);
+          currentCount = Array.isArray(list) ? list.length : (list === null ? 0 : typeof list);
+        } catch (e) { currentCount = "error: " + e.message; }
       }
       return res.status(200).json({
         kvAvailable,
         kvClient: !!kvClient,
         urlSet: !!process.env.UPSTASH_REDIS_REST_URL,
         tokenSet: !!process.env.UPSTASH_REDIS_REST_TOKEN,
-        pingError: testErr,
+        pingErr,
+        writeErr,
+        readBack,
+        currentCount,
       });
     }
     const list = (await kvGet(COMMENTS_KEY)) || [];
