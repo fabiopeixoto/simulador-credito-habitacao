@@ -36,6 +36,21 @@ module.exports = async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
 
   if (req.method === "GET") {
+    if (req.query && req.query.debug === "1") {
+      const secret = process.env.DEBUG_SECRET;
+      if (!secret || req.query.secret !== secret) return res.status(403).end();
+      let testErr = null;
+      if (kvClient) {
+        try { await kvClient.ping(); } catch (e) { testErr = e.message; }
+      }
+      return res.status(200).json({
+        kvAvailable,
+        kvClient: !!kvClient,
+        urlSet: !!process.env.UPSTASH_REDIS_REST_URL,
+        tokenSet: !!process.env.UPSTASH_REDIS_REST_TOKEN,
+        pingError: testErr,
+      });
+    }
     const list = (await kvGet(COMMENTS_KEY)) || [];
     return res.status(200).json(list);
   }
