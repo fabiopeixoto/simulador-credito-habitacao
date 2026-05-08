@@ -17744,6 +17744,13 @@ function App(){
   const[saved,setSaved]=useState(false);
   const[histSaved,setHistSaved]=useState(()=>{try{return JSON.parse(localStorage.getItem(HIST_KEY)||'[]');}catch(_){return[];}});
   const[showHist,setShowHist]=useState(false);
+  const[showComments,setShowComments]=useState(false);
+  const[comments,setComments]=useState([]);
+  const[commentLoad,setCommentLoad]=useState(false);
+  const[commentForm,setCommentForm]=useState({name:"",text:"",bank:"",simPt:"",realPt:""});
+  const[commentSubmit,setCommentSubmit]=useState(false);
+  const[commentErr,setCommentErr]=useState("");
+  const[commentOk,setCommentOk]=useState(false);
   const[bancoCustos,setBancoCustos]=useState("");
   const[bancoAmort,setBancoAmort]=useState("");
   const[bancoCen,setBancoCen]=useState("");
@@ -18009,6 +18016,25 @@ function App(){
       .map(r=>({name:r.s,"Vida T1":Math.round(r.seg.v1),"Vida T2":Math.round(r.seg.v2),"Multirriscos":Math.round(r.seg.m)}));
   },[resultados]);
 
+  // Comentários
+  const loadComments=useCallback(async()=>{
+    setCommentLoad(true);
+    try{const r=await fetch("/api/comments");if(r.ok)setComments(await r.json());}catch(_){}
+    setCommentLoad(false);
+  },[]);
+  useEffect(()=>{if(showComments)loadComments();},[showComments,loadComments]);
+  async function submitComment(e){
+    e.preventDefault();
+    setCommentErr("");setCommentOk(false);setCommentSubmit(true);
+    try{
+      const r=await fetch("/api/comments",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(commentForm)});
+      const d=await r.json();
+      if(!r.ok){setCommentErr(d.error||"Erro ao enviar");}
+      else{setComments(c=>[d,...c]);setCommentForm({name:"",text:"",bank:"",simPt:"",realPt:""});setCommentOk(true);setTimeout(()=>setCommentOk(false),4000);}
+    }catch(_){setCommentErr("Erro de ligação");}
+    setCommentSubmit(false);
+  }
+
   // Partilha por URL
   function handleShare(){
     const _p=new URLSearchParams();
@@ -18070,7 +18096,8 @@ function App(){
             React.createElement("button", {onClick:()=>setShowHist(h=>!h),"aria-label":"Histórico de simulações",title:"Histórico de simulações", style:{padding:"7px 10px",background:showHist?"rgba(2,132,199,0.12)":"rgba(0,0,0,0.05)",border:"1px solid "+(showHist?"rgba(2,132,199,0.4)":"rgba(0,0,0,0.09)"),borderRadius:7,color:showHist?Sky:"#4b5563",fontSize:14,cursor:"pointer",transition:"all 0.2s"}}, histSaved.length>0?"📋 "+histSaved.length:"📋"),
             React.createElement("div", {style:{width:1,height:22,background:"rgba(0,0,0,0.09)",margin:"0 3px"}}),
             React.createElement("button", {onClick:handleShare,"aria-label":"Partilhar simulação", style:{padding:"7px 13px",background:shared?"rgba(74,222,128,0.12)":"rgba(2,132,199,0.08)",border:"1px solid "+(shared?"rgba(74,222,128,0.5)":"rgba(2,132,199,0.3)"),borderRadius:7,color:shared?G:"#7dd3fc",fontSize:12,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600,transition:"all 0.2s"}}, shared?"✓ Copiado!":"🔗 Partilhar"),
-            React.createElement("button", {onClick:()=>loadRates(true),disabled:status==="loading","aria-label":"Actualizar taxas", style:{padding:"7px 13px",background:"rgba(37,99,235,0.1)",border:"1px solid rgba(37,99,235,0.4)",borderRadius:7,color:Au,fontSize:12,fontFamily:"sans-serif",cursor:status==="loading"?"not-allowed":"pointer",fontWeight:600}}, status==="loading"?"⏳ A actualizar...":"🔄 Actualizar"))))), React.createElement("div", {style: {maxWidth:1150,margin:"0 auto",padding:"10px 14px"}}, React.createElement("div", {style: {display:"flex",borderRadius:9,overflow:"hidden",border:"1px solid rgba(0,0,0,0.07)",marginBottom:10}}, [{id:false,icon:"🏠",label:"Crédito Normal",c:Au},{id:true,icon:"🎓",label:"Crédito Jovem ≤35 anos",c:G}].map(({id,icon,label,c})=>(
+            React.createElement("button", {onClick:()=>loadRates(true),disabled:status==="loading","aria-label":"Actualizar taxas", style:{padding:"7px 13px",background:"rgba(37,99,235,0.1)",border:"1px solid rgba(37,99,235,0.4)",borderRadius:7,color:Au,fontSize:12,fontFamily:"sans-serif",cursor:status==="loading"?"not-allowed":"pointer",fontWeight:600}}, status==="loading"?"⏳ A actualizar...":"🔄 Actualizar"),
+            React.createElement("button", {onClick:()=>setShowComments(c=>!c),"aria-label":"Comentários da comunidade", style:{padding:"7px 13px",background:showComments?"rgba(139,92,246,0.12)":"rgba(0,0,0,0.05)",border:"1px solid "+(showComments?"rgba(139,92,246,0.4)":"rgba(0,0,0,0.09)"),borderRadius:7,color:showComments?"#7c3aed":"#4b5563",fontSize:12,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600,transition:"all 0.2s"}}, "💬 Comentários"+(comments.length>0?" ("+comments.length+")":"")))))), React.createElement("div", {style: {maxWidth:1150,margin:"0 auto",padding:"10px 14px"}}, React.createElement("div", {style: {display:"flex",borderRadius:9,overflow:"hidden",border:"1px solid rgba(0,0,0,0.07)",marginBottom:10}}, [{id:false,icon:"🏠",label:"Crédito Normal",c:Au},{id:true,icon:"🎓",label:"Crédito Jovem ≤35 anos",c:G}].map(({id,icon,label,c})=>(
             React.createElement("button", {key: String(id), onClick: ()=>{setModoJovem(id);if(!id)setPct(Math.min(pct,90));}, style: {flex:1,padding:"9px",border:"none",background:modoJovem===id?"rgba("+(id?"74,222,128":"201,168,76")+",0.08)":"rgba(255,255,255,1)",borderBottom:"2px solid "+(modoJovem===id?c:"transparent"),color:modoJovem===id?c:"#4b5563",fontSize:13,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600}}, icon+" "+label)
           ))), React.createElement("div", {style: {background:"rgba(0,0,0,0.03)",border:"1px solid rgba(37,99,235,0.16)",borderRadius:11,padding:"13px 14px 10px",marginBottom:10}}, React.createElement("div", {style: {fontSize:11,letterSpacing:3,color:Au,fontFamily:"monospace",marginBottom:10}}, "PARÂMETROS GLOBAIS"), React.createElement("div", {style: {display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(135px,1fr))",gap:11,marginBottom:12,alignItems:"start"}}, React.createElement("div", null, React.createElement("div", {style: {fontSize:11,color:"#4b5563",marginBottom:3,fontFamily:"sans-serif"}}, "VALOR DO IMÓVEL (Aquisição)"), React.createElement(SliderInput, {min: 50000, max: modoJovem?450000:1500000, step: 1000, value: Math.min(valorImovel,modoJovem?450000:1500000), onChange: v=>setValorImovel(v), color: Au, suffix: "€", formatFn: v=>v.toLocaleString('pt-PT')})), React.createElement("div", null, React.createElement("div", {style: {fontSize:11,color:"#4b5563",marginBottom:3,fontFamily:"sans-serif"}}, "AVALIAÇÃO (opcional)"), React.createElement(SliderInput, {min: 0, max: modoJovem?450000:1500000, step: 1000, value: valorAvaliacao, onChange: v=>setValorAvaliacao(v), color: avalAbaixo?R:"#4b5563", suffix: "€", formatFn: v=>v===0?"= Valor de aquisição":v.toLocaleString('pt-PT')}), avalAbaixo&&(
                 React.createElement("div", {style: {fontSize:10,color:R,fontFamily:"sans-serif",marginTop:2}}, "⚠️ Avaliação abaixo do preço → LTV real: "+ltvReal+"% · spread pode subir")
@@ -18109,6 +18136,65 @@ function App(){
               React.createElement("a", {href:h.url,style:{padding:"3px 8px",background:"rgba(2,132,199,0.1)",border:"1px solid rgba(2,132,199,0.3)",borderRadius:5,color:Sky,fontSize:11,textDecoration:"none",cursor:"pointer"}}, "Restaurar"),
               React.createElement("button", {onClick:()=>{const n=histSaved.filter((_,j)=>j!==i);setHistSaved(n);try{localStorage.setItem(HIST_KEY,JSON.stringify(n));}catch(_){}},style:{padding:"3px 8px",background:"rgba(248,113,113,0.1)",border:"1px solid rgba(248,113,113,0.3)",borderRadius:5,color:R,fontSize:11,cursor:"pointer"},"aria-label":"Apagar simulação"}, "✕")
             ))
+          ),
+          showComments&&React.createElement("div", {onClick:()=>setShowComments(false),style:{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}},
+            React.createElement("div", {onClick:e=>e.stopPropagation(),style:{background:"#ffffff",borderRadius:14,width:"100%",maxWidth:580,maxHeight:"85vh",display:"flex",flexDirection:"column",boxShadow:"0 20px 60px rgba(0,0,0,0.3)",fontFamily:"'Inter',system-ui,sans-serif"}},
+              React.createElement("div", {style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 18px",borderBottom:"1px solid rgba(0,0,0,0.07)"}},
+                React.createElement("div", null,
+                  React.createElement("div", {style:{fontSize:15,fontWeight:700,color:"#111827"}}, "💬 Comentários da Comunidade"),
+                  React.createElement("div", {style:{fontSize:11,color:"#6b7280",marginTop:2}}, "Partilha a tua experiência: quanto calculou o simulador vs o que conseguiste")
+                ),
+                React.createElement("button", {onClick:()=>setShowComments(false),style:{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#6b7280",padding:"0 4px",lineHeight:1}}, "✕")
+              ),
+              React.createElement("div", {style:{flex:1,overflowY:"auto",padding:"14px 18px"}},
+                React.createElement("form", {onSubmit:submitComment,style:{background:"rgba(139,92,246,0.04)",border:"1px solid rgba(139,92,246,0.18)",borderRadius:10,padding:14,marginBottom:16}},
+                  React.createElement("div", {style:{fontSize:11,fontWeight:700,color:"#7c3aed",letterSpacing:1,marginBottom:10,fontFamily:"monospace"}}, "DEIXA O TEU COMENTÁRIO"),
+                  React.createElement("div", {style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}},
+                    React.createElement("div", null,
+                      React.createElement("label", {style:{fontSize:10,color:"#6b7280",display:"block",marginBottom:3}}, "Nome (opcional)"),
+                      React.createElement("input", {value:commentForm.name,onChange:e=>setCommentForm(f=>({...f,name:e.target.value})),placeholder:"Anónimo",maxLength:50,style:{width:"100%",padding:"6px 9px",border:"1px solid rgba(0,0,0,0.12)",borderRadius:6,fontSize:12,fontFamily:"sans-serif",boxSizing:"border-box"}})
+                    ),
+                    React.createElement("div", null,
+                      React.createElement("label", {style:{fontSize:10,color:"#6b7280",display:"block",marginBottom:3}}, "Banco (opcional)"),
+                      React.createElement("input", {value:commentForm.bank,onChange:e=>setCommentForm(f=>({...f,bank:e.target.value})),placeholder:"ex: CGD, BPI...",maxLength:40,style:{width:"100%",padding:"6px 9px",border:"1px solid rgba(0,0,0,0.12)",borderRadius:6,fontSize:12,fontFamily:"sans-serif",boxSizing:"border-box"}})
+                    )
+                  ),
+                  React.createElement("div", {style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}},
+                    React.createElement("div", null,
+                      React.createElement("label", {style:{fontSize:10,color:"#6b7280",display:"block",marginBottom:3}}, "Simulador calculou (€/mês)"),
+                      React.createElement("input", {value:commentForm.simPt,onChange:e=>setCommentForm(f=>({...f,simPt:e.target.value})),placeholder:"ex: 850",type:"text",inputMode:"decimal",style:{width:"100%",padding:"6px 9px",border:"1px solid rgba(0,0,0,0.12)",borderRadius:6,fontSize:12,fontFamily:"sans-serif",boxSizing:"border-box"}})
+                    ),
+                    React.createElement("div", null,
+                      React.createElement("label", {style:{fontSize:10,color:"#6b7280",display:"block",marginBottom:3}}, "Real conseguido (€/mês)"),
+                      React.createElement("input", {value:commentForm.realPt,onChange:e=>setCommentForm(f=>({...f,realPt:e.target.value})),placeholder:"ex: 870",type:"text",inputMode:"decimal",style:{width:"100%",padding:"6px 9px",border:"1px solid rgba(0,0,0,0.12)",borderRadius:6,fontSize:12,fontFamily:"sans-serif",boxSizing:"border-box"}})
+                    )
+                  ),
+                  React.createElement("div", {style:{marginBottom:8}},
+                    React.createElement("label", {style:{fontSize:10,color:"#6b7280",display:"block",marginBottom:3}}, "Comentário *"),
+                    React.createElement("textarea", {value:commentForm.text,onChange:e=>setCommentForm(f=>({...f,text:e.target.value})),placeholder:"Partilha a tua experiência com o simulador ou com o banco...",required:true,maxLength:500,rows:3,style:{width:"100%",padding:"6px 9px",border:"1px solid rgba(0,0,0,0.12)",borderRadius:6,fontSize:12,fontFamily:"sans-serif",resize:"vertical",boxSizing:"border-box"}})
+                  ),
+                  commentErr&&React.createElement("div", {style:{fontSize:11,color:"#dc2626",marginBottom:8,padding:"5px 9px",background:"rgba(220,38,38,0.06)",borderRadius:5}}, "⚠️ "+commentErr),
+                  commentOk&&React.createElement("div", {style:{fontSize:11,color:"#059669",marginBottom:8,padding:"5px 9px",background:"rgba(5,150,105,0.06)",borderRadius:5}}, "✅ Comentário publicado!"),
+                  React.createElement("button", {type:"submit",disabled:commentSubmit||commentForm.text.trim().length<5,style:{padding:"7px 18px",background:commentSubmit?"rgba(0,0,0,0.05)":"rgba(139,92,246,0.9)",border:"none",borderRadius:7,color:commentSubmit?"#9b9b9b":"#ffffff",fontSize:12,fontWeight:700,cursor:commentSubmit?"not-allowed":"pointer",fontFamily:"sans-serif"}}, commentSubmit?"A publicar...":"Publicar comentário")
+                ),
+                commentLoad?React.createElement("div", {style:{textAlign:"center",color:"#6b7280",fontSize:13,padding:20}}, "⏳ A carregar..."):
+                comments.length===0?React.createElement("div", {style:{textAlign:"center",color:"#9ca3af",fontSize:13,padding:20}}, "Ainda não há comentários. Sê o primeiro!"):
+                React.createElement("div", null, comments.map(c=>
+                  React.createElement("div", {key:c.id,style:{borderBottom:"1px solid rgba(0,0,0,0.06)",paddingBottom:12,marginBottom:12}},
+                    React.createElement("div", {style:{display:"flex",alignItems:"baseline",gap:8,marginBottom:4}},
+                      React.createElement("span", {style:{fontWeight:700,fontSize:13,color:"#111827"}}, c.name),
+                      c.bank&&React.createElement("span", {style:{fontSize:11,background:"rgba(37,99,235,0.08)",border:"1px solid rgba(37,99,235,0.2)",color:"#2563eb",borderRadius:4,padding:"1px 6px"}}, c.bank),
+                      React.createElement("span", {style:{fontSize:11,color:"#9ca3af",marginLeft:"auto"}}, new Date(c.ts).toLocaleDateString("pt-PT"))
+                    ),
+                    (c.simPt||c.realPt)&&React.createElement("div", {style:{display:"flex",gap:10,marginBottom:6}},
+                      c.simPt&&React.createElement("div", {style:{fontSize:11,background:"rgba(201,168,76,0.1)",border:"1px solid rgba(201,168,76,0.3)",borderRadius:5,padding:"2px 8px",color:"#92400e"}}, "🧮 Simulado: "+c.simPt.toFixed(2).replace(".",",")+"/mês"),
+                      c.realPt&&React.createElement("div", {style:{fontSize:11,background:"rgba(5,150,105,0.08)",border:"1px solid rgba(5,150,105,0.25)",borderRadius:5,padding:"2px 8px",color:"#065f46"}}, "✅ Real: "+c.realPt.toFixed(2).replace(".",",")+"/mês")
+                    ),
+                    React.createElement("div", {style:{fontSize:13,color:"#374151",lineHeight:1.5}}, c.text)
+                  )
+                ))
+              )
+            )
           ),
           React.createElement("div", {style: {display:"flex",gap:3,marginBottom:10,flexWrap:"wrap",alignItems:"center"}}, NAV.map(({id,icon,label})=>(
             React.createElement("button", {key: id, onClick: ()=>setNav(id), style: {padding:"5px 11px",border:"1px solid "+(nav===id?Au:"rgba(0,0,0,0.07)"),borderRadius:7,background:nav===id?"rgba(37,99,235,0.1)":"transparent",color:nav===id?Au:"#4b5563",fontSize:13,fontFamily:"sans-serif",cursor:"pointer",fontWeight:nav===id?700:400}}, icon+" "+label)
