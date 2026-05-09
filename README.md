@@ -6,7 +6,7 @@ Simulador gratuito de crédito habitação em Portugal para comparação de prop
 - Comparação entre 14 bancos portugueses.
 - Cálculo de prestação, TAEG, MTIC, DSTI e cenários de taxa.
 - Euribor obtida via BCE.
-- Atualização de spreads via função serverless (`api/spreads.js`) com cache e rate limiting.
+- Atualização de spreads via API (`api/spreads.js`) com cache e rate limiting.
 - PWA com Service Worker para melhor experiência de carregamento.
 
 ## Estrutura do projeto
@@ -17,33 +17,41 @@ simulador-credito/
 ├── manifest.json       # Manifesto PWA
 ├── icon.svg            # Ícone da aplicação
 ├── og-image.svg        # Imagem Open Graph
-├── vercel.json         # Configuração de deploy (Vercel)
+├── server.js           # Servidor Node.js (HTTP, compressão, API)
+├── Dockerfile          # Imagem Docker (node:20-slim)
+├── Jenkinsfile         # Pipeline CI/CD com notificações Discord
 ├── api/
-│   └── spreads.js      # Proxy/API para spreads e Euribor
+│   ├── spreads.js      # Proxy/API para spreads e Euribor
+│   └── comments.js     # API de comentários da comunidade
 ├── AUDITORIA.md        # Template de auditoria de resultados
 └── README.md
 ```
 
-## Deploy no Vercel (rápido)
-1. Criar repositório no GitHub e enviar os ficheiros do projeto.
-2. Importar o repositório em [vercel.com](https://vercel.com).
-3. (Opcional) Definir variável de ambiente:
-   - `ANTHROPIC_API_KEY`
-4. Fazer redeploy.
+## Deploy (Docker + Jenkins)
 
-## Variáveis de ambiente
-- `ANTHROPIC_API_KEY` (opcional): ativa atualização dinâmica de spreads via API Anthropic.
+O pipeline Jenkins constrói a imagem Docker e faz deploy automático a cada push.
 
-## Docker local (com persistência SQLite)
-Se correres sem Redis, os comentários usam SQLite em `data/comments.sqlite` e o cache de spreads usa `data/spreads.sqlite`.
-Para manter os dados entre reinícios/redeploys do container, monta um volume:
+### Credenciais necessárias no Jenkins
+- `anthropic-api-key` — chave Anthropic para atualização de spreads
+- `discord-webhook-url` — webhook Discord para notificações de build
+- `github-api-token` — token GitHub para enriquecer mensagens de build
 
+### Variáveis de ambiente
+- `ANTHROPIC_API_KEY` — ativa atualização dinâmica de spreads via API Anthropic
+- `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` — cache Redis partilhado (opcional; fallback SQLite local)
+- `ADMIN_TOKEN` — token para apagar comentários (aceder via `?admin=<token>`)
+- `DEBUG_SECRET` — token para endpoint de diagnóstico `/api/comments?debug=1`
+
+### Correr localmente
 ```bash
+docker build -t simulador-credito-habitacao .
 docker run -d --name simulador-credito-habitacao -p 3000:3000 \
   -v simulador-credito-habitacao-data:/usr/src/app/data \
   -e ANTHROPIC_API_KEY="..." \
   simulador-credito-habitacao:latest
 ```
+
+Sem Redis, os comentários e o cache de spreads usam SQLite em `data/`.
 
 ## Auditoria de resultados
 Para validar se os resultados do simulador estão alinhados com os simuladores oficiais dos bancos:
