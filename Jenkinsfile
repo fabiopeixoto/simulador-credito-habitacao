@@ -69,8 +69,19 @@ pipeline {
           def repoUrl = normalizeRepoUrl(env.GIT_URL ?: "")
           def commitUrl = (repoUrl && env.GIT_COMMIT) ? "${repoUrl}/commit/${env.GIT_COMMIT}" : ""
 
-          def commitTitle = sh(script: 'git log -1 --pretty=%s', returnStdout: true).trim()
-          def commitAuthor = sh(script: 'git log -1 --pretty=%an', returnStdout: true).trim()
+          def commitTitle = env.CHANGE_TITLE ?: ""
+          def commitAuthor = env.CHANGE_AUTHOR_DISPLAY_NAME ?: env.CHANGE_AUTHOR ?: ""
+          try {
+            def hasGit = sh(script: 'command -v git >/dev/null 2>&1', returnStatus: true) == 0
+            if (hasGit) {
+              if (!commitTitle) commitTitle = sh(script: 'git log -1 --pretty=%s', returnStdout: true).trim()
+              if (!commitAuthor) commitAuthor = sh(script: 'git log -1 --pretty=%an', returnStdout: true).trim()
+            }
+          } catch (_) {
+            // keep fallback values from Jenkins environment
+          }
+          if (!commitTitle) commitTitle = "Commit " + shortSha
+          if (!commitAuthor) commitAuthor = "unknown"
 
           def links = []
           if (buildUrl) links << "[Build](${buildUrl})"
@@ -87,7 +98,7 @@ pipeline {
               [name: "Project", value: env.JOB_NAME ?: "unknown", inline: true],
               [name: "Branch", value: branch, inline: true],
               [name: "Commit", value: shortSha, inline: true],
-              [name: "Author", value: commitAuthor ?: "unknown", inline: true],
+              [name: "Author", value: commitAuthor, inline: true],
               [name: "Image", value: env.DEPLOY_IMAGE ?: "unknown", inline: true],
               [name: "Duration", value: currentBuild.durationString ?: "unknown", inline: true],
               [name: "Links", value: links ? links.join(" · ") : "No links available", inline: false]
