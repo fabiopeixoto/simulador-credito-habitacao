@@ -1,5 +1,8 @@
-// ── Upstash Redis — cache partilhada entre todas as instâncias.
-// Fallback automático para in-memory quando env vars não estão configuradas.
+const fs = require("fs");
+const path = require("path");
+
+// ── Shared cache (Redis primary, SQLite fallback) ─────────────────────────
+// Se Redis não estiver configurado, usa SQLite local em ./data.
 let kvClient = null;
 try {
   if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
@@ -11,28 +14,129 @@ try {
   }
 } catch (_) {}
 
+let sqliteDb = null;
+if (!kvClient) {
+  try {
+    const Database = require("better-sqlite3");
+    const dbDir = path.join(__dirname, "..", "data");
+    const dbPath = path.join(dbDir, "spreads.sqlite");
+    fs.mkdirSync(dbDir, { recursive: true });
+    sqliteDb = new Database(dbPath);
+    sqliteDb.pragma("journal_mode = WAL");
+    sqliteDb.exec(`
+      CREATE TABLE IF NOT EXISTS kv_store (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        expiresAt INTEGER
+      );
+      CREATE INDEX IF NOT EXISTS idx_kv_store_expires ON kv_store(expiresAt);
+    `);
+  } catch (_) {}
+}
+
 const KV_CACHE_KEY   = "spreads:cache:v1";
 const KV_CALLS_PFX   = "spreads:calls:";   // + "YYYY-MM-DD"
 const KV_CACHE_TTL   = 25 * 60 * 60;       // 25 h (segundos)
 const KV_CALLS_TTL   = 49 * 60 * 60;       // 49 h
 
 async function kvGet(key) {
-  if (!kvClient) return null;
-  try { return await kvClient.get(key); } catch (_) { return null; }
+  if (kvClient) {
+    try { return await kvClient.get(key); } catch (_) { return null; }
+  }
+  if (!sqliteDb) return null;
+  try {
+    const now = Date.now();
+    const row = sqliteDb.prepare("SELECT value, expiresAt FROM kv_store WHERE key = ?").get(key);
+    if (!row) return null;
+    if (row.expiresAt !== null && row.expiresAt <= now) {
+      sqliteDb.prepare("DELETE FROM kv_store WHERE key = ?").run(key);
+      return null;
+    }
+    return JSON.parse(row.value);
+  } catch (_) {
+    return null;
+  }
 }
 
 async function kvSet(key, value, ttlSeconds) {
-  if (!kvClient) return;
-  try { await kvClient.set(key, value, { ex: ttlSeconds }); } catch (_) {}
+  if (kvClient) {
+    try { await kvClient.set(key, value, { ex: ttlSeconds }); } catch (_) {}
+    return;
+  }
+  if (!sqliteDb) return;
+  try {
+    const expiresAt = ttlSeconds ? Date.now() + ttlSeconds * 1000 : null;
+    sqliteDb
+      .prepare(`
+        INSERT INTO kv_store(key, value, expiresAt) VALUES (?, ?, ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value, expiresAt = excluded.expiresAt
+      `)
+      .run(key, JSON.stringify(value), expiresAt);
+  } catch (_) {}
 }
 
 async function kvIncr(key, ttlSeconds) {
-  if (!kvClient) return null;
+  if (kvClient) {
+    try {
+      const n = await kvClient.incr(key);
+      if (n === 1) await kvClient.expire(key, ttlSeconds).catch(() => {});
+      return n;
+    } catch (_) { return null; }
+  }
+  if (!sqliteDb) return null;
   try {
-    const n = await kvClient.incr(key);
-    if (n === 1) await kvClient.expire(key, ttlSeconds).catch(() => {});
-    return n;
-  } catch (_) { return null; }
+    const now = Date.now();
+    const expiresAt = now + ttlSeconds * 1000;
+    const tx = sqliteDb.transaction((k) => {
+      const row = sqliteDb.prepare("SELECT value, expiresAt FROM kv_store WHERE key = ?").get(k);
+      let current = 0;
+      if (row && (row.expiresAt === null || row.expiresAt > now)) {
+        current = Number(JSON.parse(row.value)) || 0;
+      }
+      const next = current + 1;
+      sqliteDb
+        .prepare(`
+          INSERT INTO kv_store(key, value, expiresAt) VALUES (?, ?, ?)
+          ON CONFLICT(key) DO UPDATE SET value = excluded.value, expiresAt = excluded.expiresAt
+        `)
+        .run(k, JSON.stringify(next), expiresAt);
+      return next;
+    });
+    return tx(key);
+  } catch (_) {
+    return null;
+  }
+}
+
+async function kvDecr(key) {
+  if (kvClient) {
+    try {
+      await kvClient.decr(key);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+  if (!sqliteDb) return false;
+  try {
+    const now = Date.now();
+    const tx = sqliteDb.transaction((k) => {
+      const row = sqliteDb.prepare("SELECT value, expiresAt FROM kv_store WHERE key = ?").get(k);
+      if (!row || (row.expiresAt !== null && row.expiresAt <= now)) {
+        sqliteDb.prepare("DELETE FROM kv_store WHERE key = ?").run(k);
+        return true;
+      }
+      const current = Number(JSON.parse(row.value)) || 0;
+      const next = Math.max(0, current - 1);
+      sqliteDb
+        .prepare("UPDATE kv_store SET value = ? WHERE key = ?")
+        .run(JSON.stringify(next), k);
+      return true;
+    });
+    return tx(key);
+  } catch (_) {
+    return false;
+  }
 }
 
 // ── In-memory L1 — evita round-trips KV dentro da mesma instância quente.
@@ -183,7 +287,7 @@ module.exports = async function handler(req, res) {
 
   if (kvSlot !== null && kvSlot > MAX_CALLS_PER_DAY) {
     // Slot acima do limite — reverter o INCR e servir cache
-    if (kvClient) kvClient.decr(KV_CALLS_PFX + today).catch(() => {});
+    kvDecr(KV_CALLS_PFX + today).catch(() => {});
     const staleD  = kvCached?.data || MEM.data || null;
     const staleTs = kvCached?.fetchedAt || MEM.fetchedAt || 0;
     if (staleD) {

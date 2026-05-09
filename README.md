@@ -35,7 +35,7 @@ simulador-credito/
 - `ANTHROPIC_API_KEY` (opcional): ativa atualização dinâmica de spreads via API Anthropic.
 
 ## Docker local (com persistência SQLite)
-Se correres sem Redis, os comentários usam SQLite em `data/comments.sqlite`.
+Se correres sem Redis, os comentários usam SQLite em `data/comments.sqlite` e o cache de spreads usa `data/spreads.sqlite`.
 Para manter os dados entre reinícios/redeploys do container, monta um volume:
 
 ```bash
