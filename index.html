@@ -17722,10 +17722,10 @@ function App(){
   // Titulares
   const[titulares,setTitulares]=useState(()=>_qi('t2',1)===2?2:1);
   const[idade1,setIdade1]=useState(()=>Math.min(75,Math.max(18,_qi('i1',30))));
-  const[rend1,setRend1]=useState(()=>Math.max(500,_qi('r1',2500)));
+  const[rend1,setRend1]=useState(()=>Math.max(500,_qi('r1',1000)));
   const[tipoC1,setTipoC1]=useState(()=>_qs('c1',"efetivo",["efetivo","termo","parcial","recibo","pensao"]));
-  const[idade2,setIdade2]=useState(()=>Math.min(75,Math.max(18,_qi('i2',28))));
-  const[rend2,setRend2]=useState(()=>Math.max(500,_qi('r2',2000)));
+  const[idade2,setIdade2]=useState(()=>Math.min(75,Math.max(18,_qi('i2',30))));
+  const[rend2,setRend2]=useState(()=>Math.max(500,_qi('r2',1000)));
   const[tipoC2,setTipoC2]=useState(()=>_qs('c2',"efetivo",["efetivo","termo","parcial","recibo","pensao"]));
 
   // DSTI extras
