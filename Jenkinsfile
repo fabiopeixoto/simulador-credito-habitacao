@@ -177,9 +177,10 @@ pipeline {
             requestBody: jsonBody,
             validResponseCodes: '200,204'
           )
+
+          sh 'docker ps --filter name=simulador-credito-habitacao --format "table {{.Names}}\t{{.Status}}\t{{.Image}}"'
         }
       }
-      sh 'docker ps --filter name=simulador-credito-habitacao --format "table {{.Names}}\t{{.Status}}\t{{.Image}}"'
     }
   }
 }
