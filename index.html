@@ -17603,10 +17603,14 @@ const BANK_DOMAINS={CA:"creditoagricola.pt",CTT:"ctt.pt",BNKTR:"bankinter.pt",AB
 const G="#16a34a",R="#dc2626",Au="#2563eb",N="#e5e7eb",Sky="#0284c7";
 const ecC=ef=>ef<=35?G:ef<=40?Au:R;
 const ecL=ef=>ef<=35?"Aprovável":ef<=40?"Limite":"Difícil";
-const thS={padding:"4px 6px",textAlign:"left",color:"#4b5563",fontSize:11,letterSpacing:1,fontWeight:600,borderBottom:"1px solid rgba(37,99,235,0.22)",whiteSpace:"nowrap",verticalAlign:"bottom"};
-const tdB={padding:"6px 6px"};
+const thS={padding:"6px 8px",textAlign:"left",color:"#4b5563",fontSize:11,letterSpacing:1,fontWeight:600,borderBottom:"1px solid rgba(37,99,235,0.22)",whiteSpace:"nowrap",verticalAlign:"bottom"};
+const tdB={padding:"8px 9px"};
 const tdG=i=>({...tdB,background:i===0?"rgba(74,222,128,0.09)":"rgba(74,222,128,0.035)",color:"#14532d"});
 const tdR=i=>({...tdB,background:i===0?"rgba(248,113,113,0.09)":"rgba(248,113,113,0.03)",color:"#7f1d1d"});
+const thSC={...thS,padding:"4px 6px"};
+const tdBC={padding:"6px 6px"};
+const tdGC=i=>({...tdBC,background:i===0?"rgba(74,222,128,0.09)":"rgba(74,222,128,0.035)",color:"#14532d"});
+const tdRC=i=>({...tdBC,background:i===0?"rgba(248,113,113,0.09)":"rgba(248,113,113,0.03)",color:"#7f1d1d"});
 const rbg=i=>i===0?"rgba(201,168,76,0.32)":i===1?"rgba(148,163,184,0.28)":i===2?"rgba(160,108,50,0.11)":"rgba(0,0,0,0.025)";
 const EUR_COLORS={"3m":["#f97316","rgba(249,115,22,0.18)"],"6m":[Sky,"rgba(2,132,199,0.18)"],"12m":[Au,"rgba(37,99,235,0.18)"]};
 
