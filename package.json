@@ -6,7 +6,6 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "@upstash/redis": "^1.34.0",
     "better-sqlite3": "^12.9.0"
   }
 }

@@ -6,7 +6,7 @@ Simulador gratuito de crédito habitação em Portugal para comparação de prop
 - Comparação entre 14 bancos portugueses.
 - Cálculo de prestação, TAEG, MTIC, DSTI e cenários de taxa.
 - Euribor obtida via BCE.
-- Atualização de spreads via API (`api/spreads.js`) com cache e rate limiting.
+- Atualização de spreads via API (`api/spreads.js`) com cache SQLite e rate limiting.
 - PWA com Service Worker para melhor experiência de carregamento.
 
 ## Estrutura do projeto
@@ -38,7 +38,6 @@ O pipeline Jenkins constrói a imagem Docker e faz deploy automático a cada pus
 
 ### Variáveis de ambiente
 - `ANTHROPIC_API_KEY` — ativa atualização dinâmica de spreads via API Anthropic
-- `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` — cache Redis partilhado (opcional; fallback SQLite local)
 - `ADMIN_TOKEN` — token para apagar comentários (aceder via `?admin=<token>`)
 - `DEBUG_SECRET` — token para endpoint de diagnóstico `/api/comments?debug=1`
 
@@ -51,7 +50,7 @@ docker run -d --name simulador-credito-habitacao -p 3000:3000 \
   simulador-credito-habitacao:latest
 ```
 
-Sem Redis, os comentários e o cache de spreads usam SQLite em `data/`.
+Os comentários e o cache de spreads são guardados em SQLite em `data/`.
 
 ## Auditoria de resultados
 Para validar se os resultados do simulador estão alinhados com os simuladores oficiais dos bancos:
