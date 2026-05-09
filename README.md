@@ -35,6 +35,8 @@ O pipeline Jenkins constrói a imagem Docker e faz deploy automático a cada pus
 - `anthropic-api-key` — chave Anthropic para atualização de spreads
 - `discord-webhook-url` — webhook Discord para notificações de build
 - `github-api-token` — token GitHub para enriquecer mensagens de build
+- `admin-token` — token para apagar comentários via `?admin=<token>`
+- `debug-secret` — token para endpoint de diagnóstico `/api/comments?debug=1&secret=<token>`
 
 ### Variáveis de ambiente
 - `ANTHROPIC_API_KEY` — ativa atualização dinâmica de spreads via API Anthropic
