@@ -1,6 +1,7 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const zlib = require("zlib");
 const { URL } = require("url");
 
 const root = path.resolve(__dirname);
@@ -38,6 +39,22 @@ function getCacheControl(pathname, ext) {
 function sendJson(res, status, payload) {
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
   res.end(JSON.stringify(payload));
+}
+
+function getCompression(req, contentType) {
+  if (!contentType) return null;
+  const isCompressible =
+    contentType.startsWith("text/") ||
+    contentType.includes("javascript") ||
+    contentType.includes("json") ||
+    contentType.includes("xml") ||
+    contentType.includes("svg");
+  if (!isCompressible) return null;
+
+  const accept = String(req.headers["accept-encoding"] || "").toLowerCase();
+  if (accept.includes("br")) return "br";
+  if (accept.includes("gzip")) return "gzip";
+  return null;
 }
 
 function decorateResponse(res) {
@@ -139,9 +156,22 @@ const server = http.createServer(async (req, res) => {
       "X-Content-Type-Options": "nosniff",
     };
 
-    res.writeHead(200, headers);
     const stream = fs.createReadStream(fullPath);
-    stream.pipe(res);
+    const compression = getCompression(req, contentType);
+    if (compression === "br") {
+      headers["Content-Encoding"] = "br";
+      headers["Vary"] = "Accept-Encoding";
+      res.writeHead(200, headers);
+      stream.pipe(zlib.createBrotliCompress()).pipe(res);
+    } else if (compression === "gzip") {
+      headers["Content-Encoding"] = "gzip";
+      headers["Vary"] = "Accept-Encoding";
+      res.writeHead(200, headers);
+      stream.pipe(zlib.createGzip()).pipe(res);
+    } else {
+      res.writeHead(200, headers);
+      stream.pipe(res);
+    }
     stream.on("error", (error) => {
       console.error(error);
       res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
