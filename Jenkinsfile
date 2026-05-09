@@ -91,12 +91,14 @@ pipeline {
             try {
               withCredentials([string(credentialsId: 'github-api-token', variable: 'GITHUB_TOKEN')]) {
                 def apiUrl = "https://api.github.com/repos/${ghRepo.owner}/${ghRepo.repo}/commits/${env.GIT_COMMIT}"
+                // Avoid Groovy GString interpolation of secrets (Jenkins security warning).
+                def authorizationHeader = 'Bearer '.concat(env.GITHUB_TOKEN as String)
                 def resp = httpRequest(
                   url: apiUrl,
                   httpMode: 'GET',
                   quiet: true,
                   customHeaders: [
-                    [name: 'Authorization', value: "Bearer ${GITHUB_TOKEN}"],
+                    [name: 'Authorization', value: authorizationHeader],
                     [name: 'Accept', value: 'application/vnd.github+json'],
                     [name: 'X-GitHub-Api-Version', value: '2022-11-28']
                   ],
