@@ -4,7 +4,8 @@ const path = require("path");
 const { URL } = require("url");
 
 const root = path.resolve(__dirname);
-const handler = require(path.join(root, "api", "spreads.js"));
+const spreadsHandler = require(path.join(root, "api", "spreads.js"));
+const commentsHandler = require(path.join(root, "api", "comments.js"));
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
@@ -70,6 +71,31 @@ function decorateResponse(res) {
   return res;
 }
 
+async function readJsonBody(req) {
+  const chunks = [];
+  for await (const chunk of req) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  const raw = Buffer.concat(chunks).toString("utf8").trim();
+  if (!raw) return {};
+  return JSON.parse(raw);
+}
+
+async function runApiHandler(req, res, requestUrl, handler) {
+  decorateResponse(res);
+  req.query = Object.fromEntries(requestUrl.searchParams.entries());
+
+  if (["POST", "PUT", "PATCH"].includes(req.method)) {
+    try {
+      req.body = await readJsonBody(req);
+    } catch (_) {
+      return sendJson(res, 400, { error: "JSON inválido" });
+    }
+  }
+
+  return handler(req, res);
+}
+
 const server = http.createServer(async (req, res) => {
   try {
     const requestUrl = new URL(req.url, `http://${req.headers.host}`);
@@ -80,8 +106,15 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(405, { Allow: "POST", "Content-Type": "application/json; charset=utf-8" });
         return res.end(JSON.stringify({ error: "Método não suportado" }));
       }
-      decorateResponse(res);
-      return handler(req, res);
+      return runApiHandler(req, res, requestUrl, spreadsHandler);
+    }
+
+    if (pathname === "/api/comments") {
+      if (!["GET", "POST", "DELETE", "OPTIONS"].includes(req.method)) {
+        res.writeHead(405, { Allow: "GET, POST, DELETE, OPTIONS", "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({ error: "Método não suportado" }));
+      }
+      return runApiHandler(req, res, requestUrl, commentsHandler);
     }
 
     let filePath = pathname === "/" ? "/index.html" : pathname;

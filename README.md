@@ -24,7 +24,6 @@ simulador-credito/
 └── README.md
 ```
 
-<<<<<<< codex/review-code-and-suggest-improvements-adz028
 ## Deploy no Vercel (rápido)
 1. Criar repositório no GitHub e enviar os ficheiros do projeto.
 2. Importar o repositório em [vercel.com](https://vercel.com).
@@ -34,6 +33,17 @@ simulador-credito/
 
 ## Variáveis de ambiente
 - `ANTHROPIC_API_KEY` (opcional): ativa atualização dinâmica de spreads via API Anthropic.
+
+## Docker local (com persistência SQLite)
+Se correres sem Redis, os comentários usam SQLite em `data/comments.sqlite`.
+Para manter os dados entre reinícios/redeploys do container, monta um volume:
+
+```bash
+docker run -d --name simulador-credito-habitacao -p 3000:3000 \
+  -v simulador-credito-habitacao-data:/usr/src/app/data \
+  -e ANTHROPIC_API_KEY="..." \
+  simulador-credito-habitacao:latest
+```
 
 ## Auditoria de resultados
 Para validar se os resultados do simulador estão alinhados com os simuladores oficiais dos bancos:
@@ -45,12 +55,3 @@ Para validar se os resultados do simulador estão alinhados com os simuladores o
 ## Notas
 - Simulação meramente indicativa.
 - Confirmar sempre condições finais na FINE (Ficha de Informação Normalizada Europeia).
-=======
----
-
-*Simulação indicativa. Consulte sempre a FINE antes de contratar.*
-
-
-## Auditoria de resultados
-- Usa o template `AUDITORIA.md` para comparar o simulador interno com simuladores oficiais de bancos e registar desvios de prestação, TAEG e MTIC.
->>>>>>> main

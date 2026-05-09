@@ -1,6 +1,8 @@
-// ── Upstash Redis ─────────────────────────────────────────────────────────
-const kvAvailable = !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
+const fs = require("fs");
+const path = require("path");
 
+// ── Upstash Redis (primary) ───────────────────────────────────────────────
+const kvAvailable = !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
 let kvClient = null;
 if (kvAvailable) {
   try {
@@ -12,22 +14,121 @@ if (kvAvailable) {
   } catch (_) {}
 }
 
-async function kvGet(key) {
-  if (!kvClient) return null;
-  try { return await kvClient.get(key); } catch (_) { return null; }
-}
+// ── SQLite (fallback when Redis is unavailable) ───────────────────────────
+let sqliteDb = null;
+let sqliteError = null;
+const dbDir = path.join(__dirname, "..", "data");
+const dbPath = path.join(dbDir, "comments.sqlite");
 
-async function kvSet(key, value, opts = {}) {
-  if (!kvClient) return false;
+if (!kvClient) {
   try {
-    if (opts.ex) await kvClient.set(key, value, { ex: opts.ex });
-    else await kvClient.set(key, value);
-    return true;
-  } catch (_) { return false; }
+    const Database = require("better-sqlite3");
+    fs.mkdirSync(dbDir, { recursive: true });
+    sqliteDb = new Database(dbPath);
+    sqliteDb.pragma("journal_mode = WAL");
+    sqliteDb.exec(`
+      CREATE TABLE IF NOT EXISTS comments (
+        id TEXT PRIMARY KEY,
+        ts INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        text TEXT NOT NULL,
+        bank TEXT,
+        simPt REAL,
+        realPt REAL
+      );
+      CREATE INDEX IF NOT EXISTS idx_comments_ts ON comments(ts DESC);
+    `);
+  } catch (error) {
+    sqliteError = error && error.message ? error.message : "SQLite init error";
+  }
 }
 
 const COMMENTS_KEY = "site:comments:v1";
 const MAX_COMMENTS = 100;
+
+function hasSqlite() {
+  return !!sqliteDb;
+}
+
+async function listComments() {
+  if (kvClient) {
+    try {
+      const list = await kvClient.get(COMMENTS_KEY);
+      return Array.isArray(list) ? list : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  if (hasSqlite()) {
+    const rows = sqliteDb
+      .prepare("SELECT id, ts, name, text, bank, simPt, realPt FROM comments ORDER BY ts DESC LIMIT ?")
+      .all(MAX_COMMENTS);
+    return rows.map((row) => ({
+      ...row,
+      simPt: row.simPt === null ? null : Number(row.simPt),
+      realPt: row.realPt === null ? null : Number(row.realPt),
+    }));
+  }
+
+  return [];
+}
+
+async function insertComment(comment) {
+  if (kvClient) {
+    try {
+      const existing = await kvClient.get(COMMENTS_KEY);
+      const list = Array.isArray(existing) ? existing : [];
+      const updated = [comment, ...list].slice(0, MAX_COMMENTS);
+      await kvClient.set(COMMENTS_KEY, updated, { ex: 365 * 24 * 3600 });
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  if (hasSqlite()) {
+    const insert = sqliteDb.prepare(`
+      INSERT INTO comments (id, ts, name, text, bank, simPt, realPt)
+      VALUES (@id, @ts, @name, @text, @bank, @simPt, @realPt)
+    `);
+    const trimOld = sqliteDb.prepare(`
+      DELETE FROM comments
+      WHERE id NOT IN (
+        SELECT id FROM comments ORDER BY ts DESC LIMIT ?
+      )
+    `);
+    const tx = sqliteDb.transaction((payload) => {
+      insert.run(payload);
+      trimOld.run(MAX_COMMENTS);
+    });
+    tx(comment);
+    return true;
+  }
+
+  return false;
+}
+
+async function deleteCommentById(id) {
+  if (kvClient) {
+    try {
+      const existing = await kvClient.get(COMMENTS_KEY);
+      const list = Array.isArray(existing) ? existing : [];
+      const updated = list.filter((c) => c.id !== id);
+      await kvClient.set(COMMENTS_KEY, updated, { ex: 365 * 24 * 3600 });
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  if (hasSqlite()) {
+    sqliteDb.prepare("DELETE FROM comments WHERE id = ?").run(id);
+    return true;
+  }
+
+  return false;
+}
 
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -50,10 +151,20 @@ module.exports = async function handler(req, res) {
           const list = await kvClient.get(COMMENTS_KEY);
           currentCount = Array.isArray(list) ? list.length : (list === null ? 0 : typeof list);
         } catch (e) { currentCount = "error: " + e.message; }
+      } else if (hasSqlite()) {
+        try {
+          currentCount = sqliteDb.prepare("SELECT COUNT(*) AS count FROM comments").get().count;
+          readBack = "sqlite-ok";
+        } catch (e) {
+          currentCount = "error: " + e.message;
+        }
       }
       return res.status(200).json({
         kvAvailable,
         kvClient: !!kvClient,
+        sqlite: hasSqlite(),
+        sqlitePath: hasSqlite() ? dbPath : null,
+        sqliteError,
         urlSet: !!process.env.UPSTASH_REDIS_REST_URL,
         tokenSet: !!process.env.UPSTASH_REDIS_REST_TOKEN,
         pingErr,
@@ -62,13 +173,16 @@ module.exports = async function handler(req, res) {
         currentCount,
       });
     }
-    const list = (await kvGet(COMMENTS_KEY)) || [];
+    const list = await listComments();
     return res.status(200).json(list);
   }
 
   if (req.method === "POST") {
-    if (!kvClient) {
-      return res.status(503).json({ error: "Base de dados não configurada. Adicione UPSTASH_REDIS_REST_URL e UPSTASH_REDIS_REST_TOKEN nas env vars do Vercel." });
+    if (!kvClient && !hasSqlite()) {
+      return res.status(503).json({
+        error: "Base de dados não configurada. Defina Redis (UPSTASH_REDIS_REST_URL/TOKEN) ou instale SQLite fallback.",
+        sqliteError,
+      });
     }
     const { name, text, bank, simPt, realPt } = req.body || {};
     const t = typeof text === "string" ? text.trim() : "";
@@ -91,9 +205,8 @@ module.exports = async function handler(req, res) {
       realPt: cleanNum(realPt),
     };
 
-    const existing = (await kvGet(COMMENTS_KEY)) || [];
-    const updated = [comment, ...existing].slice(0, MAX_COMMENTS);
-    await kvSet(COMMENTS_KEY, updated, { ex: 365 * 24 * 3600 });
+    const saved = await insertComment(comment);
+    if (!saved) return res.status(500).json({ error: "Erro ao guardar comentário" });
 
     return res.status(201).json(comment);
   }
@@ -106,9 +219,7 @@ module.exports = async function handler(req, res) {
     }
     const id = (req.query && req.query.id) || "";
     if (!id) return res.status(400).json({ error: "ID em falta" });
-    const existing = (await kvGet(COMMENTS_KEY)) || [];
-    const updated = existing.filter(c => c.id !== id);
-    const saved = await kvSet(COMMENTS_KEY, updated, { ex: 365 * 24 * 3600 });
+    const saved = await deleteCommentById(id);
     if (!saved) return res.status(500).json({ error: "Erro ao guardar" });
     return res.status(200).json({ ok: true });
   }

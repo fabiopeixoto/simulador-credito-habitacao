@@ -33,6 +33,7 @@ pipeline {
         sh '''
           docker rm -f simulador-credito-habitacao || true
           docker run -d --name simulador-credito-habitacao -p 3999:3000 \
+            -v simulador-credito-habitacao-data:/usr/src/app/data \
             -e ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY}" \
             "${DEPLOY_IMAGE}"
         '''
