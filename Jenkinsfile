@@ -13,6 +13,7 @@ pipeline {
   environment {
     DEPLOY_IMAGE = "simulador-credito-habitacao:${env.GIT_COMMIT ?: 'latest'}"
     ANTHROPIC_API_KEY = credentials('anthropic-api-key')
+    PUBLIC_APP_URL = 'https://simulador-credito.tiagomartins.pt/'
   }
 
   stages {
@@ -46,8 +47,55 @@ pipeline {
       withCredentials([string(credentialsId: 'discord-webhook-url', variable: 'WEBHOOK_URL')]) {
         script {
           def buildStatus = currentBuild.currentResult
-          def message = "**Build ${buildStatus}**\nProject: ${env.JOB_NAME}\nBuild: #${env.BUILD_NUMBER}\nBranch: ${env.GIT_BRANCH ?: 'unknown'}\nCommit: ${env.GIT_COMMIT ?: 'unknown'}\nDuration: ${currentBuild.durationString}"
-          def jsonBody = new groovy.json.JsonBuilder([content: message]).toString()
+          def statusMeta = [
+            SUCCESS:  [emoji: "✅", color: 3066993],
+            FAILURE:  [emoji: "❌", color: 15158332],
+            UNSTABLE: [emoji: "⚠️", color: 16776960],
+            ABORTED:  [emoji: "🛑", color: 9807270]
+          ][buildStatus] ?: [emoji: "ℹ️", color: 3447003]
+
+          def shortSha = (env.GIT_COMMIT ?: "unknown").take(7)
+          def branch = env.GIT_BRANCH ?: "unknown"
+          def buildUrl = env.BUILD_URL ?: ""
+          def prUrl = env.CHANGE_URL ?: ""
+
+          def normalizeRepoUrl = { raw ->
+            if (!raw) return ""
+            if (raw.startsWith("git@github.com:")) {
+              return "https://github.com/" + raw.substring("git@github.com:".length()).replaceAll(/\.git$/, "")
+            }
+            return raw.replaceAll(/\.git$/, "")
+          }
+          def repoUrl = normalizeRepoUrl(env.GIT_URL ?: "")
+          def commitUrl = (repoUrl && env.GIT_COMMIT) ? "${repoUrl}/commit/${env.GIT_COMMIT}" : ""
+
+          def commitTitle = sh(script: 'git log -1 --pretty=%s', returnStdout: true).trim()
+          def commitAuthor = sh(script: 'git log -1 --pretty=%an', returnStdout: true).trim()
+
+          def links = []
+          if (buildUrl) links << "[Build](${buildUrl})"
+          if (commitUrl) links << "[Commit](${commitUrl})"
+          if (prUrl) links << "[PR](${prUrl})"
+          if (env.PUBLIC_APP_URL) links << "[Public App](${env.PUBLIC_APP_URL})"
+
+          def embed = [
+            title: "${statusMeta.emoji} Build ${buildStatus} · #${env.BUILD_NUMBER}",
+            color: statusMeta.color,
+            description: commitTitle ?: "No commit title available",
+            url: buildUrl ?: null,
+            fields: [
+              [name: "Project", value: env.JOB_NAME ?: "unknown", inline: true],
+              [name: "Branch", value: branch, inline: true],
+              [name: "Commit", value: shortSha, inline: true],
+              [name: "Author", value: commitAuthor ?: "unknown", inline: true],
+              [name: "Image", value: env.DEPLOY_IMAGE ?: "unknown", inline: true],
+              [name: "Duration", value: currentBuild.durationString ?: "unknown", inline: true],
+              [name: "Links", value: links ? links.join(" · ") : "No links available", inline: false]
+            ],
+            timestamp: new Date().format("yyyy-MM-dd'T'HH:mm:ssXXX", TimeZone.getTimeZone("UTC"))
+          ]
+
+          def jsonBody = new groovy.json.JsonBuilder([embeds: [embed]]).toString()
 
           httpRequest(
             url: WEBHOOK_URL,
