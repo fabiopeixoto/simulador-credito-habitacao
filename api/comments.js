@@ -1,49 +1,33 @@
 const fs = require("fs");
 const path = require("path");
 
-// ── Upstash Redis (primary) ───────────────────────────────────────────────
-const kvAvailable = !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
-let kvClient = null;
-if (kvAvailable) {
-  try {
-    const { Redis } = require("@upstash/redis");
-    kvClient = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN,
-    });
-  } catch (_) {}
-}
-
-// ── SQLite (fallback when Redis is unavailable) ───────────────────────────
+// ── SQLite ────────────────────────────────────────────────────────────────
 let sqliteDb = null;
 let sqliteError = null;
 const dbDir = path.join(__dirname, "..", "data");
 const dbPath = path.join(dbDir, "comments.sqlite");
 
-if (!kvClient) {
-  try {
-    const Database = require("better-sqlite3");
-    fs.mkdirSync(dbDir, { recursive: true });
-    sqliteDb = new Database(dbPath);
-    sqliteDb.pragma("journal_mode = WAL");
-    sqliteDb.exec(`
-      CREATE TABLE IF NOT EXISTS comments (
-        id TEXT PRIMARY KEY,
-        ts INTEGER NOT NULL,
-        name TEXT NOT NULL,
-        text TEXT NOT NULL,
-        bank TEXT,
-        simPt REAL,
-        realPt REAL
-      );
-      CREATE INDEX IF NOT EXISTS idx_comments_ts ON comments(ts DESC);
-    `);
-  } catch (error) {
-    sqliteError = error && error.message ? error.message : "SQLite init error";
-  }
+try {
+  const Database = require("better-sqlite3");
+  fs.mkdirSync(dbDir, { recursive: true });
+  sqliteDb = new Database(dbPath);
+  sqliteDb.pragma("journal_mode = WAL");
+  sqliteDb.exec(`
+    CREATE TABLE IF NOT EXISTS comments (
+      id TEXT PRIMARY KEY,
+      ts INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      text TEXT NOT NULL,
+      bank TEXT,
+      simPt REAL,
+      realPt REAL
+    );
+    CREATE INDEX IF NOT EXISTS idx_comments_ts ON comments(ts DESC);
+  `);
+} catch (error) {
+  sqliteError = error && error.message ? error.message : "SQLite init error";
 }
 
-const COMMENTS_KEY = "site:comments:v1";
 const MAX_COMMENTS = 100;
 
 function hasSqlite() {
@@ -51,83 +35,41 @@ function hasSqlite() {
 }
 
 async function listComments() {
-  if (kvClient) {
-    try {
-      const list = await kvClient.get(COMMENTS_KEY);
-      return Array.isArray(list) ? list : [];
-    } catch (_) {
-      return [];
-    }
-  }
-
-  if (hasSqlite()) {
-    const rows = sqliteDb
-      .prepare("SELECT id, ts, name, text, bank, simPt, realPt FROM comments ORDER BY ts DESC LIMIT ?")
-      .all(MAX_COMMENTS);
-    return rows.map((row) => ({
-      ...row,
-      simPt: row.simPt === null ? null : Number(row.simPt),
-      realPt: row.realPt === null ? null : Number(row.realPt),
-    }));
-  }
-
-  return [];
+  if (!hasSqlite()) return [];
+  const rows = sqliteDb
+    .prepare("SELECT id, ts, name, text, bank, simPt, realPt FROM comments ORDER BY ts DESC LIMIT ?")
+    .all(MAX_COMMENTS);
+  return rows.map((row) => ({
+    ...row,
+    simPt: row.simPt === null ? null : Number(row.simPt),
+    realPt: row.realPt === null ? null : Number(row.realPt),
+  }));
 }
 
 async function insertComment(comment) {
-  if (kvClient) {
-    try {
-      const existing = await kvClient.get(COMMENTS_KEY);
-      const list = Array.isArray(existing) ? existing : [];
-      const updated = [comment, ...list].slice(0, MAX_COMMENTS);
-      await kvClient.set(COMMENTS_KEY, updated, { ex: 365 * 24 * 3600 });
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  if (hasSqlite()) {
-    const insert = sqliteDb.prepare(`
-      INSERT INTO comments (id, ts, name, text, bank, simPt, realPt)
-      VALUES (@id, @ts, @name, @text, @bank, @simPt, @realPt)
-    `);
-    const trimOld = sqliteDb.prepare(`
-      DELETE FROM comments
-      WHERE id NOT IN (
-        SELECT id FROM comments ORDER BY ts DESC LIMIT ?
-      )
-    `);
-    const tx = sqliteDb.transaction((payload) => {
-      insert.run(payload);
-      trimOld.run(MAX_COMMENTS);
-    });
-    tx(comment);
-    return true;
-  }
-
-  return false;
+  if (!hasSqlite()) return false;
+  const insert = sqliteDb.prepare(`
+    INSERT INTO comments (id, ts, name, text, bank, simPt, realPt)
+    VALUES (@id, @ts, @name, @text, @bank, @simPt, @realPt)
+  `);
+  const trimOld = sqliteDb.prepare(`
+    DELETE FROM comments
+    WHERE id NOT IN (
+      SELECT id FROM comments ORDER BY ts DESC LIMIT ?
+    )
+  `);
+  const tx = sqliteDb.transaction((payload) => {
+    insert.run(payload);
+    trimOld.run(MAX_COMMENTS);
+  });
+  tx(comment);
+  return true;
 }
 
 async function deleteCommentById(id) {
-  if (kvClient) {
-    try {
-      const existing = await kvClient.get(COMMENTS_KEY);
-      const list = Array.isArray(existing) ? existing : [];
-      const updated = list.filter((c) => c.id !== id);
-      await kvClient.set(COMMENTS_KEY, updated, { ex: 365 * 24 * 3600 });
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  if (hasSqlite()) {
-    sqliteDb.prepare("DELETE FROM comments WHERE id = ?").run(id);
-    return true;
-  }
-
-  return false;
+  if (!hasSqlite()) return false;
+  sqliteDb.prepare("DELETE FROM comments WHERE id = ?").run(id);
+  return true;
 }
 
 module.exports = async function handler(req, res) {
@@ -140,18 +82,8 @@ module.exports = async function handler(req, res) {
     if (req.query && req.query.debug === "1") {
       const secret = process.env.DEBUG_SECRET;
       if (!secret || req.query.secret !== secret) return res.status(403).end();
-      let pingErr = null, writeErr = null, readBack = null, currentCount = null;
-      if (kvClient) {
-        try { await kvClient.ping(); } catch (e) { pingErr = e.message; }
-        try {
-          await kvClient.set("debug:test", "ok", { ex: 60 });
-          readBack = await kvClient.get("debug:test");
-        } catch (e) { writeErr = e.message; }
-        try {
-          const list = await kvClient.get(COMMENTS_KEY);
-          currentCount = Array.isArray(list) ? list.length : (list === null ? 0 : typeof list);
-        } catch (e) { currentCount = "error: " + e.message; }
-      } else if (hasSqlite()) {
+      let currentCount = null, readBack = null;
+      if (hasSqlite()) {
         try {
           currentCount = sqliteDb.prepare("SELECT COUNT(*) AS count FROM comments").get().count;
           readBack = "sqlite-ok";
@@ -160,15 +92,9 @@ module.exports = async function handler(req, res) {
         }
       }
       return res.status(200).json({
-        kvAvailable,
-        kvClient: !!kvClient,
         sqlite: hasSqlite(),
         sqlitePath: hasSqlite() ? dbPath : null,
         sqliteError,
-        urlSet: !!process.env.UPSTASH_REDIS_REST_URL,
-        tokenSet: !!process.env.UPSTASH_REDIS_REST_TOKEN,
-        pingErr,
-        writeErr,
         readBack,
         currentCount,
       });
@@ -178,9 +104,9 @@ module.exports = async function handler(req, res) {
   }
 
   if (req.method === "POST") {
-    if (!kvClient && !hasSqlite()) {
+    if (!hasSqlite()) {
       return res.status(503).json({
-        error: "Base de dados não configurada. Defina Redis (UPSTASH_REDIS_REST_URL/TOKEN) ou instale SQLite fallback.",
+        error: "Base de dados não disponível.",
         sqliteError,
       });
     }

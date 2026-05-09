@@ -1,38 +1,24 @@
 const fs = require("fs");
 const path = require("path");
 
-// ── Shared cache (Redis primary, SQLite fallback) ─────────────────────────
-// Se Redis não estiver configurado, usa SQLite local em ./data.
-let kvClient = null;
-try {
-  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
-    const { Redis } = require("@upstash/redis");
-    kvClient = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN,
-    });
-  }
-} catch (_) {}
-
+// ── SQLite cache ──────────────────────────────────────────────────────────
 let sqliteDb = null;
-if (!kvClient) {
-  try {
-    const Database = require("better-sqlite3");
-    const dbDir = path.join(__dirname, "..", "data");
-    const dbPath = path.join(dbDir, "spreads.sqlite");
-    fs.mkdirSync(dbDir, { recursive: true });
-    sqliteDb = new Database(dbPath);
-    sqliteDb.pragma("journal_mode = WAL");
-    sqliteDb.exec(`
-      CREATE TABLE IF NOT EXISTS kv_store (
-        key TEXT PRIMARY KEY,
-        value TEXT NOT NULL,
-        expiresAt INTEGER
-      );
-      CREATE INDEX IF NOT EXISTS idx_kv_store_expires ON kv_store(expiresAt);
-    `);
-  } catch (_) {}
-}
+try {
+  const Database = require("better-sqlite3");
+  const dbDir = path.join(__dirname, "..", "data");
+  const dbPath = path.join(dbDir, "spreads.sqlite");
+  fs.mkdirSync(dbDir, { recursive: true });
+  sqliteDb = new Database(dbPath);
+  sqliteDb.pragma("journal_mode = WAL");
+  sqliteDb.exec(`
+    CREATE TABLE IF NOT EXISTS kv_store (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      expiresAt INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_kv_store_expires ON kv_store(expiresAt);
+  `);
+} catch (_) {}
 
 const KV_CACHE_KEY   = "spreads:cache:v1";
 const KV_CALLS_PFX   = "spreads:calls:";   // + "YYYY-MM-DD"
@@ -40,9 +26,6 @@ const KV_CACHE_TTL   = 25 * 60 * 60;       // 25 h (segundos)
 const KV_CALLS_TTL   = 49 * 60 * 60;       // 49 h
 
 async function kvGet(key) {
-  if (kvClient) {
-    try { return await kvClient.get(key); } catch (_) { return null; }
-  }
   if (!sqliteDb) return null;
   try {
     const now = Date.now();
@@ -59,10 +42,6 @@ async function kvGet(key) {
 }
 
 async function kvSet(key, value, ttlSeconds) {
-  if (kvClient) {
-    try { await kvClient.set(key, value, { ex: ttlSeconds }); } catch (_) {}
-    return;
-  }
   if (!sqliteDb) return;
   try {
     const expiresAt = ttlSeconds ? Date.now() + ttlSeconds * 1000 : null;
@@ -76,13 +55,6 @@ async function kvSet(key, value, ttlSeconds) {
 }
 
 async function kvIncr(key, ttlSeconds) {
-  if (kvClient) {
-    try {
-      const n = await kvClient.incr(key);
-      if (n === 1) await kvClient.expire(key, ttlSeconds).catch(() => {});
-      return n;
-    } catch (_) { return null; }
-  }
   if (!sqliteDb) return null;
   try {
     const now = Date.now();
@@ -109,14 +81,6 @@ async function kvIncr(key, ttlSeconds) {
 }
 
 async function kvDecr(key) {
-  if (kvClient) {
-    try {
-      await kvClient.decr(key);
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
   if (!sqliteDb) return false;
   try {
     const now = Date.now();
@@ -260,7 +224,7 @@ module.exports = async function handler(req, res) {
     return res.status(200).json(withMeta(MEM.data, "mem-cache", MEM.fetchedAt));
   }
 
-  // ── 2. L2: Vercel KV (partilhado entre todas as instâncias)
+  // ── 2. L2: SQLite KV cache
   const kvCached = await kvGet(KV_CACHE_KEY);
   if (kvCached) {
     const kvAge    = Date.now() - (kvCached.fetchedAt || 0);
@@ -307,7 +271,7 @@ module.exports = async function handler(req, res) {
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return res.status(503).json({ error: "ANTHROPIC_API_KEY nao configurada no Vercel" });
+  if (!apiKey) return res.status(503).json({ error: "ANTHROPIC_API_KEY não configurada" });
 
   // ── 4. Chamar APIs (Anthropic + BCE)
   try {
