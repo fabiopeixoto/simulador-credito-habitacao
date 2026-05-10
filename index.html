@@ -17350,7 +17350,7 @@ const FALLBACK_BANK_DATA = {
   BIC:   {sCom:1.00,sSem:1.50,mCom:3.00,mSem:3.50,fCom:3.60,fSem:4.10,jsCom:0.88,jsSem:1.38,promoPeriodo:0, promoSpread:null,dossier:400,avaliacao:250,contaMes:3.00,capMin:25000, capMax:1000000,vRef:19.00,mAno:150,minutas:0,  jovemIsenta:false},
   BNI:   {sCom:1.00,sSem:1.50,mCom:3.10,mSem:3.60,fCom:3.70,fSem:4.20,jsCom:0.88,jsSem:1.38,promoPeriodo:0, promoSpread:null,dossier:400,avaliacao:250,contaMes:3.00,capMin:25000, capMax:1000000,vRef:19.00,mAno:150,minutas:0,  jovemIsenta:false},
 };
-const CACHE_KEY   = "credito_cache_v7";
+const CACHE_KEY   = "credito_cache_v8";
 const CACHE_H     = 8;
 const HIST_KEY    = 'simulador-hist-v1';
 const HIST_MAX  = 5;
@@ -17776,7 +17776,10 @@ function App(){
           const cbd=cached.bd||{};
           const normBd={};
           Object.keys(FALLBACK_BANK_DATA).forEach(k=>{
-            normBd[k]=normalizeCampaignSpreadRow({...FALLBACK_BANK_DATA[k],...cbd[k]});
+            const fb=FALLBACK_BANK_DATA[k];
+            normBd[k]=normalizeCampaignSpreadRow({...fb,...cbd[k]});
+            /* jsCom/jsSem: bundle auditado (CH Jovem); cache/API podem trazer SQLite desactualizado */
+            normBd[k].jsCom=fb.jsCom;normBd[k].jsSem=fb.jsSem;
           });
           setBankData(normBd); setTs(new Date(cached.ts));
           setStatus("cached"); setMsg("Cache válida · há "+Math.round((Date.now()-cached.ts)/3600000)+"h"); return;
@@ -17804,7 +17807,7 @@ function App(){
       const tryN=(key,lo,hi)=>{const v=fn(rv[key],lo,hi);if(v!==null)upd[key]=v;};
       const sc=fn(rv.sCom,0,5);if(sc!==null){upd.sCom=sc;nSpr++;}
       tryN('sSem',0,5);tryN('mCom',0,10);tryN('mSem',0,10);tryN('fCom',0,10);tryN('fSem',0,10);
-      tryN('jsCom',0,5);tryN('jsSem',0,5);
+      /* jsCom/jsSem: não aplicar da API — vêm do bundle (FALLBACK) após o merge */
       tryN('dossier',0,2000);tryN('avaliacao',0,2000);tryN('contaMes',0,100);
       tryN('capMin',0,5000000);tryN('capMax',0,50000000);
       tryN('vRef',0,500);tryN('mAno',0,5000);
@@ -17816,7 +17819,9 @@ function App(){
       const iv=fs(rv.insV);if(iv!==null)upd.insV=iv;
       const im=fs(rv.insM);if(im!==null)upd.insM=im;
       const cn=fs(rv.contaNota);if(cn!==null)upd.contaNota=cn;
-      newBD[k]=normalizeCampaignSpreadRow({...fb,...upd,updated:sc!==null});
+      const row=normalizeCampaignSpreadRow({...fb,...upd,updated:sc!==null});
+      row.jsCom=fb.jsCom;row.jsSem=fb.jsSem;
+      newBD[k]=row;
     });
     setBankData(newBD);
     if(Object.keys(spreadsMap).length>0) statusMsg+=" · "+nSpr+"/"+Object.keys(FALLBACK_BANK_DATA).length+" actualizado ✓";
