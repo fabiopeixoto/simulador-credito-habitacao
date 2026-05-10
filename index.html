@@ -17680,6 +17680,17 @@ async function fetchBanks() {
   return resp.json(); // {banks: [...], euribor: {...}}
 }
 
+/** Garante sCom = spread normal (fora da promo) e promoSpread = spread da campanha (mais baixo). */
+function normalizeCampaignSpreadRow(d){
+  if(!d||typeof d!=="object")return d;
+  const o={...d};
+  const pp=Number(o.promoPeriodo)||0;
+  if(pp<=0)return o;
+  if(typeof o.promoSpread!=="number"||!Number.isFinite(o.promoSpread))return o;
+  if(typeof o.sCom!=="number"||!Number.isFinite(o.sCom))return o;
+  const hi=Math.max(o.sCom,o.promoSpread),lo=Math.min(o.sCom,o.promoSpread);
+  o.sCom=hi;o.promoSpread=lo;return o;
+}
 
 const NAV=[{id:"comp",icon:"📋",label:"Comparação"},{id:"seg",icon:"🛡️",label:"Seguros"},{id:"cust",icon:"💰",label:"Custos"},{id:"viab",icon:"📊",label:"Viabilidade"},{id:"cen",icon:"⚡",label:"Cenários"},{id:"amort",icon:"🔄",label:"Amortização"}];
 
@@ -17754,7 +17765,13 @@ function App(){
       try{
         const cached=JSON.parse(localStorage.getItem(CACHE_KEY)||"null");
         if(cached&&cached.ts&&cached.ts<=Date.now()&&(Date.now()-cached.ts)/3600000<CACHE_H){
-          setEUR(cached.eur); setBankData(cached.bd||FALLBACK_BANK_DATA); setTs(new Date(cached.ts));
+          setEUR(cached.eur);
+          const cbd=cached.bd||{};
+          const normBd={};
+          Object.keys(FALLBACK_BANK_DATA).forEach(k=>{
+            normBd[k]=normalizeCampaignSpreadRow({...FALLBACK_BANK_DATA[k],...cbd[k]});
+          });
+          setBankData(normBd); setTs(new Date(cached.ts));
           setStatus("cached"); setMsg("Cache válida · há "+Math.round((Date.now()-cached.ts)/3600000)+"h"); return;
         }
       }catch(_){}
@@ -17792,7 +17809,7 @@ function App(){
       const iv=fs(rv.insV);if(iv!==null)upd.insV=iv;
       const im=fs(rv.insM);if(im!==null)upd.insM=im;
       const cn=fs(rv.contaNota);if(cn!==null)upd.contaNota=cn;
-      newBD[k]={...fb,...upd,updated:sc!==null};
+      newBD[k]=normalizeCampaignSpreadRow({...fb,...upd,updated:sc!==null});
     });
     setBankData(newBD);
     if(Object.keys(spreadsMap).length>0) statusMsg+=" · "+nSpr+"/"+Object.keys(FALLBACK_BANK_DATA).length+" actualizado ✓";
