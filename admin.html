@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Gestão de Bancos</title>
+<style>
+  :root { --bg: #0f172a; --card: #1e293b; --border: #334155; --text: #e2e8f0; --muted: #94a3b8; --accent: #3b82f6; --accent2: #10b981; --danger: #ef4444; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 24px; }
+  h1 { font-size: 1.5rem; margin-bottom: 8px; }
+  h2 { font-size: 1.1rem; color: var(--accent); margin: 24px 0 12px; }
+  .header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+  .header input { background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 6px; font-size: 14px; width: 300px; }
+  .header button { background: var(--accent); color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+  .header button:hover { opacity: 0.9; }
+  .status { color: var(--muted); font-size: 13px; }
+  .status.error { color: var(--danger); }
+  .status.ok { color: var(--accent2); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; position: relative; }
+  .card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .color-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+  .card-title { font-weight: 600; font-size: 15px; }
+  .card-code { font-family: monospace; font-size: 12px; color: var(--muted); background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px; }
+  .card-body { font-size: 13px; color: var(--muted); }
+  .card-body table { width: 100%; border-collapse: collapse; }
+  .card-body td { padding: 3px 6px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .card-body td:first-child { font-weight: 500; color: var(--text); width: 40%; }
+  .card-actions { display: flex; gap: 8px; margin-top: 12px; }
+  .btn-sm { padding: 5px 10px; border-radius: 5px; border: none; font-size: 12px; cursor: pointer; }
+  .btn-edit { background: var(--accent); color: #fff; }
+  .btn-delete { background: var(--danger); color: #fff; }
+  .btn-history { background: rgba(255,255,255,0.1); color: var(--text); border: 1px solid var(--border); }
+  .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 1000; }
+  .modal-overlay.active { display: flex; }
+  .modal { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; width: 90%; max-width: 600px; max-height: 85vh; overflow-y: auto; }
+  .modal h3 { margin-bottom: 16px; }
+  .form-group { margin-bottom: 12px; }
+  .form-group label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .form-group input, .form-group select, .form-group textarea { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 6px; font-size: 14px; }
+  .form-group textarea { min-height: 60px; resize: vertical; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .modal-actions { display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end; }
+  .modal-actions button { padding: 8px 18px; border-radius: 6px; border: none; cursor: pointer; font-size: 14px; }
+  .btn-save { background: var(--accent2); color: #fff; }
+  .btn-cancel { background: rgba(255,255,255,0.1); color: var(--text); }
+  .history-list { max-height: 300px; overflow-y: auto; }
+  .history-item { padding: 8px; border-bottom: 1px solid var(--border); font-size: 12px; }
+  .history-item .date { color: var(--accent); font-weight: 600; }
+  .history-item .source { color: var(--muted); }
+  .inactive { opacity: 0.5; }
+  .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; }
+  .badge-active { background: rgba(16,185,129,0.2); color: var(--accent2); }
+  .badge-inactive { background: rgba(239,68,68,0.2); color: var(--danger); }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>Gestão de Bancos & Spreads</h1>
+  <input type="password" id="tokenInput" placeholder="Admin Token" />
+  <button onclick="loadBanks()">Carregar</button>
+  <button onclick="openNewBankModal()" style="background:var(--accent2)">+ Novo Banco</button>
+  <div id="statusMsg" class="status"></div>
+</div>
+
+<div id="banksGrid" class="grid"></div>
+
+<!-- Modal: Edit Bank -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <h3 id="editModalTitle">Editar Banco</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Código</label><input id="f_code" placeholder="CA" maxlength="10" /></div>
+      <div class="form-group"><label>Nome</label><input id="f_name" placeholder="Crédito Agrícola" /></div>
+    </div>
+    <div class="form-row-3">
+      <div class="form-group"><label>Cor</label><input id="f_color" type="color" value="#666666" /></div>
+      <div class="form-group"><label>Jovem OK</label><select id="f_jOk"><option value="1">Sim</option><option value="0">Não</option></select></div>
+      <div class="form-group"><label>Carência Máx (meses)</label><input id="f_carenciaMax" type="number" value="0" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Tipos (vírgula)</label><input id="f_tipos" placeholder="variável, mista, fixa" /></div>
+      <div class="form-group"><label>Refs Euribor (vírgula)</label><input id="f_refs" placeholder="12m" /></div>
+    </div>
+    <div class="form-group"><label>Promos (vírgula)</label><input id="f_promos" placeholder="Spread 0,45% 2a" /></div>
+    <div class="form-group"><label>Produtos vinculação</label><input id="f_prod" /></div>
+    <div class="form-group"><label>Produtos jovem</label><input id="f_jProd" /></div>
+
+    <h3 style="margin-top:16px;">Spreads & Comissões</h3>
+    <div class="form-row-3">
+      <div class="form-group"><label>Spread c/ prod.</label><input id="f_sCom" type="number" step="0.01" /></div>
+      <div class="form-group"><label>Spread s/ prod.</label><input id="f_sSem" type="number" step="0.01" /></div>
+      <div class="form-group"><label>Spread Jovem c/</label><input id="f_jsCom" type="number" step="0.01" /></div>
+    </div>
+    <div class="form-row-3">
+      <div class="form-group"><label>TAN Mista c/</label><input id="f_mCom" type="number" step="0.01" /></div>
+      <div class="form-group"><label>TAN Mista s/</label><input id="f_mSem" type="number" step="0.01" /></div>
+      <div class="form-group"><label>Spread Jovem s/</label><input id="f_jsSem" type="number" step="0.01" /></div>
+    </div>
+    <div class="form-row-3">
+      <div class="form-group"><label>TAN Fixa c/</label><input id="f_fCom" type="number" step="0.01" /></div>
+      <div class="form-group"><label>TAN Fixa s/</label><input id="f_fSem" type="number" step="0.01" /></div>
+      <div class="form-group"><label>Promo Período (meses)</label><input id="f_promoPeriodo" type="number" value="0" /></div>
+    </div>
+    <div class="form-row-3">
+      <div class="form-group"><label>Promo Spread</label><input id="f_promoSpread" type="number" step="0.01" /></div>
+      <div class="form-group"><label>Dossier €</label><input id="f_dossier" type="number" step="1" /></div>
+      <div class="form-group"><label>Avaliação €</label><input id="f_avaliacao" type="number" step="1" /></div>
+    </div>
+    <div class="form-row-3">
+      <div class="form-group"><label>Conta/mês €</label><input id="f_contaMes" type="number" step="0.01" /></div>
+      <div class="form-group"><label>Minutas €</label><input id="f_minutas" type="number" step="1" value="0" /></div>
+      <div class="form-group"><label>Jovem Isenta</label><select id="f_jovemIsenta"><option value="1">Sim</option><option value="0">Não</option></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Capital Mín €</label><input id="f_capMin" type="number" step="1000" /></div>
+      <div class="form-group"><label>Capital Máx €</label><input id="f_capMax" type="number" step="1000" /></div>
+    </div>
+    <div class="form-row-3">
+      <div class="form-group"><label>Seg. Vida Ref €/mês</label><input id="f_vRef" type="number" step="0.01" /></div>
+      <div class="form-group"><label>Multirriscos €/ano</label><input id="f_mAno" type="number" step="1" /></div>
+      <div class="form-group"><label>Nota conta</label><input id="f_contaNota" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Seguradora Vida</label><input id="f_insV" /></div>
+      <div class="form-group"><label>Seguradora Multi</label><input id="f_insM" /></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('editModal')">Cancelar</button>
+      <button class="btn-save" onclick="saveBank()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: History -->
+<div class="modal-overlay" id="historyModal">
+  <div class="modal">
+    <h3>Histórico de Spreads — <span id="historyBankName"></span></h3>
+    <div id="historyList" class="history-list"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('historyModal')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let banks = [];
+let editingCode = null;
+
+function getToken() { return document.getElementById('tokenInput').value; }
+function setStatus(msg, type) {
+  const el = document.getElementById('statusMsg');
+  el.textContent = msg;
+  el.className = 'status ' + (type || '');
+}
+
+async function loadBanks() {
+  try {
+    setStatus('A carregar...');
+    const r = await fetch('/api/banks', { headers: { 'x-admin-token': getToken() } });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    banks = await r.json();
+    renderBanks();
+    setStatus(banks.length + ' bancos carregados', 'ok');
+  } catch (e) { setStatus('Erro: ' + e.message, 'error'); }
+}
+
+function renderBanks() {
+  const grid = document.getElementById('banksGrid');
+  grid.innerHTML = banks.map(b => {
+    const s = b.spreads || {};
+    return `
+      <div class="card ${b.active ? '' : 'inactive'}">
+        <div class="card-header">
+          <div class="color-dot" style="background:${b.color}"></div>
+          <span class="card-title">${b.name}</span>
+          <span class="card-code">${b.code}</span>
+          <span class="badge ${b.active ? 'badge-active' : 'badge-inactive'}">${b.active ? 'activo' : 'inactivo'}</span>
+        </div>
+        <div class="card-body">
+          <table>
+            <tr><td>Spread c/ prod.</td><td>${s.sCom != null ? s.sCom + '%' : '—'}</td></tr>
+            <tr><td>Spread s/ prod.</td><td>${s.sSem != null ? s.sSem + '%' : '—'}</td></tr>
+            <tr><td>TAN Mista c/</td><td>${s.mCom != null ? s.mCom + '%' : '—'}</td></tr>
+            <tr><td>TAN Fixa c/</td><td>${s.fCom != null ? s.fCom + '%' : '—'}</td></tr>
+            <tr><td>Dossier</td><td>${s.dossier != null ? s.dossier + '€' : '—'}</td></tr>
+            <tr><td>Avaliação</td><td>${s.avaliacao != null ? s.avaliacao + '€' : '—'}</td></tr>
+            <tr><td>Capital</td><td>${s.capMin ? s.capMin.toLocaleString() + '€' : '—'} — ${s.capMax ? s.capMax.toLocaleString() + '€' : '—'}</td></tr>
+            <tr><td>Fonte</td><td>${s.source || '—'}</td></tr>
+            <tr><td>Actualizado</td><td>${s.fetchedAt ? new Date(s.fetchedAt).toLocaleString('pt-PT') : '—'}</td></tr>
+          </table>
+        </div>
+        <div class="card-actions">
+          <button class="btn-sm btn-edit" onclick="openEditModal('${b.code}')">Editar</button>
+          <button class="btn-sm btn-history" onclick="openHistory('${b.code}')">Histórico</button>
+          <button class="btn-sm btn-delete" onclick="deleteBank('${b.code}')">Desactivar</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function openNewBankModal() {
+  editingCode = null;
+  document.getElementById('editModalTitle').textContent = 'Novo Banco';
+  document.getElementById('f_code').disabled = false;
+  clearForm();
+  document.getElementById('editModal').classList.add('active');
+}
+
+function openEditModal(code) {
+  editingCode = code;
+  const b = banks.find(x => x.code === code);
+  if (!b) return;
+  document.getElementById('editModalTitle').textContent = 'Editar — ' + b.name;
+  document.getElementById('f_code').value = b.code;
+  document.getElementById('f_code').disabled = true;
+  document.getElementById('f_name').value = b.name;
+  document.getElementById('f_color').value = b.color;
+  document.getElementById('f_jOk').value = b.jOk ? '1' : '0';
+  document.getElementById('f_carenciaMax').value = b.carenciaMax || 0;
+  document.getElementById('f_tipos').value = (b.tipos || []).join(', ');
+  document.getElementById('f_refs').value = (b.refs || []).join(', ');
+  document.getElementById('f_promos').value = (b.promos || []).join(', ');
+  document.getElementById('f_prod').value = b.prod || '';
+  document.getElementById('f_jProd').value = b.jProd || '';
+
+  const s = b.spreads || {};
+  document.getElementById('f_sCom').value = s.sCom ?? '';
+  document.getElementById('f_sSem').value = s.sSem ?? '';
+  document.getElementById('f_jsCom').value = s.jsCom ?? '';
+  document.getElementById('f_jsSem').value = s.jsSem ?? '';
+  document.getElementById('f_mCom').value = s.mCom ?? '';
+  document.getElementById('f_mSem').value = s.mSem ?? '';
+  document.getElementById('f_fCom').value = s.fCom ?? '';
+  document.getElementById('f_fSem').value = s.fSem ?? '';
+  document.getElementById('f_promoPeriodo').value = s.promoPeriodo || 0;
+  document.getElementById('f_promoSpread').value = s.promoSpread ?? '';
+  document.getElementById('f_dossier').value = s.dossier ?? '';
+  document.getElementById('f_avaliacao').value = s.avaliacao ?? '';
+  document.getElementById('f_contaMes').value = s.contaMes ?? '';
+  document.getElementById('f_minutas').value = s.minutas || 0;
+  document.getElementById('f_jovemIsenta').value = s.jovemIsenta ? '1' : '0';
+  document.getElementById('f_capMin').value = s.capMin ?? '';
+  document.getElementById('f_capMax').value = s.capMax ?? '';
+  document.getElementById('f_vRef').value = s.vRef ?? '';
+  document.getElementById('f_mAno').value = s.mAno ?? '';
+  document.getElementById('f_contaNota').value = s.contaNota || '';
+  document.getElementById('f_insV').value = s.insV || '';
+  document.getElementById('f_insM').value = s.insM || '';
+
+  document.getElementById('editModal').classList.add('active');
+}
+
+function clearForm() {
+  ['f_code','f_name','f_prod','f_jProd','f_promos','f_tipos','f_refs',
+   'f_sCom','f_sSem','f_jsCom','f_jsSem','f_mCom','f_mSem','f_fCom','f_fSem',
+   'f_promoSpread','f_dossier','f_avaliacao','f_contaMes','f_capMin','f_capMax',
+   'f_vRef','f_mAno','f_contaNota','f_insV','f_insM'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('f_color').value = '#666666';
+  document.getElementById('f_jOk').value = '1';
+  document.getElementById('f_carenciaMax').value = '0';
+  document.getElementById('f_promoPeriodo').value = '0';
+  document.getElementById('f_minutas').value = '0';
+  document.getElementById('f_jovemIsenta').value = '1';
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+function numOrNull(id) { const v = document.getElementById(id).value; return v === '' ? null : Number(v); }
+
+async function saveBank() {
+  const code = document.getElementById('f_code').value.trim().toUpperCase();
+  if (!code) return setStatus('Código obrigatório', 'error');
+
+  const bank = {
+    code,
+    name: document.getElementById('f_name').value.trim(),
+    color: document.getElementById('f_color').value,
+    jOk: document.getElementById('f_jOk').value === '1',
+    carenciaMax: parseInt(document.getElementById('f_carenciaMax').value) || 0,
+    tipos: document.getElementById('f_tipos').value.split(',').map(s => s.trim()).filter(Boolean),
+    refs: document.getElementById('f_refs').value.split(',').map(s => s.trim()).filter(Boolean),
+    promos: document.getElementById('f_promos').value.split(',').map(s => s.trim()).filter(Boolean),
+    prod: document.getElementById('f_prod').value.trim(),
+    jProd: document.getElementById('f_jProd').value.trim(),
+    active: true,
+    sort_order: editingCode ? (banks.findIndex(b => b.code === editingCode)) : banks.length,
+  };
+
+  const spreads = {
+    bank_code: code,
+    sCom: numOrNull('f_sCom'), sSem: numOrNull('f_sSem'),
+    mCom: numOrNull('f_mCom'), mSem: numOrNull('f_mSem'),
+    fCom: numOrNull('f_fCom'), fSem: numOrNull('f_fSem'),
+    jsCom: numOrNull('f_jsCom'), jsSem: numOrNull('f_jsSem'),
+    promoPeriodo: parseInt(document.getElementById('f_promoPeriodo').value) || 0,
+    promoSpread: numOrNull('f_promoSpread'),
+    dossier: numOrNull('f_dossier'),
+    avaliacao: numOrNull('f_avaliacao'),
+    contaMes: numOrNull('f_contaMes'),
+    contaNota: document.getElementById('f_contaNota').value.trim(),
+    capMin: numOrNull('f_capMin'),
+    capMax: numOrNull('f_capMax'),
+    vRef: numOrNull('f_vRef'),
+    mAno: numOrNull('f_mAno'),
+    insV: document.getElementById('f_insV').value.trim(),
+    insM: document.getElementById('f_insM').value.trim(),
+    minutas: numOrNull('f_minutas'),
+    jovemIsenta: document.getElementById('f_jovemIsenta').value === '1',
+    source: 'manual',
+  };
+
+  try {
+    const r = await fetch('/api/banks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-token': getToken() },
+      body: JSON.stringify({ bank, spreads }),
+    });
+    if (!r.ok) { const e = await r.json(); throw new Error(e.error || 'HTTP ' + r.status); }
+    setStatus('Guardado ✓', 'ok');
+    closeModal('editModal');
+    loadBanks();
+  } catch (e) { setStatus('Erro: ' + e.message, 'error'); }
+}
+
+async function deleteBank(code) {
+  if (!confirm('Desactivar banco ' + code + '?')) return;
+  try {
+    const r = await fetch('/api/banks?code=' + code, {
+      method: 'DELETE',
+      headers: { 'x-admin-token': getToken() },
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    setStatus('Desactivado ✓', 'ok');
+    loadBanks();
+  } catch (e) { setStatus('Erro: ' + e.message, 'error'); }
+}
+
+async function openHistory(code) {
+  const b = banks.find(x => x.code === code);
+  document.getElementById('historyBankName').textContent = b ? b.name : code;
+  try {
+    const r = await fetch('/api/banks?history=' + code, { headers: { 'x-admin-token': getToken() } });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    const list = document.getElementById('historyList');
+    if (!data.history || data.history.length === 0) {
+      list.innerHTML = '<p style="color:var(--muted);padding:12px;">Sem histórico.</p>';
+    } else {
+      list.innerHTML = data.history.map(h => `
+        <div class="history-item">
+          <span class="date">${new Date(h.fetched_at).toLocaleString('pt-PT')}</span>
+          <span class="source">(${h.source})</span><br/>
+          Spread: ${h.sCom}% / ${h.sSem}% | Mista: ${h.mCom}% / ${h.mSem}% | Fixa: ${h.fCom}% / ${h.fSem}%
+          | Dossier: ${h.dossier}€ | Aval: ${h.avaliacao}€
+        </div>
+      `).join('');
+    }
+    document.getElementById('historyModal').classList.add('active');
+  } catch (e) { setStatus('Erro: ' + e.message, 'error'); }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+  }
+});
+</script>
+</body>
+</html>

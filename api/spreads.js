@@ -1,6 +1,11 @@
 const fs = require("fs");
 const path = require("path");
 
+let banksModule = null;
+try {
+  banksModule = require(path.join(__dirname, "banks.js"));
+} catch (_) {}
+
 // ── SQLite cache ──────────────────────────────────────────────────────────
 let sqliteDb = null;
 try {
@@ -303,6 +308,11 @@ module.exports = async function handler(req, res) {
     MEM.fetchedAt  = fetchedAt;
     MEM.dayKey     = today;
     MEM.callsToday = kvSlot !== null ? Number(kvSlot) : MEM.callsToday + 1;
+
+    // Persistir spreads normalizados por banco
+    if (banksModule && banksModule.bulkInsertSpreads && spreadsResult.value) {
+      try { banksModule.bulkInsertSpreads(spreadsResult.value, "anthropic"); } catch (_) {}
+    }
 
     // Actualizar L2 (KV) — fire-and-forget, não bloqueia a resposta
     kvSet(KV_CACHE_KEY, { data: freshData, fetchedAt }, KV_CACHE_TTL).catch(() => {});
