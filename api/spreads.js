@@ -215,14 +215,17 @@ module.exports = async function handler(req, res) {
   const reqToken   = req.headers["x-admin-token"] || "";
   const isAdmin    = !!(adminToken && reqToken === adminToken);
 
+  // Variáveis partilhadas entre o bloco de limites e o bloco de API
+  const today    = utcDayKey();
+  let kvCached   = null;
+  let kvSlot     = null;
+
   if (!isAdmin) {
     // Rate limit (in-memory, por instância — suficiente para protecção básica)
     const forwardedFor = req.headers["x-forwarded-for"] || "";
     const realIp       = req.headers["x-real-ip"] || "";
     const ip = forwardedFor.split(",")[0]?.trim() || realIp || req.socket?.remoteAddress || "unknown";
     if (isRateLimited(ip)) return res.status(429).json({ error: "Demasiados pedidos — tenta mais tarde" });
-
-    const today = utcDayKey();
 
     // ── 1. L1: in-memory (evita round-trip KV na mesma instância quente)
     if (MEM.dayKey !== today) { MEM.callsToday = 0; MEM.dayKey = today; }
@@ -236,7 +239,7 @@ module.exports = async function handler(req, res) {
     }
 
     // ── 2. L2: SQLite KV cache
-    const kvCached = await kvGet(KV_CACHE_KEY);
+    kvCached = await kvGet(KV_CACHE_KEY);
     if (kvCached) {
       const kvAge    = Date.now() - (kvCached.fetchedAt || 0);
       const kvCalls  = Number(await kvGet(KV_CALLS_PFX + today) || 0);
@@ -257,7 +260,7 @@ module.exports = async function handler(req, res) {
     }
 
     // ── 3. Reservar slot atomicamente com INCR antes de chamar a API.
-    const kvSlot = await kvIncr(KV_CALLS_PFX + today, KV_CALLS_TTL);
+    kvSlot = await kvIncr(KV_CALLS_PFX + today, KV_CALLS_TTL);
 
     if (kvSlot !== null && kvSlot > MAX_CALLS_PER_DAY) {
       kvDecr(KV_CALLS_PFX + today).catch(() => {});
