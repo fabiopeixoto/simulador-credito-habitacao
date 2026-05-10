@@ -15,7 +15,31 @@ if ! command -v jq >/dev/null 2>&1; then
   exit 1
 fi
 
-jq -r '.info_pt' "$SRC" 2>/dev/null || true
+if [[ ! -r "$SRC" ]]; then
+  echo "Ficheiro em falta ou sem permissão de leitura: $SRC" >&2
+  exit 1
+fi
+
+if ! jq empty "$SRC" 2>&1; then
+  echo "sources.json não é JSON válido: $SRC" >&2
+  exit 1
+fi
+
+if ! jq -e '.items | type == "array" and length > 0' "$SRC" >/dev/null; then
+  echo "sources.json inválido: é necessário um array .items não vazio em $SRC" >&2
+  exit 1
+fi
+
+if ! items_json=$(jq -c '.items[]' "$SRC"); then
+  echo "Erro ao extrair .items[] de $SRC (jq falhou)." >&2
+  exit 1
+fi
+if [[ -z "$items_json" ]]; then
+  echo "Nenhum item obtido de .items em $SRC (lista inesperadamente vazia)." >&2
+  exit 1
+fi
+
+jq -r '.info_pt // empty' "$SRC"
 echo "Destino: $OUT"
 echo ""
 
@@ -23,7 +47,8 @@ n=0
 ok=0
 fail=0
 
-while IFS= read -r row; do
+while IFS= read -r row || [[ -n "${row:-}" ]]; do
+  [[ -z "${row// }" ]] && continue
   n=$((n + 1))
   bank=$(echo "$row" | jq -r '.bank')
   label=$(echo "$row" | jq -r '.label')
@@ -56,6 +81,16 @@ while IFS= read -r row; do
     echo "    ✗ Falha no download." >&2
   fi
   echo ""
-done < <(jq -c '.items[]' "$SRC")
+done <<< "$items_json"
 
 echo "Concluído: $ok OK, $fail falhas (total $n)."
+
+if (( n == 0 )); then
+  echo "Erro: nenhuma linha processada (verifique .items em $SRC)." >&2
+  exit 1
+fi
+
+if (( fail > 0 )); then
+  echo "Saída com erro: $fail download(s) falharam." >&2
+  exit 1
+fi
