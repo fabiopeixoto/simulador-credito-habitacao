@@ -123,8 +123,7 @@ Variável obrigatória no servidor: **`ANTHROPIC_API_KEY`**.
 - Lista de bancos com ícones (favicon por domínio), edição de spreads/comissões, histórico por banco.
 - Botão **Actualizar spreads via AI** chama `POST /api/spreads` com o token introduzido na página.
 - Operações sensíveis enviam **`x-admin-token`** no header.
-
-Na app principal, rotas de moderação usam query `?admin=<token>` onde aplicável (documentado nas credenciais Jenkins).
+- **Moderação de comentários** (`DELETE /api/comments`): lista e apagar na própria página admin, abaixo dos bancos, após validar o token com **Carregar** (não há moderação na app principal).
 
 ---
 
