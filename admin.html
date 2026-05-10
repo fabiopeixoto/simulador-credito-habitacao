@@ -20,7 +20,34 @@
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
   .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; position: relative; }
   .card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-  .color-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+  .bank-logo-wrap {
+    width: 28px;
+    height: 24px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(148,163,184,0.35);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+  .bank-logo-wrap img { object-fit: contain; display: block; }
+  .bank-logo-fallback {
+    display: none;
+    font-size: 9px;
+    font-weight: 700;
+    font-family: ui-monospace, monospace;
+    color: var(--muted);
+    line-height: 1;
+    padding: 2px;
+    text-align: center;
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+  }
   .card-title { font-weight: 600; font-size: 15px; }
   .card-code { font-family: monospace; font-size: 12px; color: var(--muted); background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px; }
   .card-body { font-size: 13px; color: var(--muted); }
@@ -166,6 +193,14 @@
 </div>
 
 <script>
+/** Domínios para favicon (Google s2) — alinhado com o simulador */
+const BANK_DOMAINS = {
+  CA: 'creditoagricola.pt', CTT: 'ctt.pt', BNKTR: 'bankinter.pt', ABANCA: 'abanca.com',
+  BCP: 'millenniumbcp.pt', ACTVO: 'activobank.pt', BPI: 'bpi.pt', MNTPO: 'bancomontepio.pt',
+  SANTR: 'santander.pt', NB: 'novobanco.pt', CGD: 'cgd.pt', UCI: 'uci.es', BIC: 'eurobic.pt',
+  BNI: 'bnieuropa.pt'
+};
+
 let banks = [];
 let editingCode = null;
 
@@ -224,10 +259,18 @@ function renderBanks() {
   const grid = document.getElementById('banksGrid');
   grid.innerHTML = banks.map(b => {
     const s = b.spreads || {};
+    const domain = BANK_DOMAINS[b.code] || 'bank.pt';
+    const hex = (b.color && String(b.color).startsWith('#')) ? b.color : '#64748b';
+    const borderTint = hex.length === 7 ? hex + '55' : hex;
+    const favUrl = 'https://www.google.com/s2/favicons?sz=32&amp;domain=' + encodeURIComponent(domain);
     return `
       <div class="card ${b.active ? '' : 'inactive'}">
         <div class="card-header">
-          <div class="color-dot" style="background:${b.color}"></div>
+          <div class="bank-logo-wrap" style="border-color:${borderTint}">
+            <img src="${favUrl}" width="18" height="18" alt="" loading="lazy"
+              onerror="this.style.display='none';var f=this.nextElementSibling;if(f)f.style.display='flex';"/>
+            <span class="bank-logo-fallback">${b.code}</span>
+          </div>
           <span class="card-title">${b.name}</span>
           <span class="card-code">${b.code}</span>
           <span class="badge ${b.active ? 'badge-active' : 'badge-inactive'}">${b.active ? 'activo' : 'inactivo'}</span>
