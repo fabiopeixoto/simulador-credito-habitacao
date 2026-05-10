@@ -17326,25 +17326,26 @@ exports.version = "19.2.5";
 </script><script>(function(){if(typeof React==="undefined"){document.getElementById("root").innerHTML="<div style=color:#f87171;padding:40px><h2>Erro</h2></div>";return;}try{const { useState, useEffect, useMemo, useCallback } = React;
 const { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } = Recharts;
 
-// ── Euribor fallback (março 2026) ─────────────────────────────────────────
+// ── Euribor fallback (maio 2026) ──────────────────────────────────────────
 const FALLBACK_EUR = {
-  "3m":  { valor: 2.099, data: "março 2026" },
-  "6m":  { valor: 2.322, data: "março 2026" },
-  "12m": { valor: 2.565, data: "março 2026" },
+  "3m":  { valor: 2.209, data: "maio 2026" },
+  "6m":  { valor: 2.541, data: "maio 2026" },
+  "12m": { valor: 2.860, data: "maio 2026" },
 };
 const FALLBACK_BANK_DATA = {
-  CA:    {sCom:0.65,sSem:1.65,mCom:2.45,mSem:3.35,fCom:3.00,fSem:3.80,jsCom:0.80,jsSem:1.65,promoPeriodo:0, promoSpread:null,dossier:250,avaliacao:200,contaMes:3.50,capMin:25000, capMax:2000000,vRef:22.68,mAno:160,minutas:0,  jovemIsenta:true},
-  CTT:   {sCom:0.70,sSem:1.30,mCom:3.30,mSem:3.30,fCom:3.20,fSem:3.80,jsCom:0.70,jsSem:1.30,promoPeriodo:0, promoSpread:null,dossier:0,  avaliacao:200,contaMes:0,   capMin:25000, capMax:1000000,vRef:15.71,mAno:170,minutas:0,  jovemIsenta:true},
-  BNKTR: {sCom:0.70,sSem:1.05,mCom:2.25,mSem:2.60,fCom:3.00,fSem:3.35,jsCom:0.70,jsSem:1.05,promoPeriodo:24,promoSpread:null,dossier:350,avaliacao:250,contaMes:0,   capMin:100000,capMax:3000000,vRef:33.28,mAno:196,minutas:0,  jovemIsenta:false},
-  ABANCA:{sCom:0.70,sSem:1.70,mCom:2.70,mSem:3.70,fCom:3.10,fSem:4.10,jsCom:0.70,jsSem:1.70,promoPeriodo:0, promoSpread:null,dossier:300,avaliacao:230,contaMes:6.24,capMin:30000, capMax:2000000,vRef:16.76,mAno:154,minutas:0,  jovemIsenta:true},
-  BCP:   {sCom:0.70,sSem:1.25,mCom:3.05,mSem:3.60,fCom:4.05,fSem:4.60,jsCom:0.70,jsSem:1.25,promoPeriodo:24,promoSpread:0,  dossier:300,avaliacao:250,contaMes:5.00,capMin:20000, capMax:3000000,vRef:19.92,mAno:256,minutas:0,  jovemIsenta:true},
-  ACTVO: {sCom:0.75,sSem:1.50,mCom:3.10,mSem:3.85,fCom:3.85,fSem:4.85,jsCom:0.75,jsSem:1.50,promoPeriodo:24,promoSpread:0,  dossier:300,avaliacao:250,contaMes:0,   capMin:20000, capMax:3000000,vRef:19.84,mAno:256,minutas:0,  jovemIsenta:true},
-  BPI:   {sCom:0.75,sSem:1.50,mCom:2.80,mSem:3.55,fCom:3.25,fSem:3.80,jsCom:0.75,jsSem:1.50,promoPeriodo:0, promoSpread:null,dossier:290,avaliacao:230,contaMes:4.90,capMin:25000, capMax:3000000,vRef:13.12,mAno:195,minutas:190,jovemIsenta:true},
-  MNTPO: {sCom:0.80,sSem:1.50,mCom:3.05,mSem:3.85,fCom:3.30,fSem:3.90,jsCom:0.80,jsSem:1.50,promoPeriodo:0, promoSpread:null,dossier:250,avaliacao:200,contaMes:5.41,capMin:20000, capMax:2000000,vRef:8.29, mAno:79, minutas:0,  jovemIsenta:false},
-  SANTR: {sCom:0.80,sSem:1.90,mCom:2.85,mSem:4.75,fCom:3.20,fSem:4.40,jsCom:0.80,jsSem:1.90,promoPeriodo:36,promoSpread:0,  dossier:280,avaliacao:250,contaMes:2.90,capMin:30000, capMax:3000000,vRef:22.55,mAno:246,minutas:0,  jovemIsenta:false},
-  NB:    {sCom:0.80,sSem:1.50,mCom:2.84,mSem:3.54,fCom:3.64,fSem:4.24,jsCom:0.80,jsSem:1.50,promoPeriodo:0, promoSpread:null,dossier:333,avaliacao:332,contaMes:8.22,capMin:50000, capMax:3000000,vRef:17.55,mAno:98, minutas:0,  jovemIsenta:true},
-  CGD:   {sCom:0.85,sSem:1.35,mCom:2.50,mSem:4.60,fCom:3.30,fSem:5.40,jsCom:0.65,jsSem:1.35,promoPeriodo:24,promoSpread:null,dossier:250,avaliacao:200,contaMes:6.30,capMin:25000, capMax:3000000,vRef:29.82,mAno:110,minutas:0,  jovemIsenta:true},
-  UCI:   {sCom:1.00,sSem:1.50,mCom:3.00,mSem:3.50,fCom:3.50,fSem:4.00,jsCom:1.00,jsSem:1.50,promoPeriodo:0, promoSpread:null,dossier:300,avaliacao:230,contaMes:0,   capMin:30000, capMax:2000000,vRef:19.00,mAno:150,minutas:0,  jovemIsenta:false},
+  // Fonte: comparamais.pt, sites oficiais dos bancos e preçários (maio 2026)
+  CA:    {sCom:0.75,sSem:1.65,mCom:2.90,mSem:3.80,fCom:3.00,fSem:3.80,jsCom:0.75,jsSem:1.65,promoPeriodo:24,promoSpread:0.45, dossier:250,avaliacao:200,contaMes:3.50,capMin:25000, capMax:2000000,vRef:22.68,mAno:160,minutas:0,  jovemIsenta:true},
+  CTT:   {sCom:0.85,sSem:1.70,mCom:3.40,mSem:3.40,fCom:3.95,fSem:4.55,jsCom:0.85,jsSem:1.70,promoPeriodo:0, promoSpread:null,dossier:0,  avaliacao:200,contaMes:0,   capMin:25000, capMax:1000000,vRef:15.71,mAno:170,minutas:0,  jovemIsenta:true},
+  BNKTR: {sCom:0.65,sSem:1.00,mCom:2.90,mSem:3.25,fCom:3.45,fSem:3.80,jsCom:0.65,jsSem:1.00,promoPeriodo:24,promoSpread:null,dossier:350,avaliacao:250,contaMes:0,   capMin:100000,capMax:3000000,vRef:33.28,mAno:196,minutas:0,  jovemIsenta:false},
+  ABANCA:{sCom:0.70,sSem:1.70,mCom:2.70,mSem:3.70,fCom:4.30,fSem:4.70,jsCom:0.70,jsSem:1.70,promoPeriodo:0, promoSpread:null,dossier:300,avaliacao:230,contaMes:6.24,capMin:30000, capMax:2000000,vRef:16.76,mAno:154,minutas:0,  jovemIsenta:true},
+  BCP:   {sCom:0.65,sSem:1.25,mCom:4.10,mSem:4.65,fCom:4.65,fSem:5.20,jsCom:0.65,jsSem:1.25,promoPeriodo:24,promoSpread:0,  dossier:300,avaliacao:250,contaMes:5.00,capMin:20000, capMax:3000000,vRef:19.92,mAno:256,minutas:0,  jovemIsenta:true},
+  ACTVO: {sCom:0.80,sSem:1.50,mCom:3.50,mSem:4.25,fCom:4.05,fSem:5.05,jsCom:0.80,jsSem:1.50,promoPeriodo:24,promoSpread:0,  dossier:300,avaliacao:250,contaMes:0,   capMin:20000, capMax:3000000,vRef:19.84,mAno:256,minutas:0,  jovemIsenta:true},
+  BPI:   {sCom:0.85,sSem:1.60,mCom:3.10,mSem:3.85,fCom:4.05,fSem:4.60,jsCom:0.85,jsSem:1.60,promoPeriodo:0, promoSpread:null,dossier:290,avaliacao:230,contaMes:4.90,capMin:25000, capMax:3000000,vRef:13.12,mAno:195,minutas:190,jovemIsenta:true},
+  MNTPO: {sCom:0.70,sSem:1.50,mCom:3.70,mSem:4.50,fCom:4.20,fSem:4.80,jsCom:0.70,jsSem:1.50,promoPeriodo:0, promoSpread:null,dossier:250,avaliacao:200,contaMes:5.41,capMin:20000, capMax:2000000,vRef:8.29, mAno:79, minutas:0,  jovemIsenta:false},
+  SANTR: {sCom:0.80,sSem:1.90,mCom:2.85,mSem:4.75,fCom:4.40,fSem:5.60,jsCom:0.80,jsSem:1.90,promoPeriodo:36,promoSpread:0,  dossier:280,avaliacao:250,contaMes:2.90,capMin:30000, capMax:3000000,vRef:22.55,mAno:246,minutas:0,  jovemIsenta:false},
+  NB:    {sCom:0.90,sSem:1.60,mCom:3.80,mSem:4.50,fCom:5.17,fSem:5.77,jsCom:0.80,jsSem:1.50,promoPeriodo:0, promoSpread:null,dossier:333,avaliacao:332,contaMes:8.22,capMin:50000, capMax:3000000,vRef:17.55,mAno:98, minutas:0,  jovemIsenta:true},
+  CGD:   {sCom:0.65,sSem:1.35,mCom:3.85,mSem:4.55,fCom:4.70,fSem:5.40,jsCom:0.65,jsSem:1.35,promoPeriodo:24,promoSpread:null,dossier:250,avaliacao:200,contaMes:6.30,capMin:25000, capMax:3000000,vRef:29.82,mAno:110,minutas:0,  jovemIsenta:true},
+  UCI:   {sCom:1.64,sSem:2.14,mCom:4.35,mSem:4.85,fCom:4.85,fSem:5.35,jsCom:1.64,jsSem:2.14,promoPeriodo:0, promoSpread:null,dossier:300,avaliacao:230,contaMes:0,   capMin:30000, capMax:2000000,vRef:19.00,mAno:150,minutas:0,  jovemIsenta:false},
   BIC:   {sCom:1.00,sSem:1.50,mCom:3.00,mSem:3.50,fCom:3.60,fSem:4.10,jsCom:1.00,jsSem:1.50,promoPeriodo:0, promoSpread:null,dossier:400,avaliacao:250,contaMes:3.00,capMin:25000, capMax:1000000,vRef:19.00,mAno:150,minutas:0,  jovemIsenta:false},
   BNI:   {sCom:1.00,sSem:1.50,mCom:3.10,mSem:3.60,fCom:3.70,fSem:4.20,jsCom:1.00,jsSem:1.50,promoPeriodo:0, promoSpread:null,dossier:400,avaliacao:250,contaMes:3.00,capMin:25000, capMax:1000000,vRef:19.00,mAno:150,minutas:0,  jovemIsenta:false},
 };
@@ -17372,7 +17373,7 @@ const SEG = {
 };
 
 // ── Comissões por banco (dossier + avaliação + preparação minutas) ─────────
-// Fonte: preçários oficiais e FINE publicadas (março 2026)
+// Fonte: preçários oficiais e FINE publicadas (maio 2026)
 const COM = {
   CA:    {dossier:250,  avaliacao:200, minutas:0,   total2hab:450,  jovemIsenta:true},
   CTT:   {dossier:0,    avaliacao:200, minutas:0,   total2hab:200,  jovemIsenta:true},  // CTT isenta dossier
@@ -17448,7 +17449,7 @@ const FINALIDADE_MAX_LTV = {
 };
 
 // ── Comissão mensal de manutenção de conta (obrigatória para vinculação) ──
-// Fonte: FINE publicadas e preçários oficiais (março/abril 2026)
+// Fonte: FINE publicadas e preçários oficiais (maio 2026)
 // Incluída no cálculo TAEG conforme Directiva 2014/17/UE
 const CONTA_MES = {
   CA:    {val:3.50,  nota:"Conta CA (estimativa)"},
@@ -17477,9 +17478,9 @@ const CONTRATO_FACTOR = {
 
 // ── Bancos estáticos ──────────────────────────────────────────────────────
 const BANKS_STATIC = [
-  {name:"Crédito Agrícola", s:"CA",    color:"#2d6a2d", refs:["12m"],           jOk:true,  carenciaMax:0,  tipos:["variável","mista","fixa"], promos:["Spread 0,45% 2a→0,80%","2 indexantes"],                                                                          prod:"Dom. ordenado + Seg. Vida CA + Multirriscos CA",                          jProd:"0,45% 1.º bienio; isenção comissões"},
+  {name:"Crédito Agrícola", s:"CA",    color:"#2d6a2d", refs:["12m"],           jOk:true,  carenciaMax:0,  tipos:["variável","mista","fixa"], promos:["Spread 0,45% 2a→0,75%","2 indexantes"],                                                                          prod:"Dom. ordenado + Seg. Vida CA + Multirriscos CA",                          jProd:"0,45% 1.º bienio; isenção comissões"},
   {name:"Banco CTT",        s:"CTT",   color:"#e30613", refs:["12m"],           jOk:true,  carenciaMax:0,  tipos:["variável","mista"],         promos:["Só 3 produtos — o mais simples"],                                                                                prod:"Seg. Vida + Multirriscos + Dom. CTT",                                     jProd:"TAN fixa 2,70% 2a; 1.ª anuidade seguros oferta"},
-  {name:"Bankinter",        s:"BNKTR", color:"#f7941d", refs:["12m"],           jOk:true,  carenciaMax:12, tipos:["variável","mista","fixa"], promos:["TAN fixa 2,25% 2 anos → spread 0,70%","Aceita seguros externos"],                                                  prod:"Seg. Vida + Multirriscos + Dom. ordenado",                               jProd:"TAN fixa 2,25% 2 anos; 100% garantia Estado"},
+  {name:"Bankinter",        s:"BNKTR", color:"#f7941d", refs:["12m"],           jOk:true,  carenciaMax:12, tipos:["variável","mista","fixa"], promos:["TAN fixa 2,25% 2 anos → spread 0,65%","Aceita seguros externos"],                                                  prod:"Seg. Vida + Multirriscos + Dom. ordenado",                               jProd:"TAN fixa 2,25% 2 anos; 100% garantia Estado"},
   {name:"Abanca",           s:"ABANCA",color:"#00529b", refs:["12m"],           jOk:true,  carenciaMax:0,  tipos:["variável","mista"],         promos:["Taxa fixa 2,70% 1.º/2.º ano"],                                                                                   prod:"Dom. ≥1.000€ + Seg. Vida + Multi + Cartão",                              jProd:"TAN fixa 2,70% 1.º ano → spread 0,70%"},
   {name:"Millennium BCP",   s:"BCP",   color:"#c8102e", refs:["3m","6m","12m"], jOk:true,  carenciaMax:0,  tipos:["variável","mista","fixa"], promos:["Spread 0% primeiros 2 anos","Isenção comissões ≤35a","3 indexantes"],                                              prod:"Cartão créd.≥100€ + Créd.pessoal + Dom. + Seg. Ocidental + Ageas",      jProd:"Spread 0% 2 anos; isenção comissões ≤35a"},
   {name:"ActivoBank",       s:"ACTVO", color:"#6d1e8a", refs:["3m","6m","12m"], jOk:true,  carenciaMax:0,  tipos:["variável","mista"],         promos:["Spread 0% primeiros 2 anos","3 indexantes"],                                                                      prod:"Cartão créd.≥100€ + Créd.pessoal + Dom. + Seg. Ocidental + Ageas",      jProd:"Spread 0% 2 anos; 100% garantia Estado"},
@@ -17487,7 +17488,7 @@ const BANKS_STATIC = [
   {name:"Banco Montepio",   s:"MNTPO", color:"#7a0f2e", refs:["6m"],            jOk:true,  carenciaMax:24, tipos:["variável","mista"],         promos:["Cashback 1,5%"],                                                                                                  prod:"Conta Ordenado + Cartão ≥500€/sem + Seg. Vida + Multirriscos Lusitania", jProd:"100% garantia Estado; cashback 1,5%"},
   {name:"Santander",        s:"SANTR", color:"#ec0000", refs:["6m"],            jOk:true,  carenciaMax:12, tipos:["variável","mista","fixa"], promos:["Spread 0% 3 anos (c/prod.) → 0,80%"],                                                                             prod:"Cartão créd.≥300€ + Seg. Vida + Multirriscos Santander",                 jProd:"Spread 0% 3 anos c/prod.; 100% garantia Estado"},
   {name:"Novo Banco",       s:"NB",    color:"#00a651", refs:["12m"],           jOk:true,  carenciaMax:24, tipos:["variável","mista","fixa"], promos:["Cashback 1%","Mudum — multirriscos mais barato"],                                                                   prod:"Pack 1.º Banco (dom.) + GamaLife + Mudum",                               jProd:"100% financiamento; cashback 1%"},
-  {name:"CGD",              s:"CGD",   color:"#006633", refs:["6m"],            jOk:true,  carenciaMax:0,  tipos:["variável","mista","fixa"], promos:["Banco público","TAN fixa 2 anos → Eur.6M+0,85%","Jovem: spread 0,65%","Cert. A/B: -0,15%"],                       prod:"Pack Vinculação + Pack Ligação (Fidelidade Vida + Multi)",                jProd:"Spread 0,65% TAEG 3,26% — MELHOR JOVEM"},
+  {name:"CGD",              s:"CGD",   color:"#006633", refs:["6m"],            jOk:true,  carenciaMax:0,  tipos:["variável","mista","fixa"], promos:["Banco público","TAN fixa 2 anos → Eur.6M+0,65%","Jovem: spread 0,65%","Cert. A/B: -0,15%"],                       prod:"Pack Vinculação + Pack Ligação (Fidelidade Vida + Multi)",                jProd:"Spread 0,65% TAEG 3,26% — MELHOR JOVEM"},
   {name:"UCI",              s:"UCI",   color:"#1a3a6b", refs:["6m"],            jOk:true,  carenciaMax:0,  tipos:["variável","mista"],         promos:["Especialista habitação","Sem dom. obrigatória"],                                                                   prod:"Seg. Vida + Multirriscos",                                               jProd:"100% c/ garantia Estado"},
   {name:"Banco BIC",        s:"BIC",   color:"#e67e00", refs:["12m"],           jOk:true,  carenciaMax:0,  tipos:["variável"],                 promos:[],                                                                                                                 prod:"Domiciliação + Seguros",                                                 jProd:"Garantia Estado (Despacho 14916/2024)"},
   {name:"BNI Europa",       s:"BNI",   color:"#4a235a", refs:["12m"],           jOk:false, carenciaMax:0,  tipos:["variável"],                 promos:[],                                                                                                                 prod:"Domiciliação + Seguros",                                                 jProd:""},
