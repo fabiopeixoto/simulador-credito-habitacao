@@ -113,7 +113,7 @@ Variável obrigatória no servidor: **`ANTHROPIC_API_KEY`**.
 |----------|-----|
 | `PORT` | Porta HTTP (defeito **3000**) |
 | `ANTHROPIC_API_KEY` | Activa `POST /api/spreads` com chamada ao modelo |
-| `ADMIN_TOKEN` | Admin: `POST/DELETE /api/banks`, `DELETE /api/comments`, e bypass de limites em `POST /api/spreads` |
+| `ADMIN_TOKEN` | Admin: `GET /api/stats`, `POST/DELETE /api/banks`, `DELETE /api/comments`, e bypass de limites em `POST /api/spreads` |
 | `DEBUG_SECRET` | Endpoint de diagnóstico dos comentários |
 
 ---
@@ -123,6 +123,7 @@ Variável obrigatória no servidor: **`ANTHROPIC_API_KEY`**.
 - Lista de bancos com ícones (favicon por domínio), edição de spreads/comissões, histórico por banco.
 - Botão **Actualizar spreads via AI** chama `POST /api/spreads` com o token introduzido na página.
 - Operações sensíveis enviam **`x-admin-token`** no header.
+- **Estatísticas** (`GET /api/stats`, token no header): visitas cumulativas e por dia (UTC) à página inicial e ao painel; tabela dos últimos 7 dias; contagem de linhas de comentários. Persistido em `data/stats.sqlite`. Após **Carregar** com token.
 - **Moderação de comentários** (`DELETE /api/comments`): lista e apagar na própria página admin, abaixo dos bancos, após validar o token com **Carregar** (não há moderação na app principal).
 
 ---

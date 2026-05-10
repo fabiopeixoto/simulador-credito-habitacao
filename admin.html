@@ -95,6 +95,16 @@
   .comments-admin > h2 { margin-top: 0; margin-bottom: 8px; }
   .comments-admin-toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
   #commentsAdminList { margin-top: 4px; }
+  .stats-admin { margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--border); max-width: 960px; }
+  .stats-admin > h2 { margin-top: 0; margin-bottom: 10px; }
+  .stats-admin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(158px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .stat-card .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; line-height: 1.35; }
+  .stat-card .value { font-size: 1.35rem; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+  .stats-admin-7d { font-size: 12px; overflow-x: auto; }
+  .stats-admin-7d table { width: 100%; border-collapse: collapse; min-width: 480px; }
+  .stats-admin-7d th, .stats-admin-7d td { padding: 6px 10px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .stats-admin-7d th:first-child, .stats-admin-7d td:first-child { text-align: left; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -107,6 +117,16 @@
 </div>
 
 <div id="adminProtected" style="display:none;">
+<section class="stats-admin" aria-label="Estatísticas do site">
+  <h2>📊 Estatísticas do site</h2>
+  <div class="comments-admin-toolbar" style="margin-bottom:12px;">
+    <button type="button" class="btn-sm btn-history" onclick="loadStatsAdmin()">Actualizar estatísticas</button>
+    <span class="status" style="font-size:12px;">Pedidos GET à página inicial e a esta página admin (UTC). Total é cumulativo desde o primeiro registo.</span>
+  </div>
+  <div id="statsAdminGrid" class="stats-admin-grid"></div>
+  <div id="statsAdmin7d" class="stats-admin-7d"></div>
+</section>
+
 <div class="ai-box">
   <div class="ai-box-info">
     <h2>🤖 Actualizar Spreads via Anthropic AI</h2>
@@ -249,6 +269,10 @@ document.getElementById('tokenInput').addEventListener('input', () => {
   const cs = document.getElementById('commentsAdminStatus');
   if (cl) cl.innerHTML = '';
   if (cs) { cs.textContent = ''; cs.className = 'status'; }
+  const sg = document.getElementById('statsAdminGrid');
+  const s7 = document.getElementById('statsAdmin7d');
+  if (sg) sg.innerHTML = '';
+  if (s7) s7.innerHTML = '';
 });
 
 function getToken() { return document.getElementById('tokenInput').value; }
@@ -265,6 +289,42 @@ function escapeHtml(s) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+function fmtNum(n) {
+  if (n == null || !Number.isFinite(Number(n))) return '—';
+  return Number(n).toLocaleString('pt-PT');
+}
+
+async function loadStatsAdmin() {
+  if (!adminUnlocked) return;
+  const grid = document.getElementById('statsAdminGrid');
+  const t7 = document.getElementById('statsAdmin7d');
+  if (grid) grid.innerHTML = '<p class="status">A carregar…</p>';
+  if (t7) t7.innerHTML = '';
+  try {
+    const r = await fetch('/api/stats', { headers: { 'x-admin-token': getToken().trim() } });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    if (grid) {
+      grid.innerHTML = `
+        <div class="stat-card"><div class="label">Visitas página inicial (total)</div><div class="value">${fmtNum(d.homepageTotal)}</div></div>
+        <div class="stat-card"><div class="label">Visitas hoje · início</div><div class="value">${fmtNum(d.today && d.today.homepage)}</div></div>
+        <div class="stat-card"><div class="label">Visitas painel admin (total)</div><div class="value">${fmtNum(d.adminTotal)}</div></div>
+        <div class="stat-card"><div class="label">Visitas hoje · admin</div><div class="value">${fmtNum(d.today && d.today.admin)}</div></div>
+        <div class="stat-card"><div class="label">Linhas comentários (BD)</div><div class="value">${d.commentsTotal != null ? fmtNum(d.commentsTotal) : '—'}</div></div>
+        <div class="stat-card"><div class="label">Primeiro dia nos registos (UTC)</div><div class="value" style="font-size:1rem">${escapeHtml(d.recordedSince || '—')}</div></div>
+      `;
+    }
+    if (t7 && d.last7Days && d.last7Days.length) {
+      const rows = d.last7Days.map(x =>
+        `<tr><td>${escapeHtml(x.day)}</td><td>${fmtNum(x.homepage)}</td><td>${fmtNum(x.admin)}</td></tr>`
+      ).join('');
+      t7.innerHTML = '<table><thead><tr><th>Dia (UTC)</th><th>Início</th><th>Admin</th></tr></thead><tbody>' + rows + '</tbody></table>';
+    }
+  } catch (e) {
+    if (grid) grid.innerHTML = '<p class="status error">Não foi possível carregar estatísticas: ' + escapeHtml(e.message.slice(0, 120)) + '</p>';
+  }
 }
 
 function renderCommentsAdminTree(items) {
@@ -401,6 +461,7 @@ async function loadBanks() {
     banks = data.banks || data; // suporte para resposta {banks, euribor} e array legado
     renderBanks();
     setStatus(banks.length + ' bancos carregados', 'ok');
+    await loadStatsAdmin();
     await loadCommentsAdmin();
   } catch (e) {
     setStatus('Erro: ' + e.message, 'error');

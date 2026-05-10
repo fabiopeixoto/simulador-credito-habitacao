@@ -8,6 +8,7 @@ const root = path.resolve(__dirname);
 const spreadsHandler = require(path.join(root, "api", "spreads.js"));
 const commentsHandler = require(path.join(root, "api", "comments.js"));
 const banksHandler = require(path.join(root, "api", "banks.js"));
+const statsHandler = require(path.join(root, "api", "stats.js"));
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
@@ -143,6 +144,14 @@ const server = http.createServer(async (req, res) => {
       return runApiHandler(req, res, requestUrl, banksHandler);
     }
 
+    if (pathname === "/api/stats") {
+      if (!["GET", "OPTIONS"].includes(req.method)) {
+        res.writeHead(405, { Allow: "GET, OPTIONS", "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({ error: "Método não suportado" }));
+      }
+      return runApiHandler(req, res, requestUrl, statsHandler);
+    }
+
     let filePath = pathname === "/" ? "/index.html" : pathname;
     filePath = decodeURIComponent(filePath);
     const normalizedPath = path.normalize(filePath).replace(/^([/\\]+|\.\.\/?)+/, "");
@@ -155,6 +164,13 @@ const server = http.createServer(async (req, res) => {
     const stat = await fs.promises.stat(fullPath).catch(() => null);
     if (!stat || !stat.isFile()) {
       return sendJson(res, 404, { error: "Não encontrado" });
+    }
+
+    if (req.method === "GET") {
+      try {
+        if (pathname === "/" || normalizedPath === "index.html") statsHandler.recordHomepageView();
+        else if (normalizedPath === "admin.html") statsHandler.recordAdminPageView();
+      } catch (_) {}
     }
 
     const ext = path.extname(fullPath).toLowerCase();
