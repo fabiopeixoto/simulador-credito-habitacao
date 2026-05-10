@@ -68,10 +68,31 @@ try {
 }
 
 // ── Euribor cache helpers ──────────────────────────────────────────────────
-const EUR_CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
+/** Intervalo mínimo entre pedidos HTTP ao BCE em GET /api/banks (evita sobrecarga). */
+const EUR_BCE_NET_MIN_MS = 90 * 1000;
+let lastEuriborNetAttemptMs = 0;
+
+function euriborPayloadDiffers(prev, eur, eurLabel) {
+  if (!eur || typeof eur !== "object") return false;
+  const keys = ["3m", "6m", "12m"];
+  if (!prev || !prev.eur) return keys.some((k) => typeof eur[k] === "number" && Number.isFinite(eur[k]));
+  const pe = prev.eur;
+  for (const k of keys) {
+    const a = pe[k];
+    const b = eur[k];
+    if ((a == null || !Number.isFinite(a)) && (b == null || !Number.isFinite(b))) continue;
+    if (typeof a !== "number" || typeof b !== "number") return true;
+    if (Math.abs(a - b) > 1e-10) return true;
+  }
+  const la = String(prev.eurLabel || "").trim();
+  const lb = String(eurLabel || "").trim();
+  return la !== lb;
+}
 
 function setEuribor(eur, eurLabel) {
   if (!sqliteDb) return;
+  const prev = getEuribor();
+  if (!euriborPayloadDiffers(prev, eur, eurLabel)) return;
   try {
     sqliteDb.prepare(`
       INSERT INTO kv_store(key, value, updated_at) VALUES (?, ?, ?)
@@ -130,6 +151,24 @@ async function fetchAndCacheEuribor() {
   const result = { eur, eurLabel, fetchedAt: Date.now() };
   setEuribor(eur, eurLabel);
   return result;
+}
+
+/**
+ * Re-descobre Euribor na rede com throttle; só persiste em SQLite quando os valores
+ * diferem do cache (setEuribor já compara).
+ */
+async function refreshEuriborFromBceForGet() {
+  const now = Date.now();
+  if (now - lastEuriborNetAttemptMs < EUR_BCE_NET_MIN_MS) {
+    return getEuribor();
+  }
+  lastEuriborNetAttemptMs = now;
+  try {
+    await fetchAndCacheEuribor();
+  } catch (_) {
+    /* mantém cache anterior */
+  }
+  return getEuribor();
 }
 
 // ── Seed data ─────────────────────────────────────────────────────────────
@@ -253,6 +292,35 @@ function normalizeCampaignSpreadPair(d) {
   return out;
 }
 
+function nclose(a, b) {
+  if (a == null && b == null) return true;
+  if (a == null || b == null) return false;
+  return Math.abs(Number(a) - Number(b)) < 1e-8;
+}
+
+/** True se o último spread em DB for semanticamente igual ao payload (evita histórico duplicado). */
+function spreadComparableEqual(stored, incomingNorm) {
+  if (!stored || !incomingNorm || typeof incomingNorm !== "object") return false;
+  const S = { ...stored };
+  const I = incomingNorm;
+  delete S.fetchedAt;
+  delete S.source;
+  const nums = [
+    "sCom", "sSem", "mCom", "mSem", "fCom", "fSem", "jsCom", "jsSem",
+    "dossier", "avaliacao", "contaMes", "capMin", "capMax", "vRef", "mAno", "minutas",
+  ];
+  for (const k of nums) {
+    if (!nclose(S[k], I[k])) return false;
+  }
+  if (Number(S.promoPeriodo || 0) !== Number(I.promoPeriodo || 0)) return false;
+  if (!nclose(S.promoSpread, I.promoSpread)) return false;
+  if (String(S.contaNota || "").trim() !== String(I.contaNota || "").trim()) return false;
+  if (String(S.insV || "").trim() !== String(I.insV || "").trim()) return false;
+  if (String(S.insM || "").trim() !== String(I.insM || "").trim()) return false;
+  if (!!S.jovemIsenta !== !!I.jovemIsenta) return false;
+  return true;
+}
+
 // ── Queries ───────────────────────────────────────────────────────────────
 
 function getAllBanks() {
@@ -351,6 +419,8 @@ function insertSpreads(bankCode, spreadsData, source = "manual") {
   if (!sqliteDb) return false;
   if (!spreadsData || typeof spreadsData !== "object") return false;
   spreadsData = normalizeCampaignSpreadPair({ ...spreadsData });
+  const latest = getLatestSpreads();
+  if (spreadComparableEqual(latest[bankCode], spreadsData)) return true;
   const stmt = sqliteDb.prepare(`
     INSERT INTO spreads (bank_code, sCom, sSem, mCom, mSem, fCom, fSem, jsCom, jsSem,
       promoPeriodo, promoSpread, dossier, avaliacao, contaMes, contaNota,
@@ -399,9 +469,11 @@ function bulkInsertSpreads(spreadsMap, source = "anthropic") {
       @capMin, @capMax, @vRef, @mAno, @insV, @insM, @minutas, @jovemIsenta, @source)
   `);
   const tx = sqliteDb.transaction((map) => {
+    const latest = getLatestSpreads();
     for (const [code, data] of Object.entries(map)) {
       if (!data || typeof data !== "object") continue;
       const d = normalizeCampaignSpreadPair({ ...data });
+      if (spreadComparableEqual(latest[code], d)) continue;
       stmt.run({
         bank_code: code,
         sCom: d.sCom ?? null,
@@ -468,14 +540,12 @@ module.exports = async function handler(req, res) {
       spreads: spreads[bank.code] || null,
     }));
 
-    // Euribor: serve cache; se ausente ou expirado, tenta fetch fresco de BCE
+    // Euribor: sincroniza com BCE (throttle à rede); SQLite só actualiza se os valores diferirem
     let euriborData = getEuribor();
-    if (!euriborData || (Date.now() - (euriborData.fetchedAt || 0)) > EUR_CACHE_TTL_MS) {
-      try {
-        euriborData = await fetchAndCacheEuribor();
-      } catch (_) {
-        // Mantém dados em cache mesmo que estejam expirados
-      }
+    try {
+      euriborData = await refreshEuriborFromBceForGet();
+    } catch (_) {
+      /* mantém cache */
     }
 
     return res.status(200).json({ banks: result, euribor: euriborData || null });
