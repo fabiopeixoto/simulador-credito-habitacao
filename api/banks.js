@@ -189,6 +189,7 @@ const SEED_BANKS = [
   { code: "BNI", name: "BNI Europa", color: "#4a235a", refs: ["12m"], jOk: false, carenciaMax: 0, tipos: ["variável"], promos: [], prod: "Domiciliação + Seguros", jProd: "" },
 ];
 
+/** Valores canónicos servidos via GET /api/banks (SQLite). Actualizar aqui + deploy; `reconcileSeedSpreadsToDb` insere linha nova se divergirem. */
 const SEED_SPREADS = {
   CA: { sCom: 0.75, sSem: 1.65, mCom: 2.90, mSem: 3.80, fCom: 3.00, fSem: 3.80, jsCom: 0.75, jsSem: 1.65, promoPeriodo: 24, promoSpread: 0.45, dossier: 250, avaliacao: 200, contaMes: 3.50, contaNota: "Conta CA (estimativa)", capMin: 25000, capMax: 2000000, vRef: 22.68, mAno: 160, insV: "CA Seguros", insM: "CA Seguros", minutas: 0, jovemIsenta: true },
   CTT: { sCom: 0.85, sSem: 1.70, mCom: 3.40, mSem: 3.40, fCom: 3.95, fSem: 4.55, jsCom: 0.85, jsSem: 1.70, promoPeriodo: 0, promoSpread: null, dossier: 0, avaliacao: 200, contaMes: 0, contaNota: "Sem comissão de conta obrigatória", capMin: 25000, capMax: 1000000, vRef: 15.71, mAno: 170, insV: "CTT Seguros", insM: "CTT Seguros", minutas: 0, jovemIsenta: true },
@@ -201,9 +202,9 @@ const SEED_SPREADS = {
   SANTR: { sCom: 0.80, sSem: 1.90, mCom: 2.85, mSem: 4.75, fCom: 4.40, fSem: 5.60, jsCom: 0.80, jsSem: 1.90, promoPeriodo: 36, promoSpread: 0, dossier: 280, avaliacao: 250, contaMes: 2.90, contaNota: "Conta Santander (confirmado preçário jan.2026)", capMin: 30000, capMax: 3000000, vRef: 22.55, mAno: 246, insV: "Santander Seguros", insM: "Santander Seguros", minutas: 0, jovemIsenta: false },
   NB: { sCom: 0.90, sSem: 1.60, mCom: 3.80, mSem: 4.50, fCom: 5.17, fSem: 5.77, jsCom: 0.80, jsSem: 1.50, promoPeriodo: 0, promoSpread: null, dossier: 333, avaliacao: 332, contaMes: 8.22, contaNota: "Conta Pacote NB €8,22/mês IS incluído (preçário fev.2026)", capMin: 50000, capMax: 3000000, vRef: 17.55, mAno: 98, insV: "GamaLife", insM: "Mudum", minutas: 0, jovemIsenta: true },
   CGD: { sCom: 0.65, sSem: 1.35, mCom: 3.85, mSem: 4.55, fCom: 4.70, fSem: 5.40, jsCom: 0.65, jsSem: 1.35, promoPeriodo: 24, promoSpread: null, dossier: 250, avaliacao: 200, contaMes: 6.30, contaNota: "Conta Caixadirecta €6,30/mês IS incluído (confirmado preçário 2026)", capMin: 25000, capMax: 3000000, vRef: 29.82, mAno: 110, insV: "Fidelidade", insM: "Fidelidade Casa", minutas: 0, jovemIsenta: true },
-  UCI: { sCom: 1.64, sSem: 2.14, mCom: 4.35, mSem: 4.85, fCom: 4.85, fSem: 5.35, jsCom: 1.64, jsSem: 2.14, promoPeriodo: 0, promoSpread: null, dossier: 300, avaliacao: 230, contaMes: 0, contaNota: "Sem conta obrigatória", capMin: 30000, capMax: 2000000, vRef: 19.00, mAno: 150, insV: "(est.)", insM: "(est.)", minutas: 0, jovemIsenta: false },
-  BIC: { sCom: 1.00, sSem: 1.50, mCom: 3.00, mSem: 3.50, fCom: 3.60, fSem: 4.10, jsCom: 1.00, jsSem: 1.50, promoPeriodo: 0, promoSpread: null, dossier: 400, avaliacao: 250, contaMes: 3.00, contaNota: "(estimativa)", capMin: 25000, capMax: 1000000, vRef: 19.00, mAno: 150, insV: "(est.)", insM: "(est.)", minutas: 0, jovemIsenta: false },
-  BNI: { sCom: 1.00, sSem: 1.50, mCom: 3.10, mSem: 3.60, fCom: 3.70, fSem: 4.20, jsCom: 1.00, jsSem: 1.50, promoPeriodo: 0, promoSpread: null, dossier: 400, avaliacao: 250, contaMes: 3.00, contaNota: "(estimativa)", capMin: 25000, capMax: 1000000, vRef: 19.00, mAno: 150, insV: "(est.)", insM: "(est.)", minutas: 0, jovemIsenta: false },
+  UCI: { sCom: 1.64, sSem: 2.14, mCom: 4.35, mSem: 4.85, fCom: 4.85, fSem: 5.35, jsCom: 1.52, jsSem: 2.02, promoPeriodo: 0, promoSpread: null, dossier: 300, avaliacao: 230, contaMes: 0, contaNota: "Sem conta obrigatória", capMin: 30000, capMax: 2000000, vRef: 19.00, mAno: 150, insV: "(est.)", insM: "(est.)", minutas: 0, jovemIsenta: false },
+  BIC: { sCom: 1.00, sSem: 1.50, mCom: 3.00, mSem: 3.50, fCom: 3.60, fSem: 4.10, jsCom: 0.88, jsSem: 1.38, promoPeriodo: 0, promoSpread: null, dossier: 400, avaliacao: 250, contaMes: 3.00, contaNota: "(estimativa)", capMin: 25000, capMax: 1000000, vRef: 19.00, mAno: 150, insV: "(est.)", insM: "(est.)", minutas: 0, jovemIsenta: false },
+  BNI: { sCom: 1.00, sSem: 1.50, mCom: 3.10, mSem: 3.60, fCom: 3.70, fSem: 4.20, jsCom: 0.88, jsSem: 1.38, promoPeriodo: 0, promoSpread: null, dossier: 400, avaliacao: 250, contaMes: 3.00, contaNota: "(estimativa)", capMin: 25000, capMax: 1000000, vRef: 19.00, mAno: 150, insV: "(est.)", insM: "(est.)", minutas: 0, jovemIsenta: false },
 };
 
 function seedIfEmpty() {
@@ -276,6 +277,25 @@ function seedIfEmpty() {
 }
 
 seedIfEmpty();
+
+/** Em cada arranque: se `SEED_SPREADS` diverge do último registo do banco, insere uma linha nova (deploy sem POST manual). Não sobrepõe spreads `source=manual` (POST admin). */
+function reconcileSeedSpreadsToDb() {
+  if (!sqliteDb) return;
+  try {
+    const latest = getLatestSpreads();
+    const map = {};
+    for (const [code, sd] of Object.entries(SEED_SPREADS)) {
+      const row = latest[code];
+      if (row && String(row.source || "").trim() === "manual") continue;
+      map[code] = sd;
+    }
+    if (Object.keys(map).length === 0) return;
+    bulkInsertSpreads(map, "seed-reconcile");
+  } catch (e) {
+    console.error("banks.js: reconcileSeedSpreadsToDb:", e.message);
+  }
+}
+reconcileSeedSpreadsToDb();
 
 /** sCom = spread normal (fora da promo); promoSpread = durante a promo (≤ sCom). Corrige inversões da API. */
 function normalizeCampaignSpreadPair(d) {

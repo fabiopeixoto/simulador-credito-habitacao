@@ -30,6 +30,9 @@ const KV_CALLS_PFX   = "spreads:calls:";   // + "YYYY-MM-DD"
 const KV_CACHE_TTL   = 25 * 60 * 60;       // 25 h (segundos)
 const KV_CALLS_TTL   = 49 * 60 * 60;       // 49 h
 
+/** Por defeito não gravar respostas LLM na SQLite do simulador (`banks.sqlite`); os spreads servidos vêm de SEED_SPREADS + reconcile + POST /api/banks. Para persistir saídas Anthropic na BD: ANTHROPIC_PERSIST_SPREADS=1 */
+const PERSIST_ANTHROPIC_SPREADS_TO_SQLITE = process.env.ANTHROPIC_PERSIST_SPREADS === "1";
+
 async function kvGet(key) {
   if (!sqliteDb) return null;
   try {
@@ -321,8 +324,8 @@ module.exports = async function handler(req, res) {
     MEM.dayKey     = today;
     MEM.callsToday = kvSlot !== null ? Number(kvSlot) : MEM.callsToday + 1;
 
-    // Persistir spreads normalizados por banco
-    if (banksModule && banksModule.bulkInsertSpreads && spreadsResult.value) {
+    // Opcional: persistir na SQLite do simulador (desactivado por defeito — evita sobrescrever dados auditados)
+    if (PERSIST_ANTHROPIC_SPREADS_TO_SQLITE && banksModule && banksModule.bulkInsertSpreads && spreadsResult.value) {
       try { banksModule.bulkInsertSpreads(spreadsResult.value, "anthropic"); } catch (_) {}
     }
 

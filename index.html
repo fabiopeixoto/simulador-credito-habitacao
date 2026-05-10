@@ -17333,7 +17333,7 @@ const FALLBACK_EUR = {
   "12m": { valor: 2.860, data: "maio 2026" },
 };
 const FALLBACK_BANK_DATA = {
-  // Fonte: comparamais.pt, sites oficiais dos bancos e preçários (maio 2026)
+  // Offline / primeira pintura: espelhar api/banks.js SEED_SPREADS; em produção GET /api/banks (SQLite) é a fonte.
   CA:    {sCom:0.75,sSem:1.65,mCom:2.90,mSem:3.80,fCom:3.00,fSem:3.80,jsCom:0.62,jsSem:1.52,promoPeriodo:24,promoSpread:0.45, dossier:250,avaliacao:200,contaMes:3.50,capMin:25000, capMax:2000000,vRef:22.68,mAno:160,minutas:0,  jovemIsenta:true},
   CTT:   {sCom:0.85,sSem:1.70,mCom:3.40,mSem:3.40,fCom:3.95,fSem:4.55,jsCom:0.73,jsSem:1.58,promoPeriodo:0, promoSpread:null,dossier:0,  avaliacao:200,contaMes:0,   capMin:25000, capMax:1000000,vRef:15.71,mAno:170,minutas:0,  jovemIsenta:true},
   BNKTR: {sCom:0.70,sSem:1.05,mCom:2.90,mSem:3.25,fCom:3.45,fSem:3.80,jsCom:0.62,jsSem:0.97,promoPeriodo:24,promoSpread:null,dossier:350,avaliacao:250,contaMes:0,   capMin:100000,capMax:3000000,vRef:33.28,mAno:196,minutas:0,  jovemIsenta:false}, // Normal verif. simulador Bankinter 2026 (prints): spr 0,70%/1,05% c/ pack Vida+Multi+Dom. (Δ0,35pp); 180k/30a E3→746,81€ · E6→773,92€ · E12→802,96€. CH Jovem (js): estim. −0,08pp até print próprio
