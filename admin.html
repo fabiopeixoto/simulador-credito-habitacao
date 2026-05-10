@@ -91,16 +91,41 @@
   #aiStatus { font-size: 12px; color: var(--muted); min-width: 180px; }
   #aiStatus.ok { color: var(--accent2); }
   #aiStatus.error { color: var(--danger); }
+  .comments-admin { margin-top: 8px; padding-top: 24px; border-top: 1px solid var(--border); max-width: 960px; }
+  .comments-admin > h2 { margin-top: 0; margin-bottom: 8px; }
+  .comments-admin-toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+  #commentsAdminList { margin-top: 4px; }
+  .stats-admin { margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--border); max-width: 960px; }
+  .stats-admin > h2 { margin-top: 0; margin-bottom: 10px; }
+  .stats-admin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(158px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .stat-card .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; line-height: 1.35; }
+  .stat-card .value { font-size: 1.35rem; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+  .stats-admin-7d { font-size: 12px; overflow-x: auto; }
+  .stats-admin-7d table { width: 100%; border-collapse: collapse; min-width: 480px; }
+  .stats-admin-7d th, .stats-admin-7d td { padding: 6px 10px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .stats-admin-7d th:first-child, .stats-admin-7d td:first-child { text-align: left; color: var(--muted); }
 </style>
 </head>
 <body>
 <div class="header">
   <h1>Gestão de Bancos & Spreads</h1>
-  <input type="password" id="tokenInput" placeholder="Admin Token" />
-  <button onclick="loadBanks()">Carregar</button>
-  <button onclick="openNewBankModal()" style="background:var(--accent2)">+ Novo Banco</button>
+  <input type="password" id="tokenInput" placeholder="Admin Token" autocomplete="current-password" />
+  <button type="button" onclick="loadBanks()">Carregar</button>
+  <button type="button" id="btnNewBank" onclick="openNewBankModal()" style="display:none;background:var(--accent2)">+ Novo Banco</button>
   <div id="statusMsg" class="status"></div>
 </div>
+
+<div id="adminProtected" style="display:none;">
+<section class="stats-admin" aria-label="Estatísticas do site">
+  <h2>📊 Estatísticas do site</h2>
+  <div class="comments-admin-toolbar" style="margin-bottom:12px;">
+    <button type="button" class="btn-sm btn-history" onclick="loadStatsAdmin()">Actualizar estatísticas</button>
+    <span class="status" style="font-size:12px;">Pedidos GET à página inicial e a esta página admin (UTC). Total é cumulativo desde o primeiro registo.</span>
+  </div>
+  <div id="statsAdminGrid" class="stats-admin-grid"></div>
+  <div id="statsAdmin7d" class="stats-admin-7d"></div>
+</section>
 
 <div class="ai-box">
   <div class="ai-box-info">
@@ -108,10 +133,21 @@
     <p>Chama a API Anthropic para obter os spreads mais recentes de todos os bancos e guarda-os na base de dados. Sem limite de chamadas para admin.</p>
   </div>
   <div id="aiStatus"></div>
-  <button class="btn-ai" id="btnAi" onclick="refreshSpreadsAI()">🤖 Actualizar Agora</button>
+  <button type="button" class="btn-ai" id="btnAi" onclick="refreshSpreadsAI()">🤖 Actualizar Agora</button>
 </div>
 
 <div id="banksGrid" class="grid"></div>
+
+<section class="comments-admin" aria-label="Moderação de comentários">
+  <h2>💬 Comentários da comunidade</h2>
+  <p style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.45;">Comentários públicos do simulador. Apagar remove o comentário principal e todas as respostas associadas.</p>
+  <div class="comments-admin-toolbar">
+    <button type="button" class="btn-sm btn-history" onclick="loadCommentsAdmin()">Actualizar lista</button>
+    <span id="commentsAdminStatus" class="status"></span>
+  </div>
+  <div id="commentsAdminList"></div>
+</section>
+</div>
 
 <!-- Modal: Edit Bank -->
 <div class="modal-overlay" id="editModal">
@@ -203,6 +239,41 @@ const BANK_DOMAINS = {
 
 let banks = [];
 let editingCode = null;
+let adminUnlocked = false;
+
+function setAdminUnlocked(ok) {
+  adminUnlocked = !!ok;
+  const prot = document.getElementById('adminProtected');
+  const nb = document.getElementById('btnNewBank');
+  if (prot) prot.style.display = ok ? '' : 'none';
+  if (nb) nb.style.display = ok ? 'inline-block' : 'none';
+}
+
+async function verifyAdminToken() {
+  const token = getToken().trim();
+  if (!token) return false;
+  const r = await fetch('/api/banks', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+    body: '{}',
+  });
+  return r.ok;
+}
+
+document.getElementById('tokenInput').addEventListener('input', () => {
+  setAdminUnlocked(false);
+  banks = [];
+  const grid = document.getElementById('banksGrid');
+  if (grid) grid.innerHTML = '';
+  const cl = document.getElementById('commentsAdminList');
+  const cs = document.getElementById('commentsAdminStatus');
+  if (cl) cl.innerHTML = '';
+  if (cs) { cs.textContent = ''; cs.className = 'status'; }
+  const sg = document.getElementById('statsAdminGrid');
+  const s7 = document.getElementById('statsAdmin7d');
+  if (sg) sg.innerHTML = '';
+  if (s7) s7.innerHTML = '';
+});
 
 function getToken() { return document.getElementById('tokenInput').value; }
 function setStatus(msg, type) {
@@ -211,7 +282,131 @@ function setStatus(msg, type) {
   el.className = 'status ' + (type || '');
 }
 
+function escapeHtml(s) {
+  if (s == null || s === '') return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function fmtNum(n) {
+  if (n == null || !Number.isFinite(Number(n))) return '—';
+  return Number(n).toLocaleString('pt-PT');
+}
+
+async function loadStatsAdmin() {
+  if (!adminUnlocked) return;
+  const grid = document.getElementById('statsAdminGrid');
+  const t7 = document.getElementById('statsAdmin7d');
+  if (grid) grid.innerHTML = '<p class="status">A carregar…</p>';
+  if (t7) t7.innerHTML = '';
+  try {
+    const r = await fetch('/api/stats', { headers: { 'x-admin-token': getToken().trim() } });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    if (grid) {
+      grid.innerHTML = `
+        <div class="stat-card"><div class="label">Visitas página inicial (total)</div><div class="value">${fmtNum(d.homepageTotal)}</div></div>
+        <div class="stat-card"><div class="label">Visitas hoje · início</div><div class="value">${fmtNum(d.today && d.today.homepage)}</div></div>
+        <div class="stat-card"><div class="label">Visitas painel admin (total)</div><div class="value">${fmtNum(d.adminTotal)}</div></div>
+        <div class="stat-card"><div class="label">Visitas hoje · admin</div><div class="value">${fmtNum(d.today && d.today.admin)}</div></div>
+        <div class="stat-card"><div class="label">Linhas comentários (BD)</div><div class="value">${d.commentsTotal != null ? fmtNum(d.commentsTotal) : '—'}</div></div>
+        <div class="stat-card"><div class="label">Primeiro dia nos registos (UTC)</div><div class="value" style="font-size:1rem">${escapeHtml(d.recordedSince || '—')}</div></div>
+      `;
+    }
+    if (t7 && d.last7Days && d.last7Days.length) {
+      const rows = d.last7Days.map(x =>
+        `<tr><td>${escapeHtml(x.day)}</td><td>${fmtNum(x.homepage)}</td><td>${fmtNum(x.admin)}</td></tr>`
+      ).join('');
+      t7.innerHTML = '<table><thead><tr><th>Dia (UTC)</th><th>Início</th><th>Admin</th></tr></thead><tbody>' + rows + '</tbody></table>';
+    }
+  } catch (e) {
+    if (grid) grid.innerHTML = '<p class="status error">Não foi possível carregar estatísticas: ' + escapeHtml(e.message.slice(0, 120)) + '</p>';
+  }
+}
+
+function renderCommentsAdminTree(items) {
+  const box = document.getElementById('commentsAdminList');
+  const st = document.getElementById('commentsAdminStatus');
+  if (!box) return;
+  if (!items || items.length === 0) {
+    box.innerHTML = '<p class="status">Sem comentários.</p>';
+    if (st) st.textContent = '';
+    return;
+  }
+  function card(c, depth) {
+    const dt = new Date(c.ts).toLocaleString('pt-PT');
+    const idEsc = escapeHtml(c.id);
+    const replies = (c.replies || []).map(r => card(r, depth + 1)).join('');
+    const bankLine = c.bank ? ' · ' + escapeHtml(c.bank) : '';
+    const nums = (c.simPt != null || c.realPt != null)
+      ? '<div style="font-size:12px;color:var(--muted);margin-top:4px;">Simulador: '
+        + (c.simPt != null ? escapeHtml(String(c.simPt)) : '—')
+        + ' €/mês · Real: '
+        + (c.realPt != null ? escapeHtml(String(c.realPt)) : '—')
+        + ' €/mês</div>'
+      : '';
+    return `
+      <div style="margin-left:${depth * 14}px;margin-bottom:10px;padding:12px 14px;background:rgba(0,0,0,0.2);border-radius:8px;border-left:3px solid rgba(59,130,246,0.45);">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:220px;font-size:13px;">
+            <strong>${escapeHtml(c.name || 'Anónimo')}</strong><span style="color:var(--muted);">${bankLine}</span>
+            <span style="color:var(--muted);font-size:12px;"> · ${dt}</span>
+            ${nums}
+            <div style="margin-top:8px;color:var(--text);white-space:pre-wrap;line-height:1.45;">${escapeHtml(c.text)}</div>
+          </div>
+          <button type="button" class="btn-sm btn-delete" data-cid="${idEsc}" onclick="deleteCommentAdmin(this.dataset.cid)">Apagar</button>
+        </div>
+        ${replies}
+      </div>`;
+  }
+  box.innerHTML = items.map(c => card(c, 0)).join('');
+  if (st) st.textContent = items.length + ' fio(s)';
+}
+
+async function loadCommentsAdmin() {
+  if (!adminUnlocked) return;
+  const st = document.getElementById('commentsAdminStatus');
+  if (st) { st.textContent = 'A carregar…'; st.className = 'status'; }
+  try {
+    const r = await fetch('/api/comments');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    renderCommentsAdminTree(Array.isArray(data) ? data : []);
+    if (st) st.className = 'status ok';
+  } catch (e) {
+    if (st) {
+      st.textContent = 'Erro: ' + e.message.slice(0, 80);
+      st.className = 'status error';
+    }
+  }
+}
+
+async function deleteCommentAdmin(id) {
+  if (!adminUnlocked || !id) return;
+  if (!confirm('Apagar este comentário e respostas associadas?')) return;
+  try {
+    const r = await fetch('/api/comments?id=' + encodeURIComponent(id), {
+      method: 'DELETE',
+      headers: { 'x-admin-token': getToken().trim() },
+    });
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      throw new Error(d.error || 'HTTP ' + r.status);
+    }
+    await loadCommentsAdmin();
+  } catch (e) {
+    alert('Erro: ' + e.message);
+  }
+}
+
 async function refreshSpreadsAI() {
+  if (!adminUnlocked) {
+    setStatus('Valida o token com Carregar primeiro.', 'error');
+    return;
+  }
   const token = getToken();
   if (!token) { setStatus('Introduz o Admin Token primeiro', 'error'); return; }
   const btn = document.getElementById('btnAi');
@@ -245,14 +440,33 @@ async function refreshSpreadsAI() {
 
 async function loadBanks() {
   try {
-    setStatus('A carregar...');
-    const r = await fetch('/api/banks', { headers: { 'x-admin-token': getToken() } });
+    setStatus('A validar token…');
+    const token = getToken().trim();
+    if (!token) {
+      setStatus('Introduz o Admin Token.', 'error');
+      setAdminUnlocked(false);
+      return;
+    }
+    const valid = await verifyAdminToken();
+    if (!valid) {
+      setStatus('Token inválido ou acesso negado.', 'error');
+      setAdminUnlocked(false);
+      return;
+    }
+    setAdminUnlocked(true);
+    setStatus('A carregar…');
+    const r = await fetch('/api/banks', { headers: { 'x-admin-token': token } });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const data = await r.json();
     banks = data.banks || data; // suporte para resposta {banks, euribor} e array legado
     renderBanks();
     setStatus(banks.length + ' bancos carregados', 'ok');
-  } catch (e) { setStatus('Erro: ' + e.message, 'error'); }
+    await loadStatsAdmin();
+    await loadCommentsAdmin();
+  } catch (e) {
+    setStatus('Erro: ' + e.message, 'error');
+    setAdminUnlocked(false);
+  }
 }
 
 function renderBanks() {
@@ -299,6 +513,7 @@ function renderBanks() {
 }
 
 function openNewBankModal() {
+  if (!adminUnlocked) return;
   editingCode = null;
   document.getElementById('editModalTitle').textContent = 'Novo Banco';
   document.getElementById('f_code').disabled = false;
@@ -307,6 +522,7 @@ function openNewBankModal() {
 }
 
 function openEditModal(code) {
+  if (!adminUnlocked) return;
   editingCode = code;
   const b = banks.find(x => x.code === code);
   if (!b) return;
@@ -370,6 +586,7 @@ function closeModal(id) { document.getElementById(id).classList.remove('active')
 function numOrNull(id) { const v = document.getElementById(id).value; return v === '' ? null : Number(v); }
 
 async function saveBank() {
+  if (!adminUnlocked) return;
   const code = document.getElementById('f_code').value.trim().toUpperCase();
   if (!code) return setStatus('Código obrigatório', 'error');
 
@@ -425,6 +642,7 @@ async function saveBank() {
 }
 
 async function deleteBank(code) {
+  if (!adminUnlocked) return;
   if (!confirm('Desactivar banco ' + code + '?')) return;
   try {
     const r = await fetch('/api/banks?code=' + code, {
@@ -438,6 +656,7 @@ async function deleteBank(code) {
 }
 
 async function openHistory(code) {
+  if (!adminUnlocked) return;
   const b = banks.find(x => x.code === code);
   document.getElementById('historyBankName').textContent = b ? b.name : code;
   try {
