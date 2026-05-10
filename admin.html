@@ -91,7 +91,6 @@
   #aiStatus { font-size: 12px; color: var(--muted); min-width: 180px; }
   #aiStatus.ok { color: var(--accent2); }
   #aiStatus.error { color: var(--danger); }
-  #adminLockNotice { margin-bottom: 16px; max-width: 720px; line-height: 1.45; }
 </style>
 </head>
 <body>
@@ -102,8 +101,6 @@
   <button type="button" id="btnNewBank" onclick="openNewBankModal()" style="display:none;background:var(--accent2)">+ Novo Banco</button>
   <div id="statusMsg" class="status"></div>
 </div>
-
-<p id="adminLockNotice" class="status">Introduz o Admin Token e clica em <strong>Carregar</strong> para validar. Os restantes controlos aparecem só com token correcto.</p>
 
 <div id="adminProtected" style="display:none;">
 <div class="ai-box">
@@ -214,10 +211,8 @@ function setAdminUnlocked(ok) {
   adminUnlocked = !!ok;
   const prot = document.getElementById('adminProtected');
   const nb = document.getElementById('btnNewBank');
-  const notice = document.getElementById('adminLockNotice');
   if (prot) prot.style.display = ok ? '' : 'none';
   if (nb) nb.style.display = ok ? 'inline-block' : 'none';
-  if (notice) notice.style.display = ok ? 'none' : '';
 }
 
 async function verifyAdminToken() {
