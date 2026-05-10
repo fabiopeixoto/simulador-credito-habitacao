@@ -91,6 +91,10 @@
   #aiStatus { font-size: 12px; color: var(--muted); min-width: 180px; }
   #aiStatus.ok { color: var(--accent2); }
   #aiStatus.error { color: var(--danger); }
+  .comments-admin { margin-top: 8px; padding-top: 24px; border-top: 1px solid var(--border); max-width: 960px; }
+  .comments-admin > h2 { margin-top: 0; margin-bottom: 8px; }
+  .comments-admin-toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+  #commentsAdminList { margin-top: 4px; }
 </style>
 </head>
 <body>
@@ -113,6 +117,16 @@
 </div>
 
 <div id="banksGrid" class="grid"></div>
+
+<section class="comments-admin" aria-label="Moderação de comentários">
+  <h2>💬 Comentários da comunidade</h2>
+  <p style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.45;">Comentários públicos do simulador. Apagar remove o comentário principal e todas as respostas associadas.</p>
+  <div class="comments-admin-toolbar">
+    <button type="button" class="btn-sm btn-history" onclick="loadCommentsAdmin()">Actualizar lista</button>
+    <span id="commentsAdminStatus" class="status"></span>
+  </div>
+  <div id="commentsAdminList"></div>
+</section>
 </div>
 
 <!-- Modal: Edit Bank -->
@@ -231,6 +245,10 @@ document.getElementById('tokenInput').addEventListener('input', () => {
   banks = [];
   const grid = document.getElementById('banksGrid');
   if (grid) grid.innerHTML = '';
+  const cl = document.getElementById('commentsAdminList');
+  const cs = document.getElementById('commentsAdminStatus');
+  if (cl) cl.innerHTML = '';
+  if (cs) { cs.textContent = ''; cs.className = 'status'; }
 });
 
 function getToken() { return document.getElementById('tokenInput').value; }
@@ -238,6 +256,90 @@ function setStatus(msg, type) {
   const el = document.getElementById('statusMsg');
   el.textContent = msg;
   el.className = 'status ' + (type || '');
+}
+
+function escapeHtml(s) {
+  if (s == null || s === '') return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function renderCommentsAdminTree(items) {
+  const box = document.getElementById('commentsAdminList');
+  const st = document.getElementById('commentsAdminStatus');
+  if (!box) return;
+  if (!items || items.length === 0) {
+    box.innerHTML = '<p class="status">Sem comentários.</p>';
+    if (st) st.textContent = '';
+    return;
+  }
+  function card(c, depth) {
+    const dt = new Date(c.ts).toLocaleString('pt-PT');
+    const idEsc = escapeHtml(c.id);
+    const replies = (c.replies || []).map(r => card(r, depth + 1)).join('');
+    const bankLine = c.bank ? ' · ' + escapeHtml(c.bank) : '';
+    const nums = (c.simPt != null || c.realPt != null)
+      ? '<div style="font-size:12px;color:var(--muted);margin-top:4px;">Simulador: '
+        + (c.simPt != null ? escapeHtml(String(c.simPt)) : '—')
+        + ' €/mês · Real: '
+        + (c.realPt != null ? escapeHtml(String(c.realPt)) : '—')
+        + ' €/mês</div>'
+      : '';
+    return `
+      <div style="margin-left:${depth * 14}px;margin-bottom:10px;padding:12px 14px;background:rgba(0,0,0,0.2);border-radius:8px;border-left:3px solid rgba(59,130,246,0.45);">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:220px;font-size:13px;">
+            <strong>${escapeHtml(c.name || 'Anónimo')}</strong><span style="color:var(--muted);">${bankLine}</span>
+            <span style="color:var(--muted);font-size:12px;"> · ${dt}</span>
+            ${nums}
+            <div style="margin-top:8px;color:var(--text);white-space:pre-wrap;line-height:1.45;">${escapeHtml(c.text)}</div>
+          </div>
+          <button type="button" class="btn-sm btn-delete" data-cid="${idEsc}" onclick="deleteCommentAdmin(this.dataset.cid)">Apagar</button>
+        </div>
+        ${replies}
+      </div>`;
+  }
+  box.innerHTML = items.map(c => card(c, 0)).join('');
+  if (st) st.textContent = items.length + ' fio(s)';
+}
+
+async function loadCommentsAdmin() {
+  if (!adminUnlocked) return;
+  const st = document.getElementById('commentsAdminStatus');
+  if (st) { st.textContent = 'A carregar…'; st.className = 'status'; }
+  try {
+    const r = await fetch('/api/comments');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    renderCommentsAdminTree(Array.isArray(data) ? data : []);
+    if (st) st.className = 'status ok';
+  } catch (e) {
+    if (st) {
+      st.textContent = 'Erro: ' + e.message.slice(0, 80);
+      st.className = 'status error';
+    }
+  }
+}
+
+async function deleteCommentAdmin(id) {
+  if (!adminUnlocked || !id) return;
+  if (!confirm('Apagar este comentário e respostas associadas?')) return;
+  try {
+    const r = await fetch('/api/comments?id=' + encodeURIComponent(id), {
+      method: 'DELETE',
+      headers: { 'x-admin-token': getToken().trim() },
+    });
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      throw new Error(d.error || 'HTTP ' + r.status);
+    }
+    await loadCommentsAdmin();
+  } catch (e) {
+    alert('Erro: ' + e.message);
+  }
 }
 
 async function refreshSpreadsAI() {
@@ -299,6 +401,7 @@ async function loadBanks() {
     banks = data.banks || data; // suporte para resposta {banks, euribor} e array legado
     renderBanks();
     setStatus(banks.length + ' bancos carregados', 'ok');
+    await loadCommentsAdmin();
   } catch (e) {
     setStatus('Erro: ' + e.message, 'error');
     setAdminUnlocked(false);
