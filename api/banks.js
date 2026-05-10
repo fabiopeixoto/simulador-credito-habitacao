@@ -238,6 +238,21 @@ function seedIfEmpty() {
 
 seedIfEmpty();
 
+/** sCom = spread normal (fora da promo); promoSpread = durante a promo (≤ sCom). Corrige inversões da API. */
+function normalizeCampaignSpreadPair(d) {
+  if (!d || typeof d !== "object") return d;
+  const out = { ...d };
+  const pp = Number(out.promoPeriodo) || 0;
+  if (pp <= 0) return out;
+  if (typeof out.promoSpread !== "number" || !Number.isFinite(out.promoSpread)) return out;
+  if (typeof out.sCom !== "number" || !Number.isFinite(out.sCom)) return out;
+  const hi = Math.max(out.sCom, out.promoSpread);
+  const lo = Math.min(out.sCom, out.promoSpread);
+  out.sCom = hi;
+  out.promoSpread = lo;
+  return out;
+}
+
 // ── Queries ───────────────────────────────────────────────────────────────
 
 function getAllBanks() {
@@ -267,7 +282,7 @@ function getLatestSpreads() {
 
   const result = {};
   for (const row of rows) {
-    result[row.bank_code] = {
+    result[row.bank_code] = normalizeCampaignSpreadPair({
       sCom: row.sCom, sSem: row.sSem,
       mCom: row.mCom, mSem: row.mSem,
       fCom: row.fCom, fSem: row.fSem,
@@ -288,7 +303,7 @@ function getLatestSpreads() {
       jovemIsenta: !!row.jovemIsenta,
       source: row.source,
       fetchedAt: row.fetched_at,
-    };
+    });
   }
   return result;
 }
@@ -334,6 +349,8 @@ function upsertBank(bankData) {
 
 function insertSpreads(bankCode, spreadsData, source = "manual") {
   if (!sqliteDb) return false;
+  if (!spreadsData || typeof spreadsData !== "object") return false;
+  spreadsData = normalizeCampaignSpreadPair({ ...spreadsData });
   const stmt = sqliteDb.prepare(`
     INSERT INTO spreads (bank_code, sCom, sSem, mCom, mSem, fCom, fSem, jsCom, jsSem,
       promoPeriodo, promoSpread, dossier, avaliacao, contaMes, contaNota,
@@ -383,30 +400,32 @@ function bulkInsertSpreads(spreadsMap, source = "anthropic") {
   `);
   const tx = sqliteDb.transaction((map) => {
     for (const [code, data] of Object.entries(map)) {
+      if (!data || typeof data !== "object") continue;
+      const d = normalizeCampaignSpreadPair({ ...data });
       stmt.run({
         bank_code: code,
-        sCom: data.sCom ?? null,
-        sSem: data.sSem ?? null,
-        mCom: data.mCom ?? null,
-        mSem: data.mSem ?? null,
-        fCom: data.fCom ?? null,
-        fSem: data.fSem ?? null,
-        jsCom: data.jsCom ?? null,
-        jsSem: data.jsSem ?? null,
-        promoPeriodo: data.promoPeriodo || 0,
-        promoSpread: data.promoSpread ?? null,
-        dossier: data.dossier || 0,
-        avaliacao: data.avaliacao || 0,
-        contaMes: data.contaMes || 0,
-        contaNota: data.contaNota || "",
-        capMin: data.capMin || 0,
-        capMax: data.capMax || 0,
-        vRef: data.vRef || 0,
-        mAno: data.mAno || 0,
-        insV: data.insV || "",
-        insM: data.insM || "",
-        minutas: data.minutas || 0,
-        jovemIsenta: data.jovemIsenta ? 1 : 0,
+        sCom: d.sCom ?? null,
+        sSem: d.sSem ?? null,
+        mCom: d.mCom ?? null,
+        mSem: d.mSem ?? null,
+        fCom: d.fCom ?? null,
+        fSem: d.fSem ?? null,
+        jsCom: d.jsCom ?? null,
+        jsSem: d.jsSem ?? null,
+        promoPeriodo: d.promoPeriodo || 0,
+        promoSpread: d.promoSpread ?? null,
+        dossier: d.dossier || 0,
+        avaliacao: d.avaliacao || 0,
+        contaMes: d.contaMes || 0,
+        contaNota: d.contaNota || "",
+        capMin: d.capMin || 0,
+        capMax: d.capMax || 0,
+        vRef: d.vRef || 0,
+        mAno: d.mAno || 0,
+        insV: d.insV || "",
+        insM: d.insM || "",
+        minutas: d.minutas || 0,
+        jovemIsenta: d.jovemIsenta ? 1 : 0,
         source,
       });
     }
