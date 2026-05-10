@@ -1,2 +1,5 @@
 node_modules/
 data/
+
+# PDFs de preçários (gerados localmente — ver scripts/download-precarios-bancos.sh)
+reference/precarios-pdf/files/*.pdf
