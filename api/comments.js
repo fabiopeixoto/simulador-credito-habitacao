@@ -20,10 +20,16 @@ try {
       text TEXT NOT NULL,
       bank TEXT,
       simPt REAL,
-      realPt REAL
+      realPt REAL,
+      parentId TEXT
     );
     CREATE INDEX IF NOT EXISTS idx_comments_ts ON comments(ts DESC);
   `);
+  const columns = sqliteDb.prepare("PRAGMA table_info(comments)").all().map((column) => column.name);
+  if (!columns.includes("parentId")) {
+    sqliteDb.prepare("ALTER TABLE comments ADD COLUMN parentId TEXT").run();
+  }
+  sqliteDb.prepare("CREATE INDEX IF NOT EXISTS idx_comments_parent ON comments(parentId, ts)").run();
 } catch (error) {
   sqliteError = error && error.message ? error.message : "SQLite init error";
 }
@@ -37,20 +43,34 @@ function hasSqlite() {
 async function listComments() {
   if (!hasSqlite()) return [];
   const rows = sqliteDb
-    .prepare("SELECT id, ts, name, text, bank, simPt, realPt FROM comments ORDER BY ts DESC LIMIT ?")
+    .prepare("SELECT id, ts, name, text, bank, simPt, realPt, parentId FROM comments ORDER BY ts DESC LIMIT ?")
     .all(MAX_COMMENTS);
-  return rows.map((row) => ({
+  const comments = rows.map((row) => ({
     ...row,
+    parentId: row.parentId || null,
+    replies: [],
     simPt: row.simPt === null ? null : Number(row.simPt),
     realPt: row.realPt === null ? null : Number(row.realPt),
   }));
+  const byId = new Map(comments.map((comment) => [comment.id, comment]));
+  const roots = [];
+  comments.forEach((comment) => {
+    if (comment.parentId && byId.has(comment.parentId)) {
+      byId.get(comment.parentId).replies.push(comment);
+    } else if (!comment.parentId) {
+      roots.push(comment);
+    }
+  });
+  roots.sort((a, b) => b.ts - a.ts);
+  roots.forEach((comment) => comment.replies.sort((a, b) => a.ts - b.ts));
+  return roots;
 }
 
 async function insertComment(comment) {
   if (!hasSqlite()) return false;
   const insert = sqliteDb.prepare(`
-    INSERT INTO comments (id, ts, name, text, bank, simPt, realPt)
-    VALUES (@id, @ts, @name, @text, @bank, @simPt, @realPt)
+    INSERT INTO comments (id, ts, name, text, bank, simPt, realPt, parentId)
+    VALUES (@id, @ts, @name, @text, @bank, @simPt, @realPt, @parentId)
   `);
   const trimOld = sqliteDb.prepare(`
     DELETE FROM comments
@@ -58,9 +78,15 @@ async function insertComment(comment) {
       SELECT id FROM comments ORDER BY ts DESC LIMIT ?
     )
   `);
+  const trimOrphanReplies = sqliteDb.prepare(`
+    DELETE FROM comments
+    WHERE parentId IS NOT NULL
+      AND parentId NOT IN (SELECT id FROM comments)
+  `);
   const tx = sqliteDb.transaction((payload) => {
     insert.run(payload);
     trimOld.run(MAX_COMMENTS);
+    trimOrphanReplies.run();
   });
   tx(comment);
   return true;
@@ -68,8 +94,13 @@ async function insertComment(comment) {
 
 async function deleteCommentById(id) {
   if (!hasSqlite()) return false;
-  sqliteDb.prepare("DELETE FROM comments WHERE id = ?").run(id);
+  sqliteDb.prepare("DELETE FROM comments WHERE id = ? OR parentId = ?").run(id, id);
   return true;
+}
+
+function getCommentById(id) {
+  if (!hasSqlite()) return null;
+  return sqliteDb.prepare("SELECT id, parentId FROM comments WHERE id = ?").get(id) || null;
 }
 
 module.exports = async function handler(req, res) {
@@ -110,10 +141,16 @@ module.exports = async function handler(req, res) {
         sqliteError,
       });
     }
-    const { name, text, bank, simPt, realPt } = req.body || {};
+    const { name, text, bank, simPt, realPt, parentId } = req.body || {};
     const t = typeof text === "string" ? text.trim() : "";
     if (t.length < 5 || t.length > 500) {
       return res.status(400).json({ error: "Comentário inválido (5–500 caracteres)" });
+    }
+    const cleanParentId = typeof parentId === "string" && parentId.trim() ? parentId.trim() : null;
+    if (cleanParentId) {
+      const parent = getCommentById(cleanParentId);
+      if (!parent) return res.status(404).json({ error: "Comentário original não encontrado" });
+      if (parent.parentId) return res.status(400).json({ error: "Só é possível responder a comentários principais" });
     }
 
     const cleanNum = (v) => {
@@ -126,15 +163,16 @@ module.exports = async function handler(req, res) {
       ts: Date.now(),
       name: (typeof name === "string" ? name.trim().slice(0, 50) : "") || "Anónimo",
       text: t.slice(0, 500),
-      bank: typeof bank === "string" && bank.trim() ? bank.trim().slice(0, 40) : null,
-      simPt: cleanNum(simPt),
-      realPt: cleanNum(realPt),
+      bank: cleanParentId ? null : (typeof bank === "string" && bank.trim() ? bank.trim().slice(0, 40) : null),
+      simPt: cleanParentId ? null : cleanNum(simPt),
+      realPt: cleanParentId ? null : cleanNum(realPt),
+      parentId: cleanParentId,
     };
 
     const saved = await insertComment(comment);
     if (!saved) return res.status(500).json({ error: "Erro ao guardar comentário" });
 
-    return res.status(201).json(comment);
+    return res.status(201).json({ ...comment, replies: [] });
   }
 
   if (req.method === "DELETE") {
