@@ -7,6 +7,7 @@ const { URL } = require("url");
 const root = path.resolve(__dirname);
 const spreadsHandler = require(path.join(root, "api", "spreads.js"));
 const commentsHandler = require(path.join(root, "api", "comments.js"));
+const banksHandler = require(path.join(root, "api", "banks.js"));
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
@@ -132,6 +133,14 @@ const server = http.createServer(async (req, res) => {
         return res.end(JSON.stringify({ error: "Método não suportado" }));
       }
       return runApiHandler(req, res, requestUrl, commentsHandler);
+    }
+
+    if (pathname === "/api/banks") {
+      if (!["GET", "POST", "PUT", "DELETE", "OPTIONS"].includes(req.method)) {
+        res.writeHead(405, { Allow: "GET, POST, PUT, DELETE, OPTIONS", "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({ error: "Método não suportado" }));
+      }
+      return runApiHandler(req, res, requestUrl, banksHandler);
     }
 
     let filePath = pathname === "/" ? "/index.html" : pathname;
