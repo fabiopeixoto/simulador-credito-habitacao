@@ -17569,7 +17569,11 @@ function calcIMT(v,j,finalidade) {
     return v*0.06;
   }
   // Tabela I 2025: HPP
-  if(j&&v<=330539)return 0; // Jovem: isenção até €330.539 (2026)
+  // IMT Jovem (OE 2026, continente): isenção total até 330.539€; entre 330.539€ e 660.982€ taxa 8% só sobre o excedente; acima do teto parcial aplica-se a tabela normal (sem benefício)
+  if(j){
+    if(v<=330539)return 0;
+    if(v<=660982)return(v-330539)*0.08;
+  }
   if(v<=99407)  return 0;
   if(v<=136025) return v*0.02-1988.14;
   if(v<=185474) return v*0.05-6069.39;
@@ -17875,11 +17879,12 @@ function App(){
       const ltvAddon=getLTVAddon(b.s,ltv);
       const finalAddon=FINALIDADE_ADDON[finalidade]||0;
       const jsc=bd.jsCom??b.jsCom;
+      const jss=bd.jsSem??FALLBACK_BANK_DATA[b.s]?.jsSem??basesSem;
       return{
         ...b,
         sCom:Math.max(0,(modoJovem?jsc:basesCom)-certB+ltvAddon+finalAddon),
         sComBase:modoJovem?jsc:basesCom,
-        sSem:basesSem+ltvAddon+finalAddon,
+        sSem:(modoJovem?jss:basesSem)+ltvAddon+finalAddon,
         ltvAddon,finalAddon,
         spreadUpdated:bd.updated??false,
         capitalOk:capital>=(bd.capMin??0)&&capital<=(bd.capMax??9999999),
@@ -17947,7 +17952,7 @@ function App(){
         const comB2={...comB2base,dossier:bd2.dossier??comB2base.dossier,avaliacao:bd2.avaliacao??comB2base.avaliacao,minutas:bd2.minutas??comB2base.minutas,jovemIsenta:bd2.jovemIsenta??comB2base.jovemIsenta};
         const comD2=modoJovem&&comB2.jovemIsenta?0:comB2.dossier;
         const isCredTAEG=Math.round(capital*0.006);
-        const regHTAEG=Math.round(capital*0.0008+150);
+        const regHTAEG=(modoJovem&&finalidade==="hpp")?0:Math.round(capital*0.0008+150);
         const comInic=comD2+(comB2.avaliacao||0)+(comB2.minutas||0)+200+isCredTAEG+regHTAEG;
         const encargoTAEG=pC+seg.tot+isM+segProtMensal+contaM;
         const taeg=calcTAEG(capital,comInic,encargoTAEG,prazoCalc*12);
@@ -17985,7 +17990,7 @@ function App(){
       if(sortBy==="seguros")     return a.seg.tot-bk.seg.tot || a.s.localeCompare(bk.s);
       return 0;
     });
-  },[BANKS,bankData,modoJovem,tipoTaxa,EUR,capital,prazoR,carencia,idade1,idade2,is2,valorImovel,rendT,outros,sortBy,segProtMensal]);
+  },[BANKS,bankData,modoJovem,finalidade,tipoTaxa,EUR,capital,prazoR,carencia,idade1,idade2,is2,valorImovel,rendT,outros,sortBy,segProtMensal]);
 
   const melhor=resultados[0];
 
@@ -18354,7 +18359,7 @@ function App(){
                 {k:"capital",  l:"Capital Emprestado",                    v:capital,      note:"LTV "+pctR+"%"},
                 {k:"entrada",  l:"Entrada necessária",                    v:entrada,      c:entrada===0?G:Au, note:entrada===0?"100% financiado (garantia Estado)":null},
                 {k:"sep1",     l:null},
-                {k:"imt",      l:"IMT",                                   v:imt,          c:imt===0?G:R,  note:modoJovem&&imt===0?"Isento ≤35a (HPP ≤330.539€)":imt===0?"Isento":finalidade!=="hpp"?"Taxa progressiva 1-8% (Portaria 352/2024)":null},
+                {k:"imt",      l:"IMT",                                   v:imt,          c:imt===0?G:R,  note:modoJovem&&imt===0?"Isento ≤35a (HPP ≤330.539€)":modoJovem&&imt>0&&valorImovel<=660982?"IMT parcial OE2026: 8% sobre (valor − 330.539€)":imt===0?"Isento":finalidade!=="hpp"?"Taxa progressiva 1-8% (Portaria 352/2024)":null},
                 {k:"isesc",    l:"Imp. Selo escritura (0,8%)",            v:isEsc,        c:isEsc===0?G:undefined, note:modoJovem&&isEsc===0?"✅ Isento ≤35a":null},
                 {k:"iscred",   l:"Imp. Selo crédito (0,6%)",             v:isCred,       c:undefined, note:modoJovem?"ℹ️ Não isento (só IS escritura é isento ≤35a)":null},
                 {k:"sep2",     l:null},
