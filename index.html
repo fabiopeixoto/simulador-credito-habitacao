@@ -30,7 +30,7 @@
 <meta name="twitter:title" content="Simulador Crédito Habitação Portugal">
 <meta name="twitter:description" content="Compare spreads de 14 bancos portugueses em tempo real.">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"Simulador Crédito Habitação Portugal","description":"Simulador gratuito de crédito habitação em Portugal. Compare spreads de 14 bancos portugueses em tempo real.","applicationCategory":"FinanceApplication","operatingSystem":"Any","inLanguage":"pt-PT","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}}</script>
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5782697147722140" crossorigin="anonymous"></script></head><body><div id="root"><main style="max-width:520px;margin:0 auto;padding:28px 20px;font-family:sans-serif;color:#111827;text-align:center"><h1 style="font-size:20px;font-weight:700;margin-bottom:8px">Simulador Crédito Habitação</h1><p style="font-size:13px;color:#6b7280">A carregar…</p></main></div><script>(function(win) {
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5782697147722140" crossorigin="anonymous"></script></head><body><div id="root"><main style="max-width:560px;margin:0 auto;padding:28px 20px;font-family:sans-serif;color:#111827;text-align:left;line-height:1.55"><h1 style="font-size:20px;font-weight:700;margin-bottom:10px;text-align:center">Simulador Crédito Habitação</h1><p style="font-size:13px;color:#374151;margin-bottom:10px">Compare prestações e spreads de <strong>14 bancos portugueses</strong>, com Euribor actualizado e estimativas de seguros, imposto de selo, TAEG e DSTI. Indicativo — não substitui a FINE nem a análise do banco.</p><p style="font-size:13px;color:#6b7280;text-align:center">A carregar o simulador…</p></main></div><script>(function(win) {
   var _mods = {};
   function _def(id, factory) {
     var m = {exports: {}};
@@ -17827,6 +17827,7 @@ function App(){
     return()=>clearTimeout(revalidateId);
   },[loadRates]);
   useEffect(()=>{const id=setInterval(()=>loadRates(true),CACHE_H*3600*1000);return()=>clearInterval(id);},[loadRates]);
+  useEffect(()=>{var fn=window.__creditSimRevealAds;if(typeof fn==="function")fn();},[]);
 
   // ── Derivados ────────────────────────────────────────────────────────────
   const is2=titulares===2;
@@ -18447,8 +18448,8 @@ function App(){
 }
 ;(function(){var c=document.getElementById('root');var r=ReactDOM.createRoot(c);r.render(React.createElement(App,null));})();}catch(e){var _d=document.getElementById("root");_d.style.cssText="color:#f87171;padding:40px;background:#e5e7eb;min-height:100vh";var _h=document.createElement("h2");_h.textContent="Erro ao iniciar";var _p=document.createElement("p");_p.textContent=e.message;_d.appendChild(_h);_d.appendChild(_p);}})();</script><script>if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js');</script>
 
-<!-- ═══════════════════ STICKY FOOTER AD ═══════════════════ -->
-<div id="sticky-ad" style="position:fixed;bottom:0;left:0;right:0;z-index:9998;background:#f9fafb;border-top:1px solid #e5e7eb;text-align:center;padding:4px 0 2px;">
+<!-- ═══════════════════ STICKY FOOTER AD (só após conteúdo montado — política AdSense) ═══════════════════ -->
+<div id="sticky-ad" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9998;background:#f9fafb;border-top:1px solid #e5e7eb;text-align:center;padding:4px 0 2px;">
   <button id="close-sticky-ad" style="position:absolute;top:4px;right:8px;background:none;border:none;color:#9ca3af;cursor:pointer;font-size:18px;line-height:1;padding:0 4px;" title="Fechar anúncio">✕</button>
   <ins class="adsbygoogle" id="adsense-ins" style="display:inline-block;width:728px;height:90px;max-width:100%" data-ad-client="ca-pub-5782697147722140" data-ad-slot="6100287333"></ins>
   <p style="font-size:9px;color:#9ca3af;margin:1px 0 0;font-family:sans-serif">Publicidade</p>
@@ -18459,19 +18460,28 @@ function App(){
 (function() {
   var stickyAd = document.getElementById('sticky-ad');
   var btnClose = document.getElementById('close-sticky-ad');
+  var adPushed = false;
 
   function applyAdSize() {
     var ins = document.getElementById('adsense-ins');
+    if (!ins) return;
     var mobile = window.innerWidth < 728;
     ins.style.width  = mobile ? '320px' : '728px';
     ins.style.height = mobile ? '50px'  : '90px';
     document.body.style.paddingBottom = mobile ? '62px' : '102px';
   }
 
-  applyAdSize();
-  (window.adsbygoogle = window.adsbygoogle || []).push({});
+  window.__creditSimRevealAds = function() {
+    if (adPushed || !stickyAd) return;
+    adPushed = true;
+    stickyAd.style.display = '';
+    applyAdSize();
+    try {
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+    } catch (_) {}
+  };
 
-  btnClose.addEventListener('click', function() {
+  if (btnClose) btnClose.addEventListener('click', function() {
     stickyAd.style.display = 'none';
     document.body.style.paddingBottom = '';
   });
