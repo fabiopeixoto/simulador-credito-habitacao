@@ -5,32 +5,41 @@
 ## Regras de comparação
 - Data da auditoria (UTC): **2026-05-10**
 - Perfil: **HPP**
-- Montante imóvel: **250 000 €** (para LTV 80% com crédito 200 000 €)
-- Entrada: **50 000 €**
-- Montante crédito: **200 000 €**
 - Prazo: **30** anos
 - Tipo de taxa: **Variável**
-- Indexante: **Euribor 6M** (= **2,454 %** na sessão CGD verificada)
+- Indexante: **Euribor 6M** (= **2,454 %** na sessão CGD verificada via API)
 - Titulares: **1** (idade **30**)
-- Produtos associados: **Com / Sem** (dois cartões no simulador CGD)
 
 ## Tolerâncias aceites
 - Prestação mensal: desvio até **±5%** = "aproximado".
 - TAEG: desvio até **±0,30 p.p.** = "aproximado".
 - MTIC: desvio até **±5%** = "aproximado".
 
-## Tabela de evidência
+## Tabela de evidência — CGD (`POST /calculate` simuladorch.cgd.pt)
 
-### CGD — verificação API `POST /calculate` (2026-05-10)
+### Medida Jovem — crédito **200 000 €**, imóvel **200 000 €** (financiamento **100 %**, LTV > 90 %)
 
-Condição comercial **actual** na API (spread base **1,35 %** / condicionado **0,65 %** sobre Euribor 6 m):
+`IsMedidaJovem=true`, restantes campos alinhados ao wizard.
 
-| Cartão simulador CGD | Prestação indicada (oficial) | Fórmula anuidade interna (PMT) | TAEG (oficial) | MTIC (oficial) |
+| Cartão | Spread (oficial) | TAN | Prestação (oficial) | PMT anuidade interna |
 |---|---:|---:|---:|---:|
-| Prestação base (sem produtos vinculados) | 932,37 € | 932,37 € (TAN 3,804 %) | 4,4 % | 355 570,74 € |
-| Prestação reduzida (com produtos) | 854,47 € | 854,47 € (TAN 3,104 %) | 3,7 % | 327 093,22 € |
+| Base (sem produtos) | 2,35 % | 4,804 % | 1 049,81 € | 1 049,81 € |
+| Reduzida (com produtos) | 1,65 % | 4,104 % | 966,86 € | 966,86 € |
 
-**Nota sobre capturas de ecrã antigas:** valores como prestação **1 049,81 €** / **966,86 €** com spreads **2,35 %** / **1,65 %** são **internamente consistentes** com o mesmo Euribor (2,454 %) mas correspondem a **outra condição comercial** (preçário ou perfil diferente). Com os spreads **actuais** da API, as prestações são as da tabela acima.
+TAEG / MTIC na API (cartão base): **5,4 %** / **397 437,73 €**; cartão reduzido: **4,7 %** / **367 145,20 €**.
+
+### Medida Jovem — crédito **200 000 €**, imóvel **≥ ca. 223 000 €** (LTV **≤ 90 %**)
+
+O simulador CGD passa ao patamar de spread **mais baixo**:
+
+| Cartão | Spread (oficial) | Prestação (oficial) |
+|---|---:|---:|
+| Base | 1,35 % | 932,37 € |
+| Reduzida | 0,65 % | 854,47 € |
+
+### Nota
+
+A fronteira exacta entre patamares está entre imóvel **222 000 €** e **223 000 €** (crédito 200 000 €) na API verificada. No simulador interno usa-se **capital / valor de referência > 90 %** para o patamar “alto” (spreads **2,35 % / 1,65 %**).
 
 ### Outros bancos (pendente preenchimento)
 
@@ -42,13 +51,12 @@ Condição comercial **actual** na API (spread base **1,35 %** / condicionado **
 | Novo Banco | https://www.novobanco.pt/particulares/credito-habitacao |  |  |  |  |  |  |  |  |  |  |
 
 ## Resultado final
-- CGD (PMT capital+juros, mesmo Euribor e spreads da API): **coincidência exacta** com a fórmula de anuidade do simulador.
+- CGD Medida Jovem (PMT capital+juros): **coincidência exacta** com a anuidade quando Euribor e patamar de spread coincidem com a API.
 - Observações:
-  - Manter **Euribor actualizado** (BCE / sessão do banco); um Euribor diferente altera só a componente TAN.
-  - MTIC/TAEG dependem de custos iniciais e seguros na FINE — comparar sempre com o mesmo pacote de produtos.
+  - Activar **Crédito jovem** + **HPP** na app; quando o financiamento é superior a **90 %** do valor de referência do imóvel, aplicam-se spreads **1,65 % / 2,35 %** (com / sem produtos), sem somar o escalão LTV genérico do preçário — espelha o simulador oficial.
 
 ## Checklist de consistência
-- [x] Mesmos inputs em todos os simuladores (CGD API)
+- [x] Mesmos inputs (API CGD)
 - [x] Mesmo tipo de taxa/indexante
 - [x] Produtos associados alinhados (cartão base vs reduzido)
 - [ ] Seguros dentro/fora do banco identificados

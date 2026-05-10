@@ -17344,7 +17344,7 @@ const FALLBACK_BANK_DATA = {
   MNTPO: {sCom:0.70,sSem:1.50,mCom:3.70,mSem:4.50,fCom:4.20,fSem:4.80,jsCom:0.70,jsSem:1.50,promoPeriodo:0, promoSpread:null,dossier:250,avaliacao:200,contaMes:5.41,capMin:20000, capMax:2000000,vRef:8.29, mAno:79, minutas:0,  jovemIsenta:false},
   SANTR: {sCom:0.80,sSem:1.90,mCom:2.85,mSem:4.75,fCom:4.40,fSem:5.60,jsCom:0.80,jsSem:1.90,promoPeriodo:36,promoSpread:0,  dossier:280,avaliacao:250,contaMes:2.90,capMin:30000, capMax:3000000,vRef:22.55,mAno:246,minutas:0,  jovemIsenta:false},
   NB:    {sCom:0.90,sSem:1.60,mCom:3.80,mSem:4.50,fCom:5.17,fSem:5.77,jsCom:0.80,jsSem:1.50,promoPeriodo:0, promoSpread:null,dossier:333,avaliacao:332,contaMes:8.22,capMin:50000, capMax:3000000,vRef:17.55,mAno:98, minutas:0,  jovemIsenta:true},
-  // CGD: POST simuladorch.cgd.pt/calculate (2026-05-10) HPP 200k€/30a, imóvel 250k€, E6→spr cond. 0,65%/base 1,35% → PMT ~854/932€. Capturas com spr 1,65%/2,35% (PMT ~967/1049€) reflectem outro preçário/data ou perfil comercial.
+  // CGD: Medida Jovem — POST simuladorch.cgd.pt (2026-05-10): LTV>90% → spr base 2,35%/cond.1,65%; LTV≤90% → 1,35%/0,65% (imóvel≥valorRef). Ver apply em BANKS useMemo.
   CGD:   {sCom:0.65,sSem:1.35,mCom:3.85,mSem:4.55,fCom:4.70,fSem:5.40,jsCom:0.65,jsSem:1.35,promoPeriodo:24,promoSpread:null,dossier:250,avaliacao:200,contaMes:6.30,capMin:25000, capMax:3000000,vRef:29.82,mAno:110,minutas:0,  jovemIsenta:true},
   UCI:   {sCom:1.64,sSem:2.14,mCom:4.35,mSem:4.85,fCom:4.85,fSem:5.35,jsCom:1.64,jsSem:2.14,promoPeriodo:0, promoSpread:null,dossier:300,avaliacao:230,contaMes:0,   capMin:30000, capMax:2000000,vRef:19.00,mAno:150,minutas:0,  jovemIsenta:false},
   BIC:   {sCom:1.00,sSem:1.50,mCom:3.00,mSem:3.50,fCom:3.60,fSem:4.10,jsCom:1.00,jsSem:1.50,promoPeriodo:0, promoSpread:null,dossier:400,avaliacao:250,contaMes:3.00,capMin:25000, capMax:1000000,vRef:19.00,mAno:150,minutas:0,  jovemIsenta:false},
@@ -17880,10 +17880,17 @@ function App(){
       const bd=bankData[b.s]||{};
       const basesCom=bd.sCom??1;
       const basesSem=bd.sSem??1.5;
-      const ltvAddon=getLTVAddon(b.s,ltv);
+      const ltvAddonRaw=getLTVAddon(b.s,ltv);
+      const ltvAddon=(b.s==="CGD"&&modoJovem&&finalidade==="hpp")?0:ltvAddonRaw;
       const finalAddon=FINALIDADE_ADDON[finalidade]||0;
-      const jsc=bd.jsCom??b.jsCom;
-      const jss=bd.jsSem??FALLBACK_BANK_DATA[b.s]?.jsSem??basesSem;
+      let jsc=bd.jsCom??b.jsCom;
+      let jss=bd.jsSem??FALLBACK_BANK_DATA[b.s]?.jsSem??basesSem;
+      // CGD Medida Jovem (simulador oficial): spreads por patamar de LTV sobre valor de referência
+      if(b.s==="CGD"&&modoJovem&&finalidade==="hpp"&&valorRef>0){
+        const acima90=capital/valorRef>0.9;
+        jsc=acima90?1.65:0.65;
+        jss=acima90?2.35:1.35;
+      }
       return{
         ...b,
         sCom:Math.max(0,(modoJovem?jsc:basesCom)-certB+ltvAddon+finalAddon),
@@ -17901,13 +17908,13 @@ function App(){
         fCom:bd.fCom??0,
         fSem:bd.fSem??0,
         jsCom:jsc,
-        jsSem:bd.jsSem??0,
+        jsSem:jss,
         insV:bd.insV,
         insM:bd.insM,
         contaNota:bd.contaNota,
       };
     });
-  },[bankData,certB,ltv,finalidade,modoJovem,capital]);
+  },[bankData,certB,ltv,finalidade,modoJovem,capital,valorRef]);
 
   // ── Resultados ────────────────────────────────────────────────────────────
   const resultados=useMemo(()=>{
