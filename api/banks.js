@@ -56,9 +56,80 @@ try {
     );
     CREATE INDEX IF NOT EXISTS idx_spreads_bank ON spreads(bank_code, fetched_at DESC);
     CREATE INDEX IF NOT EXISTS idx_spreads_fetched ON spreads(fetched_at DESC);
+
+    CREATE TABLE IF NOT EXISTS kv_store (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+    );
   `);
 } catch (e) {
   console.error("banks.js: SQLite init error:", e.message);
+}
+
+// ── Euribor cache helpers ──────────────────────────────────────────────────
+const EUR_CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
+
+function setEuribor(eur, eurLabel) {
+  if (!sqliteDb) return;
+  try {
+    sqliteDb.prepare(`
+      INSERT INTO kv_store(key, value, updated_at) VALUES (?, ?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+    `).run("euribor", JSON.stringify({ eur, eurLabel, fetchedAt: Date.now() }), Date.now());
+  } catch (_) {}
+}
+
+function getEuribor() {
+  if (!sqliteDb) return null;
+  try {
+    const row = sqliteDb.prepare("SELECT value, updated_at FROM kv_store WHERE key = ?").get("euribor");
+    if (!row) return null;
+    return JSON.parse(row.value);
+  } catch (_) { return null; }
+}
+
+async function fetchAndCacheEuribor() {
+  const BASE = "https://data-api.ecb.europa.eu/service/data/FM/";
+  const SERIES = {
+    "3m":  "M.U2.EUR.RT.MM.EURIBOR3MD_.HSTA",
+    "6m":  "M.U2.EUR.RT.MM.EURIBOR6MD_.HSTA",
+    "12m": "M.U2.EUR.RT.MM.EURIBOR1YD_.HSTA",
+  };
+  const MESES = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+
+  function parseCSV(csv) {
+    const lines = csv.trim().split("\n").filter(l => l.trim());
+    if (lines.length < 2) throw new Error("CSV vazio");
+    const headers = lines[0].split(",").map(h => h.trim().replace(/"/g, ""));
+    const dateIdx = headers.indexOf("TIME_PERIOD");
+    const valIdx  = headers.indexOf("OBS_VALUE");
+    if (dateIdx < 0 || valIdx < 0) throw new Error("Colunas não encontradas");
+    const cols = lines[lines.length - 1].split(",").map(c => c.trim().replace(/"/g, ""));
+    const val  = parseFloat(cols[valIdx]);
+    const date = cols[dateIdx] || "";
+    if (isNaN(val)) throw new Error("Valor inválido");
+    return { val, date };
+  }
+
+  const eur = {};
+  let eurLabel = "";
+  const settled = await Promise.allSettled(
+    Object.entries(SERIES).map(async ([key, series]) => {
+      const r = await fetch(BASE + series + "?format=csvdata&lastNObservations=1", { signal: AbortSignal.timeout(10000) });
+      if (!r.ok) throw new Error("BCE " + key + " HTTP " + r.status);
+      const { val, date } = parseCSV(await r.text());
+      eur[key] = val;
+      if (!eurLabel && date) {
+        const [y, m] = date.split("-");
+        eurLabel = (MESES[parseInt(m, 10) - 1] || m) + ". " + y;
+      }
+    })
+  );
+  if (settled.every(r => r.status === "rejected")) throw new Error("BCE indisponível");
+  const result = { eur, eurLabel, fetchedAt: Date.now() };
+  setEuribor(eur, eurLabel);
+  return result;
 }
 
 // ── Seed data ─────────────────────────────────────────────────────────────
@@ -378,7 +449,17 @@ module.exports = async function handler(req, res) {
       spreads: spreads[bank.code] || null,
     }));
 
-    return res.status(200).json(result);
+    // Euribor: serve cache; se ausente ou expirado, tenta fetch fresco de BCE
+    let euriborData = getEuribor();
+    if (!euriborData || (Date.now() - (euriborData.fetchedAt || 0)) > EUR_CACHE_TTL_MS) {
+      try {
+        euriborData = await fetchAndCacheEuribor();
+      } catch (_) {
+        // Mantém dados em cache mesmo que estejam expirados
+      }
+    }
+
+    return res.status(200).json({ banks: result, euribor: euriborData || null });
   }
 
   // POST/PUT/DELETE require admin token
@@ -428,3 +509,4 @@ module.exports = async function handler(req, res) {
 module.exports.bulkInsertSpreads = bulkInsertSpreads;
 module.exports.getLatestSpreads = getLatestSpreads;
 module.exports.getAllBanks = getAllBanks;
+module.exports.setEuribor = setEuribor;

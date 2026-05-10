@@ -17669,33 +17669,15 @@ function SliderInput({min,max,step,value,onChange,color,prefix,suffix,formatFn,a
           }}), suffix&&React.createElement("span", {style: {fontSize:13,color:"#4b5563",fontFamily:"sans-serif"}}, suffix)))
   );
 }
-// ── Euribor via BCE (sem chave, sempre funciona) ──────────────────────────
-// ── Taxas via proxy Vercel (Euribor BCE + spreads) ───────────────────────
-async function fetchSpreadsAnthropic() {
-  const resp = await fetch("/api/spreads",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"}
-  });
+// ── Dados dos bancos via API local (SQLite) ───────────────────────────────
+async function fetchBanks() {
+  const resp = await fetch("/api/banks");
   if(!resp.ok){
     const errText = await resp.text().catch(()=>"");
     const errJson = (() => { try { return JSON.parse(errText); } catch(_) { return {}; } })();
-    const errMsg  = errJson.error?.message || errJson.error || errText.slice(0,120) || "HTTP "+resp.status;
-    let errPT;
-    if(errMsg.includes("credit balance")||errMsg.includes("insufficient")||errMsg.includes("balance is too low"))
-      errPT="Saldo insuficiente — adiciona crédito em console.anthropic.com/settings/billing";
-    else if(resp.status===401||errMsg.includes("invalid x-api-key")||errMsg.includes("invalid api key"))
-      errPT="Chave API inválida — verifica em console.anthropic.com/settings/keys";
-    else if(errMsg.includes("Origem não autorizada"))
-      errPT="CORS bloqueado — verifica ALLOWED_ORIGIN nas env vars do Vercel";
-    else if(resp.status===403||errMsg.includes("permission"))
-      errPT="Sem permissões — verifica o plano em console.anthropic.com";
-    else if(resp.status===429)
-      errPT="Demasiados pedidos — aguarda alguns minutos";
-    else
-      errPT="API "+resp.status+": "+String(errMsg).slice(0,70);
-    throw new Error(errPT);
+    throw new Error(errJson.error || "HTTP "+resp.status);
   }
-  return resp.json(); // {spreads, eur, eurLabel}
+  return resp.json(); // {banks: [...], euribor: {...}}
 }
 
 
@@ -17777,43 +17759,46 @@ function App(){
         }
       }catch(_){}
     }
-    setStatus("loading"); setMsg("A actualizar Euribor e spreads...");
-    try{
-      const raw=await fetchSpreadsAnthropic();
-      const e=raw.eur||{};
-      const label=raw.eurLabel||"";
-      const newEUR={"3m":{valor:e["3m"]||FALLBACK_EUR["3m"].valor,data:label},"6m":{valor:e["6m"]||FALLBACK_EUR["6m"].valor,data:label},"12m":{valor:e["12m"]||FALLBACK_EUR["12m"].valor,data:label}};
-      setEUR(newEUR); setTs(new Date()); setStatus("ok");
-      let statusMsg=label?"Euribor BCE · "+label:"Euribor: fallback";
-      const newBD={};
-      let nSpr=0;
-      const fn=(v,lo,hi)=>{const n=Number(v);return Number.isFinite(n)&&n>=lo&&n<hi?n:null;};
-      Object.keys(FALLBACK_BANK_DATA).forEach(k=>{
-        const fb=FALLBACK_BANK_DATA[k];
-        const rv=(raw.spreads&&raw.spreads[k])||{};
-        const upd={};
-        const tryN=(key,lo,hi)=>{const v=fn(rv[key],lo,hi);if(v!==null)upd[key]=v;};
-        const sc=fn(rv.sCom,0,5);if(sc!==null){upd.sCom=sc;nSpr++;}
-        tryN('sSem',0,5);tryN('mCom',0,10);tryN('mSem',0,10);tryN('fCom',0,10);tryN('fSem',0,10);
-        tryN('jsCom',0,5);tryN('jsSem',0,5);
-        tryN('dossier',0,2000);tryN('avaliacao',0,2000);tryN('contaMes',0,100);
-        tryN('capMin',0,5000000);tryN('capMax',0,50000000);
-        tryN('vRef',0,500);tryN('mAno',0,5000);
-        tryN('promoPeriodo',0,360);
-        const ps=rv.promoSpread;if(ps===null||(typeof ps==='number'&&Number.isFinite(ps)&&ps>=0&&ps<10))upd.promoSpread=ps;
-        tryN('minutas',0,500);
-        const ji=rv.jovemIsenta;if(typeof ji==='boolean')upd.jovemIsenta=ji;
-        const fs=(v)=>typeof v==='string'&&v.length>0&&v.length<100?v.trim():null;
-        const iv=fs(rv.insV);if(iv!==null)upd.insV=iv;
-        const im=fs(rv.insM);if(im!==null)upd.insM=im;
-        const cn=fs(rv.contaNota);if(cn!==null)upd.contaNota=cn;
-        newBD[k]={...fb,...upd,updated:sc!==null};
-      });
-      setBankData(newBD);
-      if(raw.spreads) statusMsg+=" · "+nSpr+"/"+Object.keys(FALLBACK_BANK_DATA).length+" actualizado ✓";
-      try{localStorage.setItem(CACHE_KEY,JSON.stringify({eur:newEUR,bd:newBD,ts:Date.now()}));}catch(_){}
-      setMsg(statusMsg);
-    }catch(err){setStatus("error");setMsg("Erro: "+err.message.slice(0,80));}
+  setStatus("loading"); setMsg("A carregar dados dos bancos...");
+  try{
+    const raw=await fetchBanks();
+    const e=(raw.euribor&&raw.euribor.eur)||{};
+    const label=(raw.euribor&&raw.euribor.eurLabel)||"";
+    const newEUR={"3m":{valor:e["3m"]||FALLBACK_EUR["3m"].valor,data:label||FALLBACK_EUR["3m"].data},"6m":{valor:e["6m"]||FALLBACK_EUR["6m"].valor,data:label||FALLBACK_EUR["6m"].data},"12m":{valor:e["12m"]||FALLBACK_EUR["12m"].valor,data:label||FALLBACK_EUR["12m"].data}};
+    setEUR(newEUR); setTs(new Date()); setStatus("ok");
+    let statusMsg=label?"Euribor BCE · "+label:"Dados: actualizados";
+    const newBD={};
+    let nSpr=0;
+    const fn=(v,lo,hi)=>{const n=Number(v);return Number.isFinite(n)&&n>=lo&&n<hi?n:null;};
+    // Converter array de bancos em mapa de spreads {código: {...}}
+    const spreadsMap={};
+    (raw.banks||[]).forEach(b=>{if(b.code&&b.spreads)spreadsMap[b.code]=b.spreads;});
+    Object.keys(FALLBACK_BANK_DATA).forEach(k=>{
+      const fb=FALLBACK_BANK_DATA[k];
+      const rv=spreadsMap[k]||{};
+      const upd={};
+      const tryN=(key,lo,hi)=>{const v=fn(rv[key],lo,hi);if(v!==null)upd[key]=v;};
+      const sc=fn(rv.sCom,0,5);if(sc!==null){upd.sCom=sc;nSpr++;}
+      tryN('sSem',0,5);tryN('mCom',0,10);tryN('mSem',0,10);tryN('fCom',0,10);tryN('fSem',0,10);
+      tryN('jsCom',0,5);tryN('jsSem',0,5);
+      tryN('dossier',0,2000);tryN('avaliacao',0,2000);tryN('contaMes',0,100);
+      tryN('capMin',0,5000000);tryN('capMax',0,50000000);
+      tryN('vRef',0,500);tryN('mAno',0,5000);
+      tryN('promoPeriodo',0,360);
+      const ps=rv.promoSpread;if(ps===null||(typeof ps==='number'&&Number.isFinite(ps)&&ps>=0&&ps<10))upd.promoSpread=ps;
+      tryN('minutas',0,500);
+      const ji=rv.jovemIsenta;if(typeof ji==='boolean')upd.jovemIsenta=ji;
+      const fs=(v)=>typeof v==='string'&&v.length>0&&v.length<100?v.trim():null;
+      const iv=fs(rv.insV);if(iv!==null)upd.insV=iv;
+      const im=fs(rv.insM);if(im!==null)upd.insM=im;
+      const cn=fs(rv.contaNota);if(cn!==null)upd.contaNota=cn;
+      newBD[k]={...fb,...upd,updated:sc!==null};
+    });
+    setBankData(newBD);
+    if(Object.keys(spreadsMap).length>0) statusMsg+=" · "+nSpr+"/"+Object.keys(FALLBACK_BANK_DATA).length+" actualizado ✓";
+    try{localStorage.setItem(CACHE_KEY,JSON.stringify({eur:newEUR,bd:newBD,ts:Date.now()}));}catch(_){}
+    setMsg(statusMsg);
+  }catch(err){setStatus("error");setMsg("Erro: "+err.message.slice(0,80));}
   },[]);
   useEffect(()=>{
     loadRates(false);
