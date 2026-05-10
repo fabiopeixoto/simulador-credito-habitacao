@@ -91,27 +91,32 @@
   #aiStatus { font-size: 12px; color: var(--muted); min-width: 180px; }
   #aiStatus.ok { color: var(--accent2); }
   #aiStatus.error { color: var(--danger); }
+  #adminLockNotice { margin-bottom: 16px; max-width: 720px; line-height: 1.45; }
 </style>
 </head>
 <body>
 <div class="header">
   <h1>Gestão de Bancos & Spreads</h1>
-  <input type="password" id="tokenInput" placeholder="Admin Token" />
-  <button onclick="loadBanks()">Carregar</button>
-  <button onclick="openNewBankModal()" style="background:var(--accent2)">+ Novo Banco</button>
+  <input type="password" id="tokenInput" placeholder="Admin Token" autocomplete="current-password" />
+  <button type="button" onclick="loadBanks()">Carregar</button>
+  <button type="button" id="btnNewBank" onclick="openNewBankModal()" style="display:none;background:var(--accent2)">+ Novo Banco</button>
   <div id="statusMsg" class="status"></div>
 </div>
 
+<p id="adminLockNotice" class="status">Introduz o Admin Token e clica em <strong>Carregar</strong> para validar. Os restantes controlos aparecem só com token correcto.</p>
+
+<div id="adminProtected" style="display:none;">
 <div class="ai-box">
   <div class="ai-box-info">
     <h2>🤖 Actualizar Spreads via Anthropic AI</h2>
     <p>Chama a API Anthropic para obter os spreads mais recentes de todos os bancos e guarda-os na base de dados. Sem limite de chamadas para admin.</p>
   </div>
   <div id="aiStatus"></div>
-  <button class="btn-ai" id="btnAi" onclick="refreshSpreadsAI()">🤖 Actualizar Agora</button>
+  <button type="button" class="btn-ai" id="btnAi" onclick="refreshSpreadsAI()">🤖 Actualizar Agora</button>
 </div>
 
 <div id="banksGrid" class="grid"></div>
+</div>
 
 <!-- Modal: Edit Bank -->
 <div class="modal-overlay" id="editModal">
@@ -203,6 +208,35 @@ const BANK_DOMAINS = {
 
 let banks = [];
 let editingCode = null;
+let adminUnlocked = false;
+
+function setAdminUnlocked(ok) {
+  adminUnlocked = !!ok;
+  const prot = document.getElementById('adminProtected');
+  const nb = document.getElementById('btnNewBank');
+  const notice = document.getElementById('adminLockNotice');
+  if (prot) prot.style.display = ok ? '' : 'none';
+  if (nb) nb.style.display = ok ? 'inline-block' : 'none';
+  if (notice) notice.style.display = ok ? 'none' : '';
+}
+
+async function verifyAdminToken() {
+  const token = getToken().trim();
+  if (!token) return false;
+  const r = await fetch('/api/banks', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+    body: '{}',
+  });
+  return r.ok;
+}
+
+document.getElementById('tokenInput').addEventListener('input', () => {
+  setAdminUnlocked(false);
+  banks = [];
+  const grid = document.getElementById('banksGrid');
+  if (grid) grid.innerHTML = '';
+});
 
 function getToken() { return document.getElementById('tokenInput').value; }
 function setStatus(msg, type) {
@@ -212,6 +246,10 @@ function setStatus(msg, type) {
 }
 
 async function refreshSpreadsAI() {
+  if (!adminUnlocked) {
+    setStatus('Valida o token com Carregar primeiro.', 'error');
+    return;
+  }
   const token = getToken();
   if (!token) { setStatus('Introduz o Admin Token primeiro', 'error'); return; }
   const btn = document.getElementById('btnAi');
@@ -245,14 +283,31 @@ async function refreshSpreadsAI() {
 
 async function loadBanks() {
   try {
-    setStatus('A carregar...');
-    const r = await fetch('/api/banks', { headers: { 'x-admin-token': getToken() } });
+    setStatus('A validar token…');
+    const token = getToken().trim();
+    if (!token) {
+      setStatus('Introduz o Admin Token.', 'error');
+      setAdminUnlocked(false);
+      return;
+    }
+    const valid = await verifyAdminToken();
+    if (!valid) {
+      setStatus('Token inválido ou acesso negado.', 'error');
+      setAdminUnlocked(false);
+      return;
+    }
+    setAdminUnlocked(true);
+    setStatus('A carregar…');
+    const r = await fetch('/api/banks', { headers: { 'x-admin-token': token } });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const data = await r.json();
     banks = data.banks || data; // suporte para resposta {banks, euribor} e array legado
     renderBanks();
     setStatus(banks.length + ' bancos carregados', 'ok');
-  } catch (e) { setStatus('Erro: ' + e.message, 'error'); }
+  } catch (e) {
+    setStatus('Erro: ' + e.message, 'error');
+    setAdminUnlocked(false);
+  }
 }
 
 function renderBanks() {
@@ -299,6 +354,7 @@ function renderBanks() {
 }
 
 function openNewBankModal() {
+  if (!adminUnlocked) return;
   editingCode = null;
   document.getElementById('editModalTitle').textContent = 'Novo Banco';
   document.getElementById('f_code').disabled = false;
@@ -307,6 +363,7 @@ function openNewBankModal() {
 }
 
 function openEditModal(code) {
+  if (!adminUnlocked) return;
   editingCode = code;
   const b = banks.find(x => x.code === code);
   if (!b) return;
@@ -370,6 +427,7 @@ function closeModal(id) { document.getElementById(id).classList.remove('active')
 function numOrNull(id) { const v = document.getElementById(id).value; return v === '' ? null : Number(v); }
 
 async function saveBank() {
+  if (!adminUnlocked) return;
   const code = document.getElementById('f_code').value.trim().toUpperCase();
   if (!code) return setStatus('Código obrigatório', 'error');
 
@@ -425,6 +483,7 @@ async function saveBank() {
 }
 
 async function deleteBank(code) {
+  if (!adminUnlocked) return;
   if (!confirm('Desactivar banco ' + code + '?')) return;
   try {
     const r = await fetch('/api/banks?code=' + code, {
@@ -438,6 +497,7 @@ async function deleteBank(code) {
 }
 
 async function openHistory(code) {
+  if (!adminUnlocked) return;
   const b = banks.find(x => x.code === code);
   document.getElementById('historyBankName').textContent = b ? b.name : code;
   try {
