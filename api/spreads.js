@@ -288,6 +288,11 @@ module.exports = async function handler(req, res) {
     const eur      = eurResult.status === "fulfilled" ? eurResult.value.eur      : null;
     const eurLabel = eurResult.status === "fulfilled" ? eurResult.value.eurLabel : "";
 
+    // Persistir Euribor em banks.sqlite para ser servido via GET /api/banks
+    if (eur && banksModule && banksModule.setEuribor) {
+      try { banksModule.setEuribor(eur, eurLabel); } catch (_) {}
+    }
+
     const staleData = kvCached?.data || MEM.data || null;
     const staleFetchedAt = kvCached?.fetchedAt || MEM.fetchedAt || 0;
 

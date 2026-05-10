@@ -162,7 +162,8 @@ async function loadBanks() {
     setStatus('A carregar...');
     const r = await fetch('/api/banks', { headers: { 'x-admin-token': getToken() } });
     if (!r.ok) throw new Error('HTTP ' + r.status);
-    banks = await r.json();
+    const data = await r.json();
+    banks = data.banks || data; // suporte para resposta {banks, euribor} e array legado
     renderBanks();
     setStatus(banks.length + ' bancos carregados', 'ok');
   } catch (e) { setStatus('Erro: ' + e.message, 'error'); }
