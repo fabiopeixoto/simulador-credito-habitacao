@@ -1,0 +1,28 @@
+{
+  "info_pt": "Folhetos oficiais (Aviso BdP 8/2009) e secções de preçário com crédito habitação. As datas nos nomes dos ficheiros reflectem o URL em uso; o Banco de Portugal actualiza os PDFs em clientebancario.bportugal.pt — se um link 404, abra o preçário no site do banco ou em https://clientebancario.bportugal.pt/precarios .",
+  "items": [
+    {"bank": "CA", "label": "comissoes-despesas", "saveAs": "CA-folheto-comissoes.pdf", "url": "https://www.creditoagricola.pt/-/media/04a717162b2f40fca83a6f7caf6f7e22.pdf"},
+    {"bank": "CA", "label": "taxas-juro", "saveAs": "CA-folheto-taxas-juro.pdf", "url": "https://www.creditoagricola.pt/-/media/be1b7d8c863f429f8af6044970080c57.pdf"},
+    {"bank": "CTT", "label": "precario-completo", "saveAs": "CTT-precario.pdf", "url": "https://www.bancoctt.pt/application/themes/pdfs/precario.pdf?language_id=1555597541833"},
+    {"bank": "BNKTR", "label": "bportugal-arquivo", "saveAs": "BNKTR-folheto-bportugal-0269_20221231.pdf", "url": "https://clientebancario.bportugal.pt/sites/default/files/precario/0269_/0269_PRE_20221231000630.pdf", "note": "Cópia remetida ao BdP; no site bankinter.pt o preçário completo pode exigir browser (Liferay)."},
+    {"bank": "ABANCA", "label": "comissoes", "saveAs": "ABANCA-folheto-comissoes.pdf", "url": "https://www.abanca.pt/files/documents/precario-folheto-comissoes-f942c04e.pdf"},
+    {"bank": "ABANCA", "label": "taxas-juro", "saveAs": "ABANCA-folheto-taxas-juro.pdf", "url": "https://www.abanca.pt/files/documents/folheto-taxa-juro-precario-e3020223.pdf"},
+    {"bank": "BCP", "label": "precario-seccao-18-credito-habitacao", "saveAs": "BCP-SECCAO_18-credito-habitacao.pdf", "url": "https://ind.millenniumbcp.pt/pt/Articles/Documents/precario/SECCAO_18.pdf"},
+    {"bank": "ACTVO", "label": "precario-seccao-18-grupo-bcp", "saveAs": "ACTVO-SECCAO_18-via-grupo-BCP.pdf", "url": "https://ind.millenniumbcp.pt/pt/Articles/Documents/precario/SECCAO_18.pdf", "note": "ActivoBank (grupo BCP) — mesma secção de CH do preçário Millennium."},
+    {"bank": "BPI", "label": "folheto-comissoes", "saveAs": "BPI-folheto-comissoes.pdf", "url": "https://www.bancobpi.pt/contentservice/getContent?documentName=PR_WCS01_UCM01004993", "referer": "https://www.bancobpi.pt/"},
+    {"bank": "BPI", "label": "folheto-taxas-juro", "saveAs": "BPI-folheto-taxas-juro.pdf", "url": "https://www.bancobpi.pt/contentservice/getContent?documentName=PR_WCS01_UCM01004994", "referer": "https://www.bancobpi.pt/"},
+    {"bank": "MNTPO", "label": "taxas-juro", "saveAs": "MNTPO-folheto-taxas-juro.pdf", "url": "https://www.bancomontepio.pt/content/dam/montepio/pdf/geral/precario/folheto-taxas-juro/folheto-taxas-juro.pdf"},
+    {"bank": "MNTPO", "label": "comissoes-despesas", "saveAs": "MNTPO-folheto-comissoes-despesas.pdf", "url": "https://www.bancomontepio.pt/content/dam/montepio/pdf/geral/precario/folheto-comissoes-despesas/folheto-comissoes-despesas.pdf"},
+    {"bank": "SANTR", "label": "comissoes-despesas-credito", "saveAs": "SANTR-folheto-comissoes-op-credito.pdf", "url": "https://www.santander.pt/pdfs/precario-banco/folheto-comissoes-despesas/outros-clientes/10-operacoes-credito/10_folhetocomissoesdespesas_oc_opscredito.pdf"},
+    {"bank": "SANTR", "label": "taxas-juro-credito", "saveAs": "SANTR-folheto-taxas-juro-op-credito.pdf", "url": "https://www.santander.pt/pdfs/precario-banco/folheto-taxas-juro/outros-clientes/20-operacoes-credito/20_precariofolhetotaxasjuro_oc_opscredito.pdf"},
+    {"bank": "SANTR", "label": "info-pre-contratual-ch", "saveAs": "SANTR-CH-informacao-pre-contratual-geral.pdf", "url": "https://www.santander.pt/pdfs/particulares/credito-habitacao/CH_Informacao_Pre-Contratual_Geral.pdf"},
+    {"bank": "NB", "label": "comissoes", "saveAs": "NB-folheto-comissoes-PRE-FC.pdf", "url": "https://www.novobanco.pt/content/dam/novobancopublicsites/docs/pdfs/precario/particulares/PRE-FC.pdf.coredownload.inline.pdf"},
+    {"bank": "NB", "label": "taxas-juro", "saveAs": "NB-folheto-taxas-juro-PRE-FT.pdf", "url": "https://www.novobanco.pt/content/dam/novobancopublicsites/docs/pdfs/precario/particulares/PRE-FT.pdf.coredownload.inline.pdf"},
+    {"bank": "CGD", "label": "comissoes-despesas", "saveAs": "CGD-folheto-10-comissoes-despesas.pdf", "url": "https://www.cgd.pt/Precario/Documents/10.pdf"},
+    {"bank": "CGD", "label": "taxas-juro", "saveAs": "CGD-folheto-20-taxas-juro.pdf", "url": "https://www.cgd.pt/Precario/Documents/20.pdf"},
+    {"bank": "UCI", "label": "comissoes", "saveAs": "UCI-PRE-FC-20260301.pdf", "url": "https://uci.pt/-/media/Files/Portugal/precario/PRE-FC-20260301.pdf"},
+    {"bank": "UCI", "label": "taxas-juro", "saveAs": "UCI-PRE-FT-202605.pdf", "url": "https://uci.pt/-/media/Files/Portugal/precario/PRE-FT-202605.pdf"},
+    {"bank": "BIC", "label": "precario-particulares", "saveAs": "BIC-PRE-FC-FT-20250901.pdf", "url": "https://www.eurobicabanca.pt/-/media/_REBRANDING/Feature/Products/EuroBic/Precario/PRE-FC_FT-20250901.pdf"},
+    {"bank": "BNI", "label": "credito-habitacao-particulares", "saveAs": "BNI-particulares-credito-habitacao.pdf", "url": "https://bnieuropa.pt/wp-content/themes/responsive/pdf/precario/particulares-credito-habitacao-e-contratos-conexos.pdf"}
+  ]
+}
