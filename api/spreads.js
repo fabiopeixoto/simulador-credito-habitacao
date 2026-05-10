@@ -210,68 +210,72 @@ function withMeta(payload, source, fetchedAt) {
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Método não suportado" });
 
-  // Rate limit (in-memory, por instância — suficiente para protecção básica)
-  const forwardedFor = req.headers["x-forwarded-for"] || "";
-  const realIp       = req.headers["x-real-ip"] || "";
-  const ip = forwardedFor.split(",")[0]?.trim() || realIp || req.socket?.remoteAddress || "unknown";
-  if (isRateLimited(ip)) return res.status(429).json({ error: "Demasiados pedidos — tenta mais tarde" });
+  // Admin override — bypassa rate limits e cache (token válido = acesso irrestrito)
+  const adminToken = process.env.ADMIN_TOKEN;
+  const reqToken   = req.headers["x-admin-token"] || "";
+  const isAdmin    = !!(adminToken && reqToken === adminToken);
 
-  const today = utcDayKey();
+  if (!isAdmin) {
+    // Rate limit (in-memory, por instância — suficiente para protecção básica)
+    const forwardedFor = req.headers["x-forwarded-for"] || "";
+    const realIp       = req.headers["x-real-ip"] || "";
+    const ip = forwardedFor.split(",")[0]?.trim() || realIp || req.socket?.remoteAddress || "unknown";
+    if (isRateLimited(ip)) return res.status(429).json({ error: "Demasiados pedidos — tenta mais tarde" });
 
-  // ── 1. L1: in-memory (evita round-trip KV na mesma instância quente)
-  if (MEM.dayKey !== today) { MEM.callsToday = 0; MEM.dayKey = today; }
-  const memAge = Date.now() - MEM.fetchedAt;
-  if (MEM.data && (MEM.callsToday >= MAX_CALLS_PER_DAY || memAge < MIN_INTERVAL_MS)) {
-    res.setHeader("X-Cache",           "MEM-HIT");
-    res.setHeader("X-Cache-Age",       Math.floor(memAge / 60000) + "min");
-    res.setHeader("X-Calls-Today",     MEM.callsToday + "/" + MAX_CALLS_PER_DAY);
-    res.setHeader("X-Data-Updated-At", new Date(MEM.fetchedAt).toISOString());
-    return res.status(200).json(withMeta(MEM.data, "mem-cache", MEM.fetchedAt));
-  }
+    const today = utcDayKey();
 
-  // ── 2. L2: SQLite KV cache
-  const kvCached = await kvGet(KV_CACHE_KEY);
-  if (kvCached) {
-    const kvAge    = Date.now() - (kvCached.fetchedAt || 0);
-    const kvCalls  = Number(await kvGet(KV_CALLS_PFX + today) || 0);
-    const kvLimitOk = kvCalls < MAX_CALLS_PER_DAY && kvAge >= MIN_INTERVAL_MS;
-
-    if (!kvLimitOk) {
-      // Promover para L1 e servir
-      MEM.data       = kvCached.data;
-      MEM.fetchedAt  = kvCached.fetchedAt || 0;
-      MEM.callsToday = kvCalls;
-      MEM.dayKey     = today;
-      res.setHeader("X-Cache",           "KV-HIT");
-      res.setHeader("X-Cache-Age",       Math.floor(kvAge / 60000) + "min");
-      res.setHeader("X-Calls-Today",     kvCalls + "/" + MAX_CALLS_PER_DAY);
+    // ── 1. L1: in-memory (evita round-trip KV na mesma instância quente)
+    if (MEM.dayKey !== today) { MEM.callsToday = 0; MEM.dayKey = today; }
+    const memAge = Date.now() - MEM.fetchedAt;
+    if (MEM.data && (MEM.callsToday >= MAX_CALLS_PER_DAY || memAge < MIN_INTERVAL_MS)) {
+      res.setHeader("X-Cache",           "MEM-HIT");
+      res.setHeader("X-Cache-Age",       Math.floor(memAge / 60000) + "min");
+      res.setHeader("X-Calls-Today",     MEM.callsToday + "/" + MAX_CALLS_PER_DAY);
       res.setHeader("X-Data-Updated-At", new Date(MEM.fetchedAt).toISOString());
-      return res.status(200).json(withMeta(kvCached.data, "kv-cache", MEM.fetchedAt));
+      return res.status(200).json(withMeta(MEM.data, "mem-cache", MEM.fetchedAt));
     }
-  }
 
-  // ── 3. Reservar slot atomicamente com INCR antes de chamar a API.
-  // Assim pedidos concorrentes em instâncias diferentes não ultrapassam o limite.
-  const kvSlot = await kvIncr(KV_CALLS_PFX + today, KV_CALLS_TTL);
+    // ── 2. L2: SQLite KV cache
+    const kvCached = await kvGet(KV_CACHE_KEY);
+    if (kvCached) {
+      const kvAge    = Date.now() - (kvCached.fetchedAt || 0);
+      const kvCalls  = Number(await kvGet(KV_CALLS_PFX + today) || 0);
+      const kvLimitOk = kvCalls < MAX_CALLS_PER_DAY && kvAge >= MIN_INTERVAL_MS;
 
-  if (kvSlot !== null && kvSlot > MAX_CALLS_PER_DAY) {
-    // Slot acima do limite — reverter o INCR e servir cache
-    kvDecr(KV_CALLS_PFX + today).catch(() => {});
-    const staleD  = kvCached?.data || MEM.data || null;
-    const staleTs = kvCached?.fetchedAt || MEM.fetchedAt || 0;
-    if (staleD) {
-      res.setHeader("X-Cache",       "KV-LIMIT");
-      res.setHeader("X-Calls-Today", (kvSlot - 1) + "/" + MAX_CALLS_PER_DAY);
-      return res.status(200).json(withMeta(staleD, "kv-cache", staleTs));
+      if (!kvLimitOk) {
+        // Promover para L1 e servir
+        MEM.data       = kvCached.data;
+        MEM.fetchedAt  = kvCached.fetchedAt || 0;
+        MEM.callsToday = kvCalls;
+        MEM.dayKey     = today;
+        res.setHeader("X-Cache",           "KV-HIT");
+        res.setHeader("X-Cache-Age",       Math.floor(kvAge / 60000) + "min");
+        res.setHeader("X-Calls-Today",     kvCalls + "/" + MAX_CALLS_PER_DAY);
+        res.setHeader("X-Data-Updated-At", new Date(MEM.fetchedAt).toISOString());
+        return res.status(200).json(withMeta(kvCached.data, "kv-cache", MEM.fetchedAt));
+      }
     }
-  }
-  if (kvSlot === null && MEM.callsToday >= MAX_CALLS_PER_DAY) {
-    // KV indisponível — fallback para contador in-memory
-    const staleD = MEM.data || null;
-    if (staleD) {
-      res.setHeader("X-Cache",       "MEM-LIMIT");
-      res.setHeader("X-Calls-Today", MEM.callsToday + "/" + MAX_CALLS_PER_DAY);
-      return res.status(200).json(withMeta(staleD, "mem-cache", MEM.fetchedAt));
+
+    // ── 3. Reservar slot atomicamente com INCR antes de chamar a API.
+    const kvSlot = await kvIncr(KV_CALLS_PFX + today, KV_CALLS_TTL);
+
+    if (kvSlot !== null && kvSlot > MAX_CALLS_PER_DAY) {
+      kvDecr(KV_CALLS_PFX + today).catch(() => {});
+      const staleD  = kvCached?.data || MEM.data || null;
+      const staleTs = kvCached?.fetchedAt || MEM.fetchedAt || 0;
+      if (staleD) {
+        res.setHeader("X-Cache",       "KV-LIMIT");
+        res.setHeader("X-Calls-Today", (kvSlot - 1) + "/" + MAX_CALLS_PER_DAY);
+        return res.status(200).json(withMeta(staleD, "kv-cache", staleTs));
+      }
+    }
+    if (kvSlot === null && MEM.callsToday >= MAX_CALLS_PER_DAY) {
+      const staleD = MEM.data || null;
+      if (staleD) {
+        res.setHeader("X-Cache",       "MEM-LIMIT");
+        res.setHeader("X-Calls-Today", MEM.callsToday + "/" + MAX_CALLS_PER_DAY);
+        return res.status(200).json(withMeta(staleD, "mem-cache", MEM.fetchedAt));
+      }
     }
   }
 
