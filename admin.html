@@ -91,6 +91,11 @@
   #aiStatus { font-size: 12px; color: var(--muted); min-width: 180px; }
   #aiStatus.ok { color: var(--accent2); }
   #aiStatus.error { color: var(--danger); }
+  .admin-eur-bar { margin-bottom: 20px; padding: 14px 18px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; max-width: 1100px; }
+  .admin-eur-bar .row { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+  .admin-eur-bar select { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 6px; font-size: 13px; }
+  .admin-eur-bar .title { font-size: 13px; font-weight: 600; color: var(--text); }
+  #adminModalEurHint strong { color: var(--text); }
   .comments-admin { margin-top: 8px; padding-top: 24px; border-top: 1px solid var(--border); max-width: 960px; }
   .comments-admin > h2 { margin-top: 0; margin-bottom: 8px; }
   .comments-admin-toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
@@ -132,6 +137,22 @@
     <div id="statsAdminGrid" class="stats-admin-col-cards"></div>
   </div>
 </section>
+
+<div id="adminEuriborBar" class="admin-eur-bar" style="display:none;" aria-label="Euribor de referência">
+  <div class="row">
+    <span class="title">Euribor de referência ao editar taxas</span>
+    <label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px;">
+      Indexante BCE
+      <select id="adminEuriborSelect" title="Indexante usado para o valor BCE e TAN variável ilustrativo">
+        <option value="3m">3 meses (3m)</option>
+        <option value="6m">6 meses (6m)</option>
+        <option value="12m">12 meses (12m)</option>
+      </select>
+    </label>
+    <span id="adminEuriborLive" class="status"></span>
+  </div>
+  <p style="margin:10px 0 0;font-size:12px;color:var(--muted);line-height:1.55;">No simulador público, a taxa <strong>variável</strong> é <strong>Euribor + spread</strong> por indexante. Escolha o Euribor acima para ver o valor BCE actual e um <strong>TAN ilustrativo</strong> em cada cartão e no formulário de edição (alinhado ao precário via campo «Refs Euribor»).</p>
+</div>
 
 <div class="ai-box">
   <div class="ai-box-info">
@@ -175,6 +196,8 @@
     <div class="form-group"><label>Promos (vírgula)</label><input id="f_promos" placeholder="Spread 0,45% 2a" /></div>
     <div class="form-group"><label>Produtos vinculação</label><input id="f_prod" /></div>
     <div class="form-group"><label>Produtos jovem</label><input id="f_jProd" /></div>
+
+    <div id="adminModalEurHint" style="font-size:12px;color:var(--muted);margin:12px 0;padding:10px 12px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.25);border-radius:8px;line-height:1.55;"></div>
 
     <h3 style="margin-top:16px;">Spreads & Comissões</h3>
     <div class="form-row-3">
@@ -246,6 +269,71 @@ const BANK_DOMAINS = {
 let banks = [];
 let editingCode = null;
 let adminUnlocked = false;
+/** Último payload `euribor` do GET /api/banks (BCE 3m/6m/12m). */
+let lastEuriborPayload = null;
+
+const ADMIN_EUR_KEY = 'adminEuriborRef';
+const ADMIN_EUR_VALID = ['3m', '6m', '12m'];
+
+function getAdminEurRef() {
+  try {
+    const v = sessionStorage.getItem(ADMIN_EUR_KEY);
+    if (ADMIN_EUR_VALID.includes(v)) return v;
+  } catch (_) {}
+  return '6m';
+}
+
+function setAdminEurRef(ref) {
+  if (!ADMIN_EUR_VALID.includes(ref)) return;
+  try {
+    sessionStorage.setItem(ADMIN_EUR_KEY, ref);
+  } catch (_) {}
+}
+
+function fmtPct(v) {
+  if (v == null || !Number.isFinite(Number(v))) return '—';
+  return Number(v).toFixed(3).replace('.', ',') + '%';
+}
+
+function updateEuriborLiveLabel() {
+  const el = document.getElementById('adminEuriborLive');
+  if (!el) return;
+  const ref = getAdminEurRef();
+  const eur = lastEuriborPayload && lastEuriborPayload.eur ? lastEuriborPayload.eur[ref] : null;
+  const lbl = lastEuriborPayload && lastEuriborPayload.eurLabel;
+  if (eur != null && Number.isFinite(Number(eur))) {
+    el.textContent = 'BCE Eur.' + ref.toUpperCase() + ' ' + fmtPct(eur) + (lbl ? ' · ' + lbl : '');
+    el.className = 'status ok';
+  } else {
+    el.textContent = 'Euribor BCE indisponível';
+    el.className = 'status error';
+  }
+}
+
+function updateAdminModalEuriborHint(b) {
+  const hint = document.getElementById('adminModalEurHint');
+  if (!hint) return;
+  const ref = getAdminEurRef();
+  const eur = lastEuriborPayload && lastEuriborPayload.eur ? lastEuriborPayload.eur[ref] : null;
+  if (!b) {
+    hint.innerHTML = 'Escolha o <strong>indexante BCE</strong> na barra acima. Ao guardar o banco, alinhe <strong>Refs Euribor</strong> ao precário (3m / 6m / 12m).';
+    return;
+  }
+  const refsArr = b.refs || [];
+  const ok = refsArr.includes(ref);
+  const s = b.spreads || {};
+  if (eur == null || !Number.isFinite(Number(eur))) {
+    hint.innerHTML = 'Indexante <strong>' + escapeHtml(ref) + '</strong>: valor BCE indisponível.';
+    return;
+  }
+  const t1 = s.sCom != null ? Number(eur) + Number(s.sCom) : null;
+  const t2 = s.sSem != null ? Number(eur) + Number(s.sSem) : null;
+  let html = 'Indexante <strong>' + escapeHtml(ref) + '</strong> BCE: <strong>' + fmtPct(eur) + '</strong> · TAN <em>variável</em> ilustr.: <strong>' + fmtPct(t1) + '</strong> c/ prod. / <strong>' + fmtPct(t2) + '</strong> s/ prod.';
+  if (!ok) {
+    html += ' <span style="color:#fbbf24;">Refs actuais (' + escapeHtml(refsArr.length ? refsArr.join(', ') : 'vazio') + ') não incluem <strong>' + escapeHtml(ref) + '</strong> — ajuste «Refs Euribor» ou troque o indexante.</span>';
+  }
+  hint.innerHTML = html;
+}
 
 function setAdminUnlocked(ok) {
   adminUnlocked = !!ok;
@@ -271,6 +359,8 @@ document.getElementById('tokenInput').addEventListener('input', () => {
   banks = [];
   const grid = document.getElementById('banksGrid');
   if (grid) grid.innerHTML = '';
+  const ebar = document.getElementById('adminEuriborBar');
+  if (ebar) ebar.style.display = 'none';
   const cl = document.getElementById('commentsAdminList');
   const cs = document.getElementById('commentsAdminStatus');
   if (cl) cl.innerHTML = '';
@@ -466,6 +556,14 @@ async function loadBanks() {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const data = await r.json();
     banks = data.banks || data; // suporte para resposta {banks, euribor} e array legado
+    lastEuriborPayload = data.euribor || null;
+    const ebar = document.getElementById('adminEuriborBar');
+    if (ebar) {
+      ebar.style.display = banks.length ? 'block' : 'none';
+      const sel = document.getElementById('adminEuriborSelect');
+      if (sel) sel.value = getAdminEurRef();
+    }
+    updateEuriborLiveLabel();
     renderBanks();
     setStatus(banks.length + ' bancos carregados', 'ok');
     await loadStatsAdmin();
@@ -478,12 +576,20 @@ async function loadBanks() {
 
 function renderBanks() {
   const grid = document.getElementById('banksGrid');
+  const ref = getAdminEurRef();
+  const eur = lastEuriborPayload && lastEuriborPayload.eur ? lastEuriborPayload.eur[ref] : null;
   grid.innerHTML = banks.map(b => {
     const s = b.spreads || {};
     const domain = BANK_DOMAINS[b.code] || 'bank.pt';
     const hex = (b.color && String(b.color).startsWith('#')) ? b.color : '#64748b';
     const borderTint = hex.length === 7 ? hex + '55' : hex;
     const favUrl = 'https://www.google.com/s2/favicons?sz=32&amp;domain=' + encodeURIComponent(domain);
+    const refsArr = b.refs || [];
+    const refOk = refsArr.includes(ref);
+    const t1 = eur != null && Number.isFinite(Number(eur)) && s.sCom != null ? Number(eur) + Number(s.sCom) : null;
+    const t2 = eur != null && Number.isFinite(Number(eur)) && s.sSem != null ? Number(eur) + Number(s.sSem) : null;
+    const tanRow = '<tr><td>TAN var. ilustr. (Eur.' + ref + ')</td><td>' + fmtPct(t1) + ' / ' + fmtPct(t2) + '</td></tr>';
+    const warnRow = refOk ? '' : '<tr><td colspan="2" style="color:#fbbf24;font-size:11px;line-height:1.35;">Refs (' + escapeHtml(refsArr.length ? refsArr.join(', ') : 'vazio') + ') não incluem <strong>' + escapeHtml(ref) + '</strong> — ajuste no editor ou troque o indexante acima.</td></tr>';
     return `
       <div class="card ${b.active ? '' : 'inactive'}">
         <div class="card-header">
@@ -498,6 +604,8 @@ function renderBanks() {
         </div>
         <div class="card-body">
           <table>
+            <tr><td>Refs Euribor</td><td>${refsArr.length ? escapeHtml(refsArr.join(', ')) : '—'}</td></tr>
+            ${tanRow}
             <tr><td>Spread c/ prod.</td><td>${s.sCom != null ? s.sCom + '%' : '—'}</td></tr>
             <tr><td>Spread s/ prod.</td><td>${s.sSem != null ? s.sSem + '%' : '—'}</td></tr>
             <tr><td>TAN Mista c/</td><td>${s.mCom != null ? s.mCom + '%' : '—'}</td></tr>
@@ -507,6 +615,7 @@ function renderBanks() {
             <tr><td>Capital</td><td>${s.capMin ? s.capMin.toLocaleString() + '€' : '—'} — ${s.capMax ? s.capMax.toLocaleString() + '€' : '—'}</td></tr>
             <tr><td>Fonte</td><td>${s.source || '—'}</td></tr>
             <tr><td>Actualizado</td><td>${s.fetchedAt ? new Date(s.fetchedAt).toLocaleString('pt-PT') : '—'}</td></tr>
+            ${warnRow}
           </table>
         </div>
         <div class="card-actions">
@@ -525,6 +634,7 @@ function openNewBankModal() {
   document.getElementById('editModalTitle').textContent = 'Novo Banco';
   document.getElementById('f_code').disabled = false;
   clearForm();
+  updateAdminModalEuriborHint(null);
   document.getElementById('editModal').classList.add('active');
 }
 
@@ -570,6 +680,7 @@ function openEditModal(code) {
   document.getElementById('f_insV').value = s.insV || '';
   document.getElementById('f_insM').value = s.insM || '';
 
+  updateAdminModalEuriborHint(b);
   document.getElementById('editModal').classList.add('active');
 }
 
@@ -692,6 +803,47 @@ document.addEventListener('keydown', e => {
     document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
   }
 });
+
+(function initAdminEuriborSelect() {
+  const sel = document.getElementById('adminEuriborSelect');
+  if (!sel) return;
+  sel.addEventListener('change', function () {
+    setAdminEurRef(this.value);
+    updateEuriborLiveLabel();
+    renderBanks();
+    const modal = document.getElementById('editModal');
+    if (modal && modal.classList.contains('active')) {
+      if (editingCode) {
+        const b = banks.find(x => x.code === editingCode);
+        if (b) updateAdminModalEuriborHint(b);
+      } else {
+        updateAdminModalEuriborHint(null);
+      }
+    }
+  });
+})();
+
+(function initModalEurLiveRefresh() {
+  function stubFromSpreadForm() {
+    return {
+      refs: document.getElementById('f_refs').value.split(',').map(function (s) { return s.trim(); }).filter(Boolean),
+      spreads: {
+        sCom: numOrNull('f_sCom'),
+        sSem: numOrNull('f_sSem'),
+      },
+    };
+  }
+  function refresh() {
+    const modal = document.getElementById('editModal');
+    if (!modal || !modal.classList.contains('active')) return;
+    updateAdminModalEuriborHint(stubFromSpreadForm());
+  }
+  ['f_refs', 'f_sCom', 'f_sSem'].forEach(function (id) {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', refresh);
+    if (el) el.addEventListener('change', refresh);
+  });
+})();
 </script>
 </body>
 </html>
