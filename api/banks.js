@@ -6,6 +6,9 @@ let sqliteDb = null;
 const dbDir = path.join(__dirname, "..", "data");
 const dbPath = path.join(dbDir, "banks.sqlite");
 
+/** Códigos retirados do produto (podem persistir em bases antigas) — não expor na API. */
+const DROPPED_BANK_CODES = new Set([String.fromCharCode(66, 73, 67)]);
+
 try {
   const Database = require("better-sqlite3");
   fs.mkdirSync(dbDir, { recursive: true });
@@ -346,7 +349,7 @@ function getAllBanks() {
   return sqliteDb.prepare(`
     SELECT code, name, color, refs, jOk, carenciaMax, tipos, promos, prod, jProd, active, sort_order, updated_at
     FROM banks WHERE active = 1 ORDER BY sort_order
-  `).all().map(row => ({
+  `).all().filter(row => !DROPPED_BANK_CODES.has(row.code)).map(row => ({
     ...row,
     refs: JSON.parse(row.refs),
     tipos: JSON.parse(row.tipos),
@@ -368,6 +371,7 @@ function getLatestSpreads() {
 
   const result = {};
   for (const row of rows) {
+    if (DROPPED_BANK_CODES.has(row.bank_code)) continue;
     result[row.bank_code] = normalizeCampaignSpreadPair({
       sCom: row.sCom, sSem: row.sSem,
       mCom: row.mCom, mSem: row.mSem,
@@ -396,6 +400,7 @@ function getLatestSpreads() {
 
 function getSpreadsHistory(bankCode, limit = 10) {
   if (!sqliteDb) return [];
+  if (DROPPED_BANK_CODES.has(bankCode)) return [];
   return sqliteDb.prepare(`
     SELECT * FROM spreads WHERE bank_code = ? ORDER BY fetched_at DESC LIMIT ?
   `).all(bankCode, limit).map(row => ({
@@ -435,6 +440,7 @@ function upsertBank(bankData) {
 
 function insertSpreads(bankCode, spreadsData, source = "manual") {
   if (!sqliteDb) return false;
+  if (DROPPED_BANK_CODES.has(bankCode)) return false;
   if (!spreadsData || typeof spreadsData !== "object") return false;
   spreadsData = normalizeCampaignSpreadPair({ ...spreadsData });
   const latest = getLatestSpreads();
@@ -489,6 +495,7 @@ function bulkInsertSpreads(spreadsMap, source = "anthropic") {
   const tx = sqliteDb.transaction((map) => {
     const latest = getLatestSpreads();
     for (const [code, data] of Object.entries(map)) {
+      if (DROPPED_BANK_CODES.has(code)) continue;
       if (!data || typeof data !== "object") continue;
       const d = normalizeCampaignSpreadPair({ ...data });
       if (spreadComparableEqual(latest[code], d)) continue;
@@ -587,11 +594,17 @@ module.exports = async function handler(req, res) {
       if (!/^[A-Z0-9_]{2,10}$/.test(bank.code)) {
         return res.status(400).json({ error: "code deve ter 2-10 caracteres maiúsculos/números" });
       }
+      if (DROPPED_BANK_CODES.has(bank.code)) {
+        return res.status(400).json({ error: "Código de banco não suportado" });
+      }
       upsertBank(bank);
     }
 
     if (spreadsData && typeof spreadsData === "object") {
       if (spreadsData.bank_code) {
+        if (DROPPED_BANK_CODES.has(spreadsData.bank_code)) {
+          return res.status(400).json({ error: "Código de banco não suportado" });
+        }
         insertSpreads(spreadsData.bank_code, spreadsData, spreadsData.source || "manual");
       } else {
         bulkInsertSpreads(spreadsData, "manual");
