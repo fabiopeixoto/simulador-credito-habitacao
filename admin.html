@@ -138,6 +138,15 @@
   </div>
 </section>
 
+<div class="ai-box">
+  <div class="ai-box-info">
+    <h2>🤖 Actualizar Spreads via Anthropic AI</h2>
+    <p>Chama a API Anthropic para obter os spreads mais recentes de todos os bancos e guarda-os na base de dados. Sem limite de chamadas para admin.</p>
+  </div>
+  <div id="aiStatus"></div>
+  <button type="button" class="btn-ai" id="btnAi" onclick="refreshSpreadsAI()">🤖 Actualizar Agora</button>
+</div>
+
 <div id="adminEuriborBar" class="admin-eur-bar" style="display:none;" aria-label="Euribor de referência">
   <div class="row">
     <span class="title">Euribor de referência ao editar taxas</span>
@@ -152,15 +161,6 @@
     <span id="adminEuriborLive" class="status"></span>
   </div>
   <p style="margin:10px 0 0;font-size:12px;color:var(--muted);line-height:1.55;">No simulador público, a taxa <strong>variável</strong> é <strong>Euribor + spread</strong> por indexante. Escolha o Euribor acima para ver o valor BCE actual e um <strong>TAN ilustrativo</strong> em cada cartão e no formulário de edição (alinhado ao precário via campo «Refs Euribor»).</p>
-</div>
-
-<div class="ai-box">
-  <div class="ai-box-info">
-    <h2>🤖 Actualizar Spreads via Anthropic AI</h2>
-    <p>Chama a API Anthropic para obter os spreads mais recentes de todos os bancos e guarda-os na base de dados. Sem limite de chamadas para admin.</p>
-  </div>
-  <div id="aiStatus"></div>
-  <button type="button" class="btn-ai" id="btnAi" onclick="refreshSpreadsAI()">🤖 Actualizar Agora</button>
 </div>
 
 <div id="banksGrid" class="grid"></div>
