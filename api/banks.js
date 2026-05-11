@@ -298,24 +298,64 @@ function reconcileSeedSpreadsToDb() {
 }
 reconcileSeedSpreadsToDb();
 
-/** Em cada arranque: se `refs` na tabela `banks` divergir de `SEED_BANKS`, actualiza (deploy sem POST manual). Corrige instalações antigas onde o indexante ficou incompleto (ex. CA só «12m» em vez de 3/6/12m). */
-function reconcileSeedBankRefsToDb() {
+/** Em cada arranque: alinha metadados canónicos na tabela `banks` a `SEED_BANKS` quando divergem (deploy sem POST manual). Corrige instalações antigas em que `INSERT OR IGNORE` deixou `refs`, `tipos`, etc. desactualizados (ex. CA só «12m», CTT/Montepio sem 3m/6m). Não altera `sort_order` nem `active`. */
+function reconcileSeedBankMetadataToDb() {
   if (!sqliteDb) return;
   try {
-    const sel = sqliteDb.prepare("SELECT refs FROM banks WHERE code = ? AND active = 1");
-    const upd = sqliteDb.prepare("UPDATE banks SET refs = ?, updated_at = ? WHERE code = ?");
+    const sel = sqliteDb.prepare(`
+      SELECT code, name, color, refs, jOk, carenciaMax, tipos, promos, prod, jProd
+      FROM banks WHERE code = ? AND active = 1
+    `);
+    const upd = sqliteDb.prepare(`
+      UPDATE banks SET
+        name = @name, color = @color, refs = @refs, jOk = @jOk, carenciaMax = @carenciaMax,
+        tipos = @tipos, promos = @promos, prod = @prod, jProd = @jProd, updated_at = @updated_at
+      WHERE code = @code
+    `);
     for (const bank of SEED_BANKS) {
       const row = sel.get(bank.code);
       if (!row) continue;
-      const want = JSON.stringify(bank.refs && bank.refs.length ? bank.refs : ["12m"]);
-      if (row.refs === want) continue;
-      upd.run(want, Date.now(), bank.code);
+      const refs = JSON.stringify(bank.refs && bank.refs.length ? bank.refs : ["12m"]);
+      const tipos = JSON.stringify(bank.tipos && bank.tipos.length ? bank.tipos : ["variável"]);
+      const promos = JSON.stringify(bank.promos || []);
+      const name = bank.name;
+      const color = bank.color || "#666666";
+      const prod = bank.prod || "";
+      const jProd = bank.jProd || "";
+      const jOk = bank.jOk ? 1 : 0;
+      const carenciaMax = Number(bank.carenciaMax) || 0;
+      if (
+        row.refs === refs &&
+        row.tipos === tipos &&
+        row.promos === promos &&
+        row.prod === prod &&
+        row.jProd === jProd &&
+        row.name === name &&
+        row.color === color &&
+        Number(row.jOk) === jOk &&
+        Number(row.carenciaMax) === carenciaMax
+      ) {
+        continue;
+      }
+      upd.run({
+        code: bank.code,
+        name,
+        color,
+        refs,
+        jOk,
+        carenciaMax,
+        tipos,
+        promos,
+        prod,
+        jProd,
+        updated_at: Date.now(),
+      });
     }
   } catch (e) {
-    console.error("banks.js: reconcileSeedBankRefsToDb:", e.message);
+    console.error("banks.js: reconcileSeedBankMetadataToDb:", e.message);
   }
 }
-reconcileSeedBankRefsToDb();
+reconcileSeedBankMetadataToDb();
 
 /** sCom = spread normal (fora da promo); promoSpread = durante a promo (≤ sCom). Corrige inversões da API. */
 function normalizeCampaignSpreadPair(d) {
