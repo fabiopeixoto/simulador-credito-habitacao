@@ -276,18 +276,6 @@ function seedIfEmpty() {
 
 seedIfEmpty();
 
-/** Remove bancos retirados do produto (órfãos em bases SQLite antigas). */
-function purgeRetiredBanks() {
-  if (!sqliteDb) return;
-  try {
-    sqliteDb.prepare("DELETE FROM spreads WHERE bank_code = ?").run("BIC");
-    sqliteDb.prepare("DELETE FROM banks WHERE code = ?").run("BIC");
-  } catch (e) {
-    console.error("banks.js: purgeRetiredBanks:", e.message);
-  }
-}
-purgeRetiredBanks();
-
 /** Em cada arranque: se `SEED_SPREADS` diverge do último registo do banco, insere uma linha nova (deploy sem POST manual). Não sobrepõe spreads `source=manual` (POST admin). */
 function reconcileSeedSpreadsToDb() {
   if (!sqliteDb) return;
