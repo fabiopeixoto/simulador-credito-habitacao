@@ -298,6 +298,25 @@ function reconcileSeedSpreadsToDb() {
 }
 reconcileSeedSpreadsToDb();
 
+/** Em cada arranque: se `refs` na tabela `banks` divergir de `SEED_BANKS`, actualiza (deploy sem POST manual). Corrige instalações antigas onde o indexante ficou incompleto (ex. CA só «12m» em vez de 3/6/12m). */
+function reconcileSeedBankRefsToDb() {
+  if (!sqliteDb) return;
+  try {
+    const sel = sqliteDb.prepare("SELECT refs FROM banks WHERE code = ? AND active = 1");
+    const upd = sqliteDb.prepare("UPDATE banks SET refs = ?, updated_at = ? WHERE code = ?");
+    for (const bank of SEED_BANKS) {
+      const row = sel.get(bank.code);
+      if (!row) continue;
+      const want = JSON.stringify(bank.refs && bank.refs.length ? bank.refs : ["12m"]);
+      if (row.refs === want) continue;
+      upd.run(want, Date.now(), bank.code);
+    }
+  } catch (e) {
+    console.error("banks.js: reconcileSeedBankRefsToDb:", e.message);
+  }
+}
+reconcileSeedBankRefsToDb();
+
 /** sCom = spread normal (fora da promo); promoSpread = durante a promo (≤ sCom). Corrige inversões da API. */
 function normalizeCampaignSpreadPair(d) {
   if (!d || typeof d !== "object") return d;
