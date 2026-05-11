@@ -18,8 +18,9 @@
     {"bank": "SANTR", "label": "info-pre-contratual-ch", "saveAs": "SANTR-CH-informacao-pre-contratual-geral.pdf", "url": "https://www.santander.pt/pdfs/particulares/credito-habitacao/CH_Informacao_Pre-Contratual_Geral.pdf"},
     {"bank": "NB", "label": "comissoes", "saveAs": "NB-folheto-comissoes-PRE-FC.pdf", "url": "https://www.novobanco.pt/content/dam/novobancopublicsites/docs/pdfs/precario/particulares/PRE-FC.pdf.coredownload.inline.pdf"},
     {"bank": "NB", "label": "taxas-juro", "saveAs": "NB-folheto-taxas-juro-PRE-FT.pdf", "url": "https://www.novobanco.pt/content/dam/novobancopublicsites/docs/pdfs/precario/particulares/PRE-FT.pdf.coredownload.inline.pdf"},
-    {"bank": "CGD", "label": "comissoes-despesas", "saveAs": "CGD-folheto-10-comissoes-despesas.pdf", "url": "https://www.cgd.pt/Precario/Documents/10.pdf"},
-    {"bank": "CGD", "label": "taxas-juro", "saveAs": "CGD-folheto-20-taxas-juro.pdf", "url": "https://www.cgd.pt/Precario/Documents/20.pdf"},
+    {"bank": "CGD", "label": "comissoes-despesas", "saveAs": "CGD-folheto-10-comissoes-despesas.pdf", "url": "https://www.cgd.pt/Precario/Documents/10.pdf", "note": "Secção «Outros clientes» — não cobre CH particulares."},
+    {"bank": "CGD", "label": "taxas-juro", "saveAs": "CGD-folheto-20-taxas-juro.pdf", "url": "https://www.cgd.pt/Precario/Documents/20.pdf", "note": "Secção «Outros clientes» — não cobre CH particulares."},
+    {"bank": "CGD", "label": "taxas-juro-particulares", "saveAs": "CGD-folheto-18-taxas-particulares.pdf", "url": "https://www.cgd.pt/Precario/Documents/18.pdf", "note": "Crédito habitação particulares (§18.1)."},
     {"bank": "UCI", "label": "comissoes", "saveAs": "UCI-PRE-FC-20260301.pdf", "url": "https://uci.pt/-/media/Files/Portugal/precario/PRE-FC-20260301.pdf"},
     {"bank": "UCI", "label": "taxas-juro", "saveAs": "UCI-PRE-FT-202605.pdf", "url": "https://uci.pt/-/media/Files/Portugal/precario/PRE-FT-202605.pdf"},
     {"bank": "BNI", "label": "credito-habitacao-particulares", "saveAs": "BNI-particulares-credito-habitacao.pdf", "url": "https://bnieuropa.pt/wp-content/themes/responsive/pdf/precario/particulares-credito-habitacao-e-contratos-conexos.pdf"}

@@ -17345,7 +17345,7 @@ const FALLBACK_BANK_DATA = {
   SANTR: {sCom:0.80,sSem:1.90,mCom:2.85,mSem:4.75,fCom:4.40,fSem:5.60,jsCom:0.68,jsSem:1.78,promoPeriodo:36,promoSpread:0,  dossier:280,avaliacao:250,contaMes:2.90,capMin:30000, capMax:3000000,vRef:22.55,mAno:246,minutas:0,  jovemIsenta:false},
   NB:    {sCom:0.75,sSem:1.70,mCom:3.65,mSem:4.60,fCom:3.71,fSem:5.99,jsCom:0.65,jsSem:1.60,promoPeriodo:0, promoSpread:null,dossier:333,avaliacao:322,contaMes:8.22,capMin:10000, capMax:3000000,vRef:17.55,mAno:98, minutas:0,  jovemIsenta:true}, // PRE-FT mai.2026 §18.1 CH indexada/mista: spread Euribor+0,75% a +1,70%; dossier 320€+IS4%≈333€; avaliação 310€+IS4%≈322€ (PRE-FC fev.2026). TAN fixa 3,712–5,996% (quadro CH fixo). Euribor 12m ilustr. 2,747% (abr.2026). capMin 10k€ no preçário (simulador pode exigir mais)
   // CGD: Medida Jovem — POST simuladorch.cgd.pt (2026-05-10): LTV>90% → spr base 2,35%/cond.1,65%; LTV≤90% → 1,35%/0,65% (imóvel≥valorRef). Ver apply em BANKS useMemo.
-  CGD:   {sCom:0.65,sSem:1.35,mCom:3.85,mSem:4.55,fCom:4.70,fSem:5.40,jsCom:0.65,jsSem:1.35,promoPeriodo:24,promoSpread:null,dossier:250,avaliacao:200,contaMes:6.30,capMin:25000, capMax:3000000,vRef:29.82,mAno:110,minutas:0,  jovemIsenta:true},
+  CGD:   {sCom:0.70,sSem:2.90,mCom:3.15,mSem:5.35,fCom:4.75,fSem:6.95,jsCom:0.65,jsSem:1.35,promoPeriodo:24,promoSpread:null,dossier:250,avaliacao:200,contaMes:6.30,capMin:5000,  capMax:3000000,vRef:29.82,mAno:110,minutas:0,  jovemIsenta:true}, // Folheto taxas 18.pdf particulares (mai.2026): CH Regime Geral E6+0,70% a +2,90%; E6 ilustr. 2,454%; TAN mista/fixa alinh. taxa base 30a 4,05%+spread. Montante mín. 5k€. Medida Jovem: spreads 0,65/1,35 no useMemo (simulador). Comissões dossier/avaliação: folheto 10.pdf é «Outros clientes» — valores mantidos
   UCI:   {sCom:1.64,sSem:2.14,mCom:4.35,mSem:4.85,fCom:4.85,fSem:5.35,jsCom:1.52,jsSem:2.02,promoPeriodo:0, promoSpread:null,dossier:300,avaliacao:230,contaMes:0,   capMin:30000, capMax:2000000,vRef:19.00,mAno:150,minutas:0,  jovemIsenta:false},
   BNI:   {sCom:1.00,sSem:1.50,mCom:3.10,mSem:3.60,fCom:3.70,fSem:4.20,jsCom:0.88,jsSem:1.38,promoPeriodo:0, promoSpread:null,dossier:400,avaliacao:250,contaMes:3.00,capMin:25000, capMax:1000000,vRef:19.00,mAno:150,minutas:0,  jovemIsenta:false},
 };
@@ -17427,7 +17427,7 @@ const CAPITAL_LIMITS = {
   MNTPO: {min:10000,  max:2000000}, // Preçário CH (mai.2026): mín. 10k€ com garantia hipotecária
   SANTR: {min:30000,  max:3000000},
   NB:    {min:10000,  max:3000000}, // Preçário NB: mín. 10k€ (CH §18.1); comparador pode usar montantes maiores
-  CGD:   {min:25000,  max:3000000},
+  CGD:   {min:5000,   max:3000000}, // Folheto 18.pdf (mai.2026): montante mínimo CH 5k€
   UCI:   {min:30000,  max:2000000},
   BNI:   {min:25000,  max:1000000},
 };
@@ -17458,7 +17458,7 @@ const CONTA_MES = {
   MNTPO: {val:3.11,  nota:"Conta Base c/ domiciliação ordenado 2,99€/mês + IS 4% ≈ 3,11€ (PRE-FC mai.2026)"},
   SANTR: {val:2.90,  nota:"Conta Santander (confirmado preçário jan.2026)"},
   NB:    {val:8.22,  nota:"Conta Pacote (fam. 100%) 7,90€/mês + IS 4% ≈ 8,22€ (PRE-FC fev.2026)"},
-  CGD:   {val:6.30,  nota:"Conta Caixadirecta €6,30/mês IS incluído (confirmado preçário 2026)"},
+  CGD:   {val:6.30,  nota:"Conta Caixadirecta €6,30/mês IS incluído (sem linha dedicada no 18.pdf de taxas CH)"},
   UCI:   {val:0,     nota:"Sem conta obrigatória"},
   BNI:   {val:3.00,  nota:"(estimativa)"},
 };
@@ -17483,7 +17483,7 @@ const BANKS_STATIC = [
   {name:"Banco Montepio",   s:"MNTPO", color:"#7a0f2e", refs:["6m"],            jOk:true,  carenciaMax:24, tipos:["variável","mista"],         promos:["Cashback 1,5%"],                                                                                                  prod:"Conta Ordenado + Cartão ≥500€/sem + Seg. Vida + Multirriscos Lusitania", jProd:"100% garantia Estado; cashback 1,5%"},
   {name:"Santander",        s:"SANTR", color:"#ec0000", refs:["6m"],            jOk:true,  carenciaMax:12, tipos:["variável","mista","fixa"], promos:["Spread 0% 3 anos (c/prod.) → 0,80%"],                                                                             prod:"Cartão créd.≥300€ + Seg. Vida + Multirriscos Santander",                 jProd:"Spread 0% 3 anos c/prod.; 100% garantia Estado"},
   {name:"Novo Banco",       s:"NB",    color:"#00a651", refs:["3m","6m","12m"], jOk:true,  carenciaMax:24, tipos:["variável","mista","fixa"], promos:["Euribor 3m · 6m · 12m","Cashback 1%","Mudum — multirriscos mais barato"],                                                                   prod:"Pack 1.º Banco (dom.) + GamaLife + Mudum",                               jProd:"100% financiamento; cashback 1%"},
-  {name:"CGD",              s:"CGD",   color:"#006633", refs:["6m"],            jOk:true,  carenciaMax:0,  tipos:["variável","mista","fixa"], promos:["Banco público","TAN fixa 2 anos → Eur.6M+0,65%","Jovem: spread 0,65%","Cert. A/B: -0,15%"],                       prod:"Pack Vinculação + Pack Ligação (Fidelidade Vida + Multi)",                jProd:"Spread 0,65% TAEG 3,26% — MELHOR JOVEM"},
+  {name:"CGD",              s:"CGD",   color:"#006633", refs:["6m"],            jOk:true,  carenciaMax:0,  tipos:["variável","mista","fixa"], promos:["Banco público","CH Reg. Geral: E6 + spread 0,70%–2,90% (folh. 18)","Medida Jovem: spreads no simulador CGD","Cert. A/B: -0,15%"],                       prod:"Pack Vinculação + Pack Ligação (Fidelidade Vida + Multi)",                jProd:"Reg. Geral E6+0,70–2,90% (mai.2026); Medida Jovem 0,65% no simulador oficial"},
   {name:"UCI",              s:"UCI",   color:"#1a3a6b", refs:["6m"],            jOk:true,  carenciaMax:0,  tipos:["variável","mista"],         promos:["Especialista habitação","Sem dom. obrigatória"],                                                                   prod:"Seg. Vida + Multirriscos",                                               jProd:"100% c/ garantia Estado"},
   {name:"BNI Europa",       s:"BNI",   color:"#4a235a", refs:["12m"],           jOk:false, carenciaMax:0,  tipos:["variável"],                 promos:[],                                                                                                                 prod:"Domiciliação + Seguros",                                                 jProd:""},
 ];
