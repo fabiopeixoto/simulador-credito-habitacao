@@ -17346,7 +17346,7 @@ const FALLBACK_BANK_DATA = {
   NB:    {sCom:0.75,sSem:1.70,mCom:3.65,mSem:4.60,fCom:3.71,fSem:5.99,jsCom:0.65,jsSem:1.60,promoPeriodo:0, promoSpread:null,dossier:333,avaliacao:322,contaMes:8.22,capMin:10000, capMax:3000000,vRef:17.55,mAno:98, minutas:0,  jovemIsenta:true}, // PRE-FT mai.2026 §18.1 CH indexada/mista: spread Euribor+0,75% a +1,70%; dossier 320€+IS4%≈333€; avaliação 310€+IS4%≈322€ (PRE-FC fev.2026). TAN fixa 3,712–5,996% (quadro CH fixo). Euribor 12m ilustr. 2,747% (abr.2026). capMin 10k€ no preçário (simulador pode exigir mais)
   // CGD: Medida Jovem — POST simuladorch.cgd.pt (2026-05-10): LTV>90% → spr base 2,35%/cond.1,65%; LTV≤90% → 1,35%/0,65% (imóvel≥valorRef). Ver apply em BANKS useMemo.
   CGD:   {sCom:0.70,sSem:2.90,mCom:3.15,mSem:5.35,fCom:4.75,fSem:6.95,jsCom:0.65,jsSem:1.35,promoPeriodo:24,promoSpread:null,dossier:250,avaliacao:200,contaMes:6.30,capMin:5000,  capMax:3000000,vRef:29.82,mAno:110,minutas:0,  jovemIsenta:true}, // Folheto taxas 18.pdf particulares (mai.2026): CH Regime Geral E6+0,70% a +2,90%; E6 ilustr. 2,454%; TAN mista/fixa alinh. taxa base 30a 4,05%+spread. Montante mín. 5k€. Medida Jovem: spreads 0,65/1,35 no useMemo (simulador). Comissões dossier/avaliação: folheto 10.pdf é «Outros clientes» — valores mantidos
-  UCI:   {sCom:1.64,sSem:2.14,mCom:4.35,mSem:4.85,fCom:4.85,fSem:5.35,jsCom:1.52,jsSem:2.02,promoPeriodo:0, promoSpread:null,dossier:300,avaliacao:230,contaMes:0,   capMin:30000, capMax:2000000,vRef:19.00,mAno:150,minutas:0,  jovemIsenta:false},
+  UCI:   {sCom:1.43,sSem:2.30,mCom:4.09,mSem:5.09,fCom:4.09,fSem:5.09,jsCom:1.43,jsSem:2.30,promoPeriodo:0, promoSpread:null,dossier:600,avaliacao:225,contaMes:0,   capMin:12500, capMax:1000000,vRef:19.00,mAno:150,minutas:400,  jovemIsenta:false}, // PRE-FT mai.2026 §18.1: CH taxa var. E6 + spread 1,43–2,30%; TAEG ex. TAN 4,754%=E6 2,454%+2,30%. Mista: TAN 4,09–5,09% (Notas 2–3: 5–10a fixo + E6). PRE-FC mar.2026 §2.1: abertura máx.600€+IS, aval.225€+IS, prep.documentação 400€+IS. Nota 5: montante 12,5k–1M€. js: sem CH Jovem dedicado no folheto
   BNI:   {sCom:2.00,sSem:3.10,mCom:4.45,mSem:5.55,fCom:5.30,fSem:6.20,jsCom:2.00,jsSem:3.10,promoPeriodo:0, promoSpread:null,dossier:750,avaliacao:200,contaMes:3.00,capMin:25000, capMax:1000000,vRef:19.00,mAno:150,minutas:0,  jovemIsenta:false}, // §18.1 taxas mai.2026: CH c/ garantia hipotecária Euribor 3/6/12m + spread 2,0–3,1% (fin./garantia ≤80%); E6 abr.2026 2,454%+2,0/3,1%→TAN 4,454%/5,554% nos ex. TAEG. Mista: TAN fixa ilustr. 24m 5,299%/6,199% + mesma fase var. Comissões §2.1: estudo 0,5% mín.750€ máx.2500€ +IS; avaliação 200€+IS. js: sem linha jovem no PDF — igual ao quadro geral
 };
 const CACHE_KEY   = "credito_cache_v10";
@@ -17385,7 +17385,7 @@ const COM = {
   SANTR: {dossier:725,  avaliacao:230, minutas:0,   total2hab:955,  jovemIsenta:false},
   NB:    {dossier:333,  avaliacao:322, minutas:0,   total2hab:655,  jovemIsenta:true},
   CGD:   {dossier:250,  avaliacao:200, minutas:0,   total2hab:450,  jovemIsenta:true},
-  UCI:   {dossier:300,  avaliacao:230, minutas:0,   total2hab:530,  jovemIsenta:false},
+  UCI:   {dossier:600,  avaliacao:225, minutas:400, total2hab:1225, jovemIsenta:false},
   BNI:   {dossier:750,  avaliacao:200, minutas:0,   total2hab:950,  jovemIsenta:false},
 };
 
@@ -17428,7 +17428,7 @@ const CAPITAL_LIMITS = {
   SANTR: {min:30000,  max:3000000},
   NB:    {min:10000,  max:3000000}, // Preçário NB: mín. 10k€ (CH §18.1); comparador pode usar montantes maiores
   CGD:   {min:5000,   max:3000000}, // Folheto 18.pdf (mai.2026): montante mínimo CH 5k€
-  UCI:   {min:30000,  max:2000000},
+  UCI:   {min:12500,  max:1000000},
   BNI:   {min:25000,  max:1000000},
 };
 
@@ -17484,7 +17484,7 @@ const BANKS_STATIC = [
   {name:"Santander",        s:"SANTR", color:"#ec0000", refs:["6m"],            jOk:true,  carenciaMax:12, tipos:["variável","mista","fixa"], promos:["Spread 0% 3 anos (c/prod.) → 0,80% (FINE)","Spread base 1,90% s/ pack (FINE)","Garantia Estado ≤35a (DL44) + benefícios fiscais jovem"],                                                                             prod:"Cartão créd.≥300€ + Seg. Vida + Multirriscos Santander",                 jProd:"Garantia Estado até 100%; isenções IMT/selo/emol. (Lei 30-A/2024, DL48-D) — ver FINE"},
   {name:"Novo Banco",       s:"NB",    color:"#00a651", refs:["3m","6m","12m"], jOk:true,  carenciaMax:24, tipos:["variável","mista","fixa"], promos:["Euribor 3m · 6m · 12m","Cashback 1%","Mudum — multirriscos mais barato"],                                                                   prod:"Pack 1.º Banco (dom.) + GamaLife + Mudum",                               jProd:"100% financiamento; cashback 1%"},
   {name:"CGD",              s:"CGD",   color:"#006633", refs:["6m"],            jOk:true,  carenciaMax:0,  tipos:["variável","mista","fixa"], promos:["Banco público","CH Reg. Geral: E6 + spread 0,70%–2,90% (folh. 18)","Medida Jovem: spreads no simulador CGD","Cert. A/B: -0,15%"],                       prod:"Pack Vinculação + Pack Ligação (Fidelidade Vida + Multi)",                jProd:"Reg. Geral E6+0,70–2,90% (mai.2026); Medida Jovem 0,65% no simulador oficial"},
-  {name:"UCI",              s:"UCI",   color:"#1a3a6b", refs:["6m"],            jOk:true,  carenciaMax:0,  tipos:["variável","mista"],         promos:["Especialista habitação","Sem dom. obrigatória"],                                                                   prod:"Seg. Vida + Multirriscos",                                               jProd:"100% c/ garantia Estado"},
+  {name:"UCI",              s:"UCI",   color:"#1a3a6b", refs:["6m"],            jOk:true,  carenciaMax:0,  tipos:["variável","mista"],         promos:["CH variável: E6 + spread 1,43–2,30% (§18.1 mai.2026)","Mista: TAN 4,09–5,09%","Montante 12,5k–1M€","Sem conta obrigatória"],                                                                   prod:"Seg. Vida + Multirriscos",                                               jProd:"100% c/ garantia Estado (condições UCI)"},
   {name:"BNI Europa",       s:"BNI",   color:"#4a235a", refs:["3m","6m","12m"], jOk:false, carenciaMax:0,  tipos:["variável","mista","fixa"], promos:["CH: spread 2,0–3,1% (Euribor 3/6/12m; §18.1 mai.2026)","Mista ilustr. 24m + variável (notas TAEG)","Estudo 0,5% (mín. 750€) + avaliação 200€"], prod:"Domiciliação + Seguros",                                                 jProd:"Sem CH Jovem no §18.1 analisado"},
 ];
 
