@@ -17335,7 +17335,7 @@ const FALLBACK_EUR = {
 const FALLBACK_BANK_DATA = {
   // Offline / primeira pintura: espelhar api/banks.js SEED_SPREADS; em produção GET /api/banks (SQLite) é a fonte.
   CA:    {sCom:0.75,sSem:1.65,mCom:2.90,mSem:3.80,fCom:3.00,fSem:3.80,jsCom:0.62,jsSem:1.52,promoPeriodo:24,promoSpread:0.45, dossier:250,avaliacao:200,contaMes:3.50,capMin:25000, capMax:2000000,vRef:22.68,mAno:160,minutas:0,  jovemIsenta:true},
-  CTT:   {sCom:0.85,sSem:1.70,mCom:3.40,mSem:3.40,fCom:3.95,fSem:4.55,jsCom:0.73,jsSem:1.58,promoPeriodo:0, promoSpread:null,dossier:0,  avaliacao:200,contaMes:0,   capMin:25000, capMax:1000000,vRef:15.71,mAno:170,minutas:0,  jovemIsenta:true},
+  CTT:   {sCom:0.70,sSem:2.60,mCom:3.65,mSem:5.35,fCom:4.70,fSem:4.70,jsCom:0.70,jsSem:2.60,promoPeriodo:0, promoSpread:null,dossier:280, avaliacao:230,contaMes:1.73,capMin:25000, capMax:1000000,vRef:15.71,mAno:170,minutas:160,jovemIsenta:false}, // Precário completo (mai.2026 no PDF): §18.1 CH Euribor 3/6/12m + spread 0,70–2,60%; E12 abr.2026 2,747%+2,60%→TAN 5,347% (ex. TAEG); mista 2a TAN fixa ilustr. 3,65%; fixa 4,70%. Comissões Parte I §2.1: abertura 280€, aval. 230€+IS, formalização 160€+IS. Conta: 20€/ano+IS4% nos ex. TAEG ≈1,73€/mês. CH Sinal Jovem: TAN fixa 5% (produto distinto). Mín. 25k€ (nota 6 FINE)
   BNKTR: {sCom:0.70,sSem:1.05,mCom:2.90,mSem:3.25,fCom:3.45,fSem:3.80,jsCom:0.62,jsSem:0.97,promoPeriodo:24,promoSpread:null,dossier:350,avaliacao:250,contaMes:0,   capMin:100000,capMax:3000000,vRef:33.28,mAno:196,minutas:0,  jovemIsenta:false}, // Normal verif. simulador Bankinter 2026 (prints): spr 0,70%/1,05% c/ pack Vida+Multi+Dom. (Δ0,35pp); 180k/30a E3→746,81€ · E6→773,92€ · E12→802,96€. CH Jovem (js): estim. −0,08pp até print próprio
   ABANCA:{sCom:0.70,sSem:1.70,mCom:3.45,mSem:4.45,fCom:2.70,fSem:3.50,jsCom:0.58,jsSem:1.58,promoPeriodo:0, promoSpread:null,dossier:520,avaliacao:286,contaMes:6.24,capMin:5000,  capMax:2000000,vRef:16.76,mAno:154,minutas:0,  jovemIsenta:true}, // PRE-FT mai.2026 §18.1 CH Valor+/Reg. Geral: spread Euribor 12m +0,70% a +1,70% (Nota 5: valores c/ redução máx. produtos); TAN ilustr. E12 2,747% (abr.2026)+spread; 1.º ano taxa fixa 2,50–3,50%. Nota 1 FINE: formalização 520€, avaliação 286€, conta 6,24€. Nota 3: financiamento mín. 5k€. PRE-FC mar.2026: avaliação imóvel residencial 275€+IS4%≈286€
   BCP:   {sCom:0.70,sSem:1.50,mCom:3.45,mSem:4.25,fCom:4.10,fSem:4.65,jsCom:0.85,jsSem:1.50,promoPeriodo:24,promoSpread:0,  dossier:300,avaliacao:250,contaMes:5.00,capMin:20000, capMax:3000000,vRef:19.92,mAno:256,minutas:0,  jovemIsenta:true}, // SECCAO_18.pdf (mai.2026): CH c/ garantia variável E6/E12 + spread 0,70–1,50%; TAN ilustr. E12 2,747% (abr.2026)+spread; taxa fixa 5a/25a 4,10%/4,65% (notas TAEG). CH Jovem: spr 0,85%/1,50% verif. simulador 2026 (200k/30a). FINE: comissões iniciais 748,80€ (dossier+formalização+avaliação) — modelo interno 300+250
@@ -17375,7 +17375,7 @@ const SEG = {
 // Fonte: preçários oficiais e FINE publicadas (maio 2026)
 const COM = {
   CA:    {dossier:250,  avaliacao:200, minutas:0,   total2hab:450,  jovemIsenta:true},
-  CTT:   {dossier:0,    avaliacao:200, minutas:0,   total2hab:200,  jovemIsenta:true},  // CTT isenta dossier
+  CTT:   {dossier:280, avaliacao:230, minutas:160, total2hab:670,  jovemIsenta:false},
   BNKTR: {dossier:350,  avaliacao:250, minutas:0,   total2hab:600,  jovemIsenta:false},
   ABANCA:{dossier:520,  avaliacao:286, minutas:0,   total2hab:806,  jovemIsenta:true},
   BCP:   {dossier:300,  avaliacao:250, minutas:0,   total2hab:550,  jovemIsenta:true},   // isenta ≤35a
@@ -17449,7 +17449,7 @@ const FINALIDADE_MAX_LTV = {
 // Incluída no cálculo TAEG conforme Directiva 2014/17/UE
 const CONTA_MES = {
   CA:    {val:3.50,  nota:"Conta CA (estimativa)"},
-  CTT:   {val:0,     nota:"Sem comissão de conta obrigatória"},
+  CTT:   {val:1.73, nota:"Conta à ordem — 20€/ano + IS 4% nos exemplos TAEG (precário mai.2026) ≈ 1,73€/mês"},
   BNKTR: {val:0,     nota:"Sem comissão de conta obrigatória"},
   ABANCA:{val:6.24,  nota:"Conta à ordem — exemplo FINE Nota 1 (mai.2026): 6,24€/mês incl. IS"},
   BCP:   {val:5.00,  nota:"Conta Millennium (estimativa; manutenção mensal fora do §18.1 CH no SECCAO_18 analisado)"},
@@ -17474,7 +17474,7 @@ const CONTRATO_FACTOR = {
 // ── Bancos estáticos ──────────────────────────────────────────────────────
 const BANKS_STATIC = [
   {name:"Crédito Agrícola", s:"CA",    color:"#2d6a2d", refs:["12m"],           jOk:true,  carenciaMax:0,  tipos:["variável","mista","fixa"], promos:["Spread 0,45% 2a→0,75%","Variável Euribor 12m"],                                                                          prod:"Dom. ordenado + Seg. Vida CA + Multirriscos CA",                          jProd:"0,45% 1.º bienio; isenção comissões"},
-  {name:"Banco CTT",        s:"CTT",   color:"#e30613", refs:["12m"],           jOk:true,  carenciaMax:0,  tipos:["variável","mista"],         promos:["Só 3 produtos — o mais simples"],                                                                                prod:"Seg. Vida + Multirriscos + Dom. CTT",                                     jProd:"TAN fixa 2,70% 2a; 1.ª anuidade seguros oferta"},
+  {name:"Banco CTT",        s:"CTT",   color:"#e30613", refs:["12m"],           jOk:true,  carenciaMax:0,  tipos:["variável","mista"],         promos:["Spread CH 0,70–2,60% (Euribor 3/6/12m)","Dom.+Seg. Vida+Multi (spread reduzido vs base)","CH Sinal Jovem: TAN fixa 5% (nota §18.1)"], prod:"Seg. Vida + Multirriscos + Dom. CTT",                                     jProd:"Taxa mista 2a TAN fixa ilustr. 3,65%; Sinal Jovem 5% fixo"},
   {name:"Bankinter",        s:"BNKTR", color:"#f7941d", refs:["3m","6m","12m"], jOk:true,  carenciaMax:12, tipos:["variável","mista","fixa"], promos:["Crédito normal: spr.mín. 0,70% c/ pack (−0,35pp vs sem) — verif. simulador","CH Jovem ≤35: spread estim. mais favorável (−0,08pp vs normal)","Euribor 3m · 6m · 12m","Aceita seguros externos"],                                                  prod:"Seg. Vida + Multirriscos + Dom. ordenado",                               jProd:"TAN fixa 2,25% 2 anos; 100% garantia Estado"},
   {name:"Abanca",           s:"ABANCA",color:"#00529b", refs:["6m","12m"],       jOk:true,  carenciaMax:0,  tipos:["variável","mista"],         promos:["Indexante Euribor 6m ou 12m","Taxa fixa 2,70% 1.º/2.º ano"],                                                                                   prod:"Dom. ≥1.000€ + Seg. Vida + Multi + Cartão",                              jProd:"TAN fixa 2,70% 1.º ano → spread 0,70%"},
   {name:"Millennium BCP",   s:"BCP",   color:"#c8102e", refs:["3m","6m","12m"], jOk:true,  carenciaMax:0,  tipos:["variável","mista","fixa"], promos:["CH: spread 0,70–1,50% (SECCAO_18 mai.2026)","CH Jovem: 0,85%/1,50% (verif. simulador)","Spread 0% primeiros 2 anos","Isenção comissões ≤35a","3 indexantes"],                                              prod:"Cartão créd.≥100€ + Créd.pessoal + Dom. + Seg. Ocidental + Ageas",      jProd:"Promo 24m + packs; isenção comissões ≤35a"},
