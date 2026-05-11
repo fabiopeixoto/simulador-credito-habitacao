@@ -185,7 +185,7 @@ const SEED_BANKS = [
   { code: "NB", name: "Novo Banco", color: "#00a651", refs: ["3m", "6m", "12m"], jOk: true, carenciaMax: 24, tipos: ["variável", "mista", "fixa"], promos: ["Euribor 3m · 6m · 12m", "Cashback 1%", "Mudum — multirriscos mais barato"], prod: "Pack 1.º Banco (dom.) + GamaLife + Mudum", jProd: "100% financiamento; cashback 1%" },
   { code: "CGD", name: "CGD", color: "#006633", refs: ["6m"], jOk: true, carenciaMax: 0, tipos: ["variável", "mista", "fixa"], promos: ["Banco público", "TAN fixa 2 anos → Eur.6M+0,65%", "Jovem: spread 0,65%", "Cert. A/B: -0,15%"], prod: "Pack Vinculação + Pack Ligação (Fidelidade Vida + Multi)", jProd: "Spread 0,65% TAEG 3,26% — MELHOR JOVEM" },
   { code: "UCI", name: "UCI", color: "#1a3a6b", refs: ["6m"], jOk: true, carenciaMax: 0, tipos: ["variável", "mista"], promos: ["Especialista habitação", "Sem dom. obrigatória"], prod: "Seg. Vida + Multirriscos", jProd: "100% c/ garantia Estado" },
-  { code: "BIC", name: "Banco BIC", color: "#e67e00", refs: ["12m"], jOk: true, carenciaMax: 0, tipos: ["variável"], promos: [], prod: "Domiciliação + Seguros", jProd: "Garantia Estado (Despacho 14916/2024)" },
+  { code: "BIC", name: "BIC (Abanca)", color: "#e67e00", refs: ["12m"], jOk: true, carenciaMax: 0, tipos: ["variável"], promos: [], prod: "Domiciliação + Seguros", jProd: "Garantia Estado (Despacho 14916/2024)" },
   { code: "BNI", name: "BNI Europa", color: "#4a235a", refs: ["12m"], jOk: false, carenciaMax: 0, tipos: ["variável"], promos: [], prod: "Domiciliação + Seguros", jProd: "" },
 ];
 

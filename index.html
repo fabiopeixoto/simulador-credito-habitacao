@@ -17491,7 +17491,7 @@ const BANKS_STATIC = [
   {name:"Novo Banco",       s:"NB",    color:"#00a651", refs:["3m","6m","12m"], jOk:true,  carenciaMax:24, tipos:["variável","mista","fixa"], promos:["Euribor 3m · 6m · 12m","Cashback 1%","Mudum — multirriscos mais barato"],                                                                   prod:"Pack 1.º Banco (dom.) + GamaLife + Mudum",                               jProd:"100% financiamento; cashback 1%"},
   {name:"CGD",              s:"CGD",   color:"#006633", refs:["6m"],            jOk:true,  carenciaMax:0,  tipos:["variável","mista","fixa"], promos:["Banco público","TAN fixa 2 anos → Eur.6M+0,65%","Jovem: spread 0,65%","Cert. A/B: -0,15%"],                       prod:"Pack Vinculação + Pack Ligação (Fidelidade Vida + Multi)",                jProd:"Spread 0,65% TAEG 3,26% — MELHOR JOVEM"},
   {name:"UCI",              s:"UCI",   color:"#1a3a6b", refs:["6m"],            jOk:true,  carenciaMax:0,  tipos:["variável","mista"],         promos:["Especialista habitação","Sem dom. obrigatória"],                                                                   prod:"Seg. Vida + Multirriscos",                                               jProd:"100% c/ garantia Estado"},
-  {name:"Banco BIC",        s:"BIC",   color:"#e67e00", refs:["12m"],           jOk:true,  carenciaMax:0,  tipos:["variável"],                 promos:[],                                                                                                                 prod:"Domiciliação + Seguros",                                                 jProd:"Garantia Estado (Despacho 14916/2024)"},
+  {name:"BIC (Abanca)",     s:"BIC",   color:"#e67e00", refs:["12m"],           jOk:true,  carenciaMax:0,  tipos:["variável"],                 promos:[],                                                                                                                 prod:"Domiciliação + Seguros",                                                 jProd:"Garantia Estado (Despacho 14916/2024)"},
   {name:"BNI Europa",       s:"BNI",   color:"#4a235a", refs:["12m"],           jOk:false, carenciaMax:0,  tipos:["variável"],                 promos:[],                                                                                                                 prod:"Domiciliação + Seguros",                                                 jProd:""},
 ];
 
@@ -17606,8 +17606,8 @@ function amChart(C,tanA,anos,extra) {
 function prestacaoCarencia(C, tanA) { return C * tanA/100/12; }
 
 // ── Domínios dos bancos (para favicon) ────────────────────────────────────
-// BIC: bic.pt — domínios eurobic/eurobicabanca partilham favicon Abanca no Google s2 e no site.
-const BANK_DOMAINS={CA:"creditoagricola.pt",CTT:"ctt.pt",BNKTR:"bankinter.pt",ABANCA:"abanca.com",BCP:"millenniumbcp.pt",ACTVO:"activobank.pt",BPI:"bpi.pt",MNTPO:"bancomontepio.pt",SANTR:"santander.pt",NB:"novobanco.pt",CGD:"cgd.pt",UCI:"uci.es",BIC:"bic.pt",BNI:"bnieuropa.pt"};
+// BIC: favicon Abanca — Euro Bic foi integrado no Grupo Abanca (código BIC mantém linha/preçários distintos na simulação).
+const BANK_DOMAINS={CA:"creditoagricola.pt",CTT:"ctt.pt",BNKTR:"bankinter.pt",ABANCA:"abanca.com",BCP:"millenniumbcp.pt",ACTVO:"activobank.pt",BPI:"bpi.pt",MNTPO:"bancomontepio.pt",SANTR:"santander.pt",NB:"novobanco.pt",CGD:"cgd.pt",UCI:"uci.es",BIC:"abanca.com",BNI:"bnieuropa.pt"};
 // ── Cores e estilos ───────────────────────────────────────────────────────
 const G="#16a34a",R="#dc2626",Au="#2563eb",N="#e5e7eb",Sky="#0284c7";
 const ecC=ef=>ef<=35?G:ef<=40?Au:R;
