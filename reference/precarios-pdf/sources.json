@@ -22,7 +22,6 @@
     {"bank": "CGD", "label": "taxas-juro", "saveAs": "CGD-folheto-20-taxas-juro.pdf", "url": "https://www.cgd.pt/Precario/Documents/20.pdf"},
     {"bank": "UCI", "label": "comissoes", "saveAs": "UCI-PRE-FC-20260301.pdf", "url": "https://uci.pt/-/media/Files/Portugal/precario/PRE-FC-20260301.pdf"},
     {"bank": "UCI", "label": "taxas-juro", "saveAs": "UCI-PRE-FT-202605.pdf", "url": "https://uci.pt/-/media/Files/Portugal/precario/PRE-FT-202605.pdf"},
-    {"bank": "BIC", "label": "precario-particulares", "saveAs": "BIC-PRE-FC-FT-20250901.pdf", "url": "https://www.eurobicabanca.pt/-/media/_REBRANDING/Feature/Products/EuroBic/Precario/PRE-FC_FT-20250901.pdf"},
     {"bank": "BNI", "label": "credito-habitacao-particulares", "saveAs": "BNI-particulares-credito-habitacao.pdf", "url": "https://bnieuropa.pt/wp-content/themes/responsive/pdf/precario/particulares-credito-habitacao-e-contratos-conexos.pdf"}
   ]
 }

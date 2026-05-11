@@ -1,7 +1,7 @@
 {
   "name": "Simulador Crédito Habitação Portugal",
   "short_name": "Crédito Hab.",
-  "description": "Compare spreads de 14 bancos portugueses em tempo real",
+  "description": "Compare spreads de 13 bancos portugueses em tempo real",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0d1b2a",

@@ -185,7 +185,6 @@ const SEED_BANKS = [
   { code: "NB", name: "Novo Banco", color: "#00a651", refs: ["3m", "6m", "12m"], jOk: true, carenciaMax: 24, tipos: ["variável", "mista", "fixa"], promos: ["Euribor 3m · 6m · 12m", "Cashback 1%", "Mudum — multirriscos mais barato"], prod: "Pack 1.º Banco (dom.) + GamaLife + Mudum", jProd: "100% financiamento; cashback 1%" },
   { code: "CGD", name: "CGD", color: "#006633", refs: ["6m"], jOk: true, carenciaMax: 0, tipos: ["variável", "mista", "fixa"], promos: ["Banco público", "TAN fixa 2 anos → Eur.6M+0,65%", "Jovem: spread 0,65%", "Cert. A/B: -0,15%"], prod: "Pack Vinculação + Pack Ligação (Fidelidade Vida + Multi)", jProd: "Spread 0,65% TAEG 3,26% — MELHOR JOVEM" },
   { code: "UCI", name: "UCI", color: "#1a3a6b", refs: ["6m"], jOk: true, carenciaMax: 0, tipos: ["variável", "mista"], promos: ["Especialista habitação", "Sem dom. obrigatória"], prod: "Seg. Vida + Multirriscos", jProd: "100% c/ garantia Estado" },
-  { code: "BIC", name: "BIC (Abanca)", color: "#e67e00", refs: ["12m"], jOk: true, carenciaMax: 0, tipos: ["variável"], promos: [], prod: "Domiciliação + Seguros", jProd: "Garantia Estado (Despacho 14916/2024)" },
   { code: "BNI", name: "BNI Europa", color: "#4a235a", refs: ["12m"], jOk: false, carenciaMax: 0, tipos: ["variável"], promos: [], prod: "Domiciliação + Seguros", jProd: "" },
 ];
 
@@ -203,7 +202,6 @@ const SEED_SPREADS = {
   NB: { sCom: 0.90, sSem: 1.60, mCom: 3.80, mSem: 4.50, fCom: 5.17, fSem: 5.77, jsCom: 0.80, jsSem: 1.50, promoPeriodo: 0, promoSpread: null, dossier: 333, avaliacao: 332, contaMes: 8.22, contaNota: "Conta Pacote NB €8,22/mês IS incluído (preçário fev.2026)", capMin: 50000, capMax: 3000000, vRef: 17.55, mAno: 98, insV: "GamaLife", insM: "Mudum", minutas: 0, jovemIsenta: true },
   CGD: { sCom: 0.65, sSem: 1.35, mCom: 3.85, mSem: 4.55, fCom: 4.70, fSem: 5.40, jsCom: 0.65, jsSem: 1.35, promoPeriodo: 24, promoSpread: null, dossier: 250, avaliacao: 200, contaMes: 6.30, contaNota: "Conta Caixadirecta €6,30/mês IS incluído (confirmado preçário 2026)", capMin: 25000, capMax: 3000000, vRef: 29.82, mAno: 110, insV: "Fidelidade", insM: "Fidelidade Casa", minutas: 0, jovemIsenta: true },
   UCI: { sCom: 1.64, sSem: 2.14, mCom: 4.35, mSem: 4.85, fCom: 4.85, fSem: 5.35, jsCom: 1.52, jsSem: 2.02, promoPeriodo: 0, promoSpread: null, dossier: 300, avaliacao: 230, contaMes: 0, contaNota: "Sem conta obrigatória", capMin: 30000, capMax: 2000000, vRef: 19.00, mAno: 150, insV: "(est.)", insM: "(est.)", minutas: 0, jovemIsenta: false },
-  BIC: { sCom: 1.00, sSem: 1.50, mCom: 3.00, mSem: 3.50, fCom: 3.60, fSem: 4.10, jsCom: 0.88, jsSem: 1.38, promoPeriodo: 0, promoSpread: null, dossier: 400, avaliacao: 250, contaMes: 3.00, contaNota: "(estimativa)", capMin: 25000, capMax: 1000000, vRef: 19.00, mAno: 150, insV: "(est.)", insM: "(est.)", minutas: 0, jovemIsenta: false },
   BNI: { sCom: 1.00, sSem: 1.50, mCom: 3.10, mSem: 3.60, fCom: 3.70, fSem: 4.20, jsCom: 0.88, jsSem: 1.38, promoPeriodo: 0, promoSpread: null, dossier: 400, avaliacao: 250, contaMes: 3.00, contaNota: "(estimativa)", capMin: 25000, capMax: 1000000, vRef: 19.00, mAno: 150, insV: "(est.)", insM: "(est.)", minutas: 0, jovemIsenta: false },
 };
 
@@ -277,6 +275,18 @@ function seedIfEmpty() {
 }
 
 seedIfEmpty();
+
+/** Remove bancos retirados do produto (órfãos em bases SQLite antigas). */
+function purgeRetiredBanks() {
+  if (!sqliteDb) return;
+  try {
+    sqliteDb.prepare("DELETE FROM spreads WHERE bank_code = ?").run("BIC");
+    sqliteDb.prepare("DELETE FROM banks WHERE code = ?").run("BIC");
+  } catch (e) {
+    console.error("banks.js: purgeRetiredBanks:", e.message);
+  }
+}
+purgeRetiredBanks();
 
 /** Em cada arranque: se `SEED_SPREADS` diverge do último registo do banco, insere uma linha nova (deploy sem POST manual). Não sobrepõe spreads `source=manual` (POST admin). */
 function reconcileSeedSpreadsToDb() {
