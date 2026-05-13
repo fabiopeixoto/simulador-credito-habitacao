@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const { fetchEuribor: fetchEuriborFromBce } = require("./euribor.js");
 
 // ── SQLite ────────────────────────────────────────────────────────────────
 let sqliteDb = null;
@@ -7,7 +8,7 @@ const dbDir = path.join(__dirname, "..", "data");
 const dbPath = path.join(dbDir, "banks.sqlite");
 
 /** Códigos retirados do produto (podem persistir em bases antigas) — não expor na API. */
-const DROPPED_BANK_CODES = new Set([String.fromCharCode(66, 73, 67)]);
+const DROPPED_BANK_CODES = new Set(["BIC"]);
 
 try {
   const Database = require("better-sqlite3");
@@ -114,43 +115,7 @@ function getEuribor() {
 }
 
 async function fetchAndCacheEuribor() {
-  const BASE = "https://data-api.ecb.europa.eu/service/data/FM/";
-  const SERIES = {
-    "3m":  "M.U2.EUR.RT.MM.EURIBOR3MD_.HSTA",
-    "6m":  "M.U2.EUR.RT.MM.EURIBOR6MD_.HSTA",
-    "12m": "M.U2.EUR.RT.MM.EURIBOR1YD_.HSTA",
-  };
-  const MESES = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
-
-  function parseCSV(csv) {
-    const lines = csv.trim().split("\n").filter(l => l.trim());
-    if (lines.length < 2) throw new Error("CSV vazio");
-    const headers = lines[0].split(",").map(h => h.trim().replace(/"/g, ""));
-    const dateIdx = headers.indexOf("TIME_PERIOD");
-    const valIdx  = headers.indexOf("OBS_VALUE");
-    if (dateIdx < 0 || valIdx < 0) throw new Error("Colunas não encontradas");
-    const cols = lines[lines.length - 1].split(",").map(c => c.trim().replace(/"/g, ""));
-    const val  = parseFloat(cols[valIdx]);
-    const date = cols[dateIdx] || "";
-    if (isNaN(val)) throw new Error("Valor inválido");
-    return { val, date };
-  }
-
-  const eur = {};
-  let eurLabel = "";
-  const settled = await Promise.allSettled(
-    Object.entries(SERIES).map(async ([key, series]) => {
-      const r = await fetch(BASE + series + "?format=csvdata&lastNObservations=1", { signal: AbortSignal.timeout(10000) });
-      if (!r.ok) throw new Error("BCE " + key + " HTTP " + r.status);
-      const { val, date } = parseCSV(await r.text());
-      eur[key] = val;
-      if (!eurLabel && date) {
-        const [y, m] = date.split("-");
-        eurLabel = (MESES[parseInt(m, 10) - 1] || m) + ". " + y;
-      }
-    })
-  );
-  if (settled.every(r => r.status === "rejected")) throw new Error("BCE indisponível");
+  const { eur, eurLabel } = await fetchEuriborFromBce(10000);
   const result = { eur, eurLabel, fetchedAt: Date.now() };
   setEuribor(eur, eurLabel);
   return result;

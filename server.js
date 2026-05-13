@@ -115,8 +115,23 @@ async function runApiHandler(req, res, requestUrl, handler) {
   return handler(req, res);
 }
 
+const SECURITY_HEADERS = {
+  // Prevents framing by any origin (clickjacking protection)
+  "X-Frame-Options": "DENY",
+  // Disables MIME sniffing
+  "X-Content-Type-Options": "nosniff",
+  // Limits referrer info sent to third parties
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+  // Disables browser features not needed by this app
+  "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+  // Minimal CSP: blocks Flash/plugins and base-tag injection without breaking AdSense or inline scripts
+  "Content-Security-Policy": "object-src 'none'; base-uri 'self'",
+};
+
 const server = http.createServer(async (req, res) => {
   try {
+    for (const [k, v] of Object.entries(SECURITY_HEADERS)) res.setHeader(k, v);
+
     const requestUrl = new URL(req.url, `http://${req.headers.host}`);
     const pathname = requestUrl.pathname;
 
@@ -178,7 +193,6 @@ const server = http.createServer(async (req, res) => {
     const headers = {
       "Content-Type": contentType,
       "Cache-Control": getCacheControl(pathname, ext),
-      "X-Content-Type-Options": "nosniff",
     };
 
     const stream = fs.createReadStream(fullPath);
