@@ -29,17 +29,13 @@ pipeline {
       }
     }
 
-    stage('Build Docker Image') {
-      // Runs on the Jenkins host where the Docker daemon is available.
+    stage('Build and Deploy') {
+      // Both build and deploy run in the same stage to guarantee the same
+      // Jenkins node/executor — the built image lives in that node's local
+      // Docker daemon, so the deploy step is guaranteed to find it.
       agent any
       steps {
         sh 'docker build -t "${DEPLOY_IMAGE}" .'
-      }
-    }
-
-    stage('Deploy Container') {
-      agent any
-      steps {
         sh '''
           docker rm -f simulador-credito-habitacao || true
           docker run -d --name simulador-credito-habitacao -p 3999:3000 \
