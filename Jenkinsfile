@@ -38,6 +38,14 @@ pipeline {
         sh 'docker build -t "${DEPLOY_IMAGE}" .'
         sh '''
           docker rm -f simulador-credito-habitacao || true
+
+          # Ensure the data volume is owned by the node user (UID 1000) so the
+          # container (USER node) can read/write the SQLite files.
+          # No-op on fresh volumes; fixes existing root-owned ones.
+          docker run --rm \
+            -v simulador-credito-habitacao-data:/data \
+            alpine chown -R 1000:1000 /data
+
           docker run -d --name simulador-credito-habitacao -p 3999:3000 \
             -v simulador-credito-habitacao-data:/usr/src/app/data \
             -e ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY}" \
