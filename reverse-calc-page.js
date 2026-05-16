@@ -1,7 +1,7 @@
 ;(function(){
   'use strict';
   if(!window._SIM||!window.React)return;
-  const{fE,fP,SliderInput,CONTRATO_FACTOR,FALLBACK_EUR,G,Au,R,N,Sky,useState}=window._SIM;
+  const{fE,fP,SliderInput,CONTRATO_FACTOR,FALLBACK_EUR,G,Au,R,N,Sky,useState,EUR_COLORS}=window._SIM;
   const React=window.React;
 
 function ReverseCalcPage({onBack,onSimulate,onOpenComments,EUR}){
@@ -53,9 +53,10 @@ function ReverseCalcPage({onBack,onSimulate,onOpenComments,EUR}){
         React.createElement("div",{style:{display:"flex",gap:5,flexWrap:"wrap"}},
           ["3m","6m","12m"].map(k=>{
             const v=EUR[k]||FALLBACK_EUR[k];
-            return React.createElement("div",{key:k,style:{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",background:"rgba(37,99,235,0.07)",border:"1px solid rgba(37,99,235,0.2)",borderRadius:4}},
-              React.createElement("span",{style:{color:Au,fontWeight:700,fontSize:10,fontFamily:"monospace",letterSpacing:1}},"EUR "+k.toUpperCase()),
-              React.createElement("span",{style:{color:"#111827",fontSize:12,fontWeight:700,fontFamily:"monospace"}},v.valor.toFixed(3).replace(".",",")+"%")
+            const[ec,ebg]=EUR_COLORS[k];
+            return React.createElement("div",{key:k,style:{display:"flex",alignItems:"center",gap:4,padding:"3px 9px",background:ebg,borderRight:"1px solid rgba(0,0,0,0.04)",borderRadius:4}},
+              React.createElement("span",{style:{color:ec,fontWeight:700,fontSize:10,fontFamily:"monospace",letterSpacing:1}},"EUR "+k.toUpperCase()),
+              React.createElement("span",{style:{color:"#111827",fontSize:13,fontWeight:700,fontFamily:"monospace"}},v.valor.toFixed(3).replace(".",",")+"%")
             );
           })
         )
@@ -80,7 +81,7 @@ function ReverseCalcPage({onBack,onSimulate,onOpenComments,EUR}){
           ),
           React.createElement("div",{style:{marginBottom:10}},
             React.createElement("div",{style:lbS},"RENDIMENTO LÍQUIDO T1"),
-            React.createElement(SliderInput,{min:500,max:15000,step:100,value:r1,onChange:setR1,color:Au,suffix:"€/mês",formatFn:v=>v.toLocaleString("pt-PT")}),
+            React.createElement(SliderInput,{min:500,max:15000,step:100,value:r1,onChange:setR1,color:"rgba(201,168,76,1)",suffix:"€/mês",formatFn:v=>v.toLocaleString("pt-PT")}),
             React.createElement("div",{style:{marginTop:5}},
               React.createElement("div",{style:lbS},"TIPO DE CONTRATO T1"),
               React.createElement("select",{value:c1,onChange:e=>setC1(e.target.value),style:{width:"100%",background:"#ffffff",border:"1px solid rgba(37,99,235,0.3)",color:"#111827",borderRadius:6,padding:"5px 8px",fontSize:12,cursor:"pointer"}},
