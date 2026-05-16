@@ -236,10 +236,15 @@
     }, []);
 
     useEffect(function () {
+      var alive = true;
       fetch("/api/comments")
         .then(function (r) { return r.ok ? r.json() : []; })
-        .then(function (data) { setComments(data); })
+        .then(function (data) {
+          if (!alive) return;
+          setComments(function (prev) { return prev.length > 0 ? prev : data; });
+        })
         .catch(function () {});
+      return function () { alive = false; };
     }, []);
 
     return h(React.Fragment, null,
