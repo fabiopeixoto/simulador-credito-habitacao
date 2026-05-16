@@ -235,7 +235,7 @@ function ReverseCalcPage({onBack,onSimulate,EUR}){
           React.createElement("div",{style:{fontWeight:700,color:Au,marginBottom:3}},"Quer simular um banco específico para "+fE(capMax)+"?"),
           React.createElement("div",{style:{fontSize:12,color:"#4b5563"}},"Usa o Simulador Principal para comparar prestações de 13 bancos com este capital.")
         ),
-        React.createElement("button",{onClick:()=>onSimulate(capMax,mJ,jovemLTV,tit),style:{padding:"9px 18px",background:Au,border:"none",borderRadius:8,color:"#ffffff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"sans-serif",whiteSpace:"nowrap"}},"Abrir Simulador →")
+        React.createElement("button",{onClick:()=>onSimulate(capMax,{youngMode:mJ,selectedLTV:jovemLTV,numTit:tit,prazo:pz,r1,c1,r2,c2,dep,out,tt,eRef}),style:{padding:"9px 18px",background:Au,border:"none",borderRadius:8,color:"#ffffff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"sans-serif",whiteSpace:"nowrap"}},"Abrir Simulador →")
       ),
       React.createElement("div",{style:{fontSize:11,color:"#6b7280",textAlign:"center",padding:"8px 0 14px"}},"ℹ️ Valores indicativos. O banco faz a sua própria análise de risco e crédito. Aprovação final depende de scorecard, historial e perfil do mutuário.")
     )
