@@ -238,7 +238,16 @@ function ReverseCalcPage({onBack,onSimulate,onOpenComments,EUR}){
         ),
         React.createElement("button",{onClick:()=>onSimulate(capMax,{youngMode:mJ,selectedLTV:jovemLTV,numTit:tit,prazo:pz,r1,c1,r2,c2,dep,out,tt,eRef}),style:{padding:"9px 18px",background:Au,border:"none",borderRadius:8,color:"#ffffff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"sans-serif",whiteSpace:"nowrap"}},"Abrir Simulador →")
       ),
-      React.createElement("div",{style:{fontSize:11,color:"#6b7280",textAlign:"center",padding:"8px 0 14px"}},"ℹ️ Valores indicativos. O banco faz a sua própria análise de risco e crédito. Aprovação final depende de scorecard, historial e perfil do mutuário.")
+      React.createElement("div",{style:{padding:"8px 0 14px"}},
+        React.createElement("div",{style:{fontSize:11,color:"#6b7280",textAlign:"center",marginBottom:10}},"ℹ️ Valores indicativos. O banco faz a sua própria análise de risco e crédito. Aprovação final depende de scorecard, historial e perfil do mutuário."),
+        React.createElement("div",{style:{marginTop:4,padding:"10px 14px",background:"rgba(255,255,255,1)",border:"1px solid rgba(37,99,235,0.25)",borderRadius:9,fontFamily:"sans-serif"}},
+          React.createElement("div",{style:{fontSize:12,fontWeight:700,color:Au,marginBottom:4}},"⚠️ Simulação indicativa — não substitui a FINE"),
+          React.createElement("div",{style:{fontSize:11,color:"#6b7280",lineHeight:1.7}},"Os valores apresentados são estimativas com base em spreads e comissões publicadas. As condições efectivas dependem da análise de risco de cada banco. Consulte sempre a Ficha de Informação Normalizada Europeia (FINE) antes de contratar.")
+        ),
+        React.createElement("div",{style:{marginTop:6,padding:"10px 14px",background:"rgba(255,255,255,1)",border:"1px solid rgba(37,99,235,0.25)",borderRadius:9,fontFamily:"sans-serif"}},
+          React.createElement("div",{style:{fontSize:11,color:"#4b5563",lineHeight:1.7}},"🔄 Euribor via BCE · Cache 8h. 📊 Spread: LTV + finalidade + cert. energético. 🧮 TAEG: Directiva 2014/17/UE. 💰 MTIC = total pago. 🛡️ Seg. vida sobre capital médio. 🏠 IS HPP: €0 (art. 7º CIS). 📅 Prazo: BdP Aviso 4/2022.")
+        )
+      )
     )
   );
 }
