@@ -113,8 +113,8 @@ function ReverseCalcPage({onBack,onSimulate,onOpenComments,EUR}){
           ),
           React.createElement("div",{style:{marginTop:10}},
             React.createElement("div",{style:lbS},"TAXA DE ESFORÇO MÁXIMA (DSTI)"),
-            React.createElement(SliderInput,{min:10,max:50,step:1,value:dsti,onChange:setDsti,color:dsti>40?R:dsti>33?Au:G,suffix:"%",formatFn:v=>v.toString()}),
-            React.createElement("div",{style:{fontSize:10,color:dsti>40?R:dsti>33?Au:G,marginTop:2}},dsti<=33?"✓ BdP recomenda ≤33%":dsti<=40?"⚠️ Acima da recomendação BdP (33%)":"⚠️ Muito elevado — aprovação improvável acima de 40%")
+            React.createElement(SliderInput,{min:10,max:50,step:1,value:dsti,onChange:setDsti,color:"#0d9488",suffix:"%",formatFn:v=>v.toString()}),
+            React.createElement("div",{style:{fontSize:10,color:dsti>40?R:dsti>33?"#b45309":"#0d9488",marginTop:2}},dsti<=33?"✓ BdP recomenda ≤33%":dsti<=40?"⚠️ Acima da recomendação BdP (33%)":"⚠️ Muito elevado — aprovação improvável acima de 40%")
           ),
           React.createElement("div",{style:{marginTop:12,padding:"8px 10px",background:"rgba(37,99,235,0.07)",border:"1px solid rgba(37,99,235,0.2)",borderRadius:8}},
             React.createElement("div",{style:{fontSize:10,color:"#4b5563",fontFamily:"monospace",letterSpacing:1,marginBottom:4}},"RENDIMENTO CONSIDERADO"),
