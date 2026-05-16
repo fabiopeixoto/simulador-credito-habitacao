@@ -1,4 +1,4 @@
-const CACHE = "simulador-v7";
+const CACHE = "simulador-v8";
 
 /** URLs exactas referenciadas em index.html / inversa.html (incl. query ?v=). */
 const PRECACHE = [
