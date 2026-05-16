@@ -17832,6 +17832,7 @@ function App(){
   },[loadRates]);
   useEffect(()=>{const id=setInterval(()=>loadRates(true),CACHE_H*3600*1000);return()=>clearInterval(id);},[loadRates]);
   useEffect(()=>{var fn=window.__creditSimRevealAds;if(typeof fn==="function")fn();},[]);
+  useEffect(()=>{if(currentPage==="inversa"&&!window.ReverseCalcPage)setCurrentPage("main");},[currentPage]);
 
   // ── Derivados ────────────────────────────────────────────────────────────
   const is2=titulares===2;
