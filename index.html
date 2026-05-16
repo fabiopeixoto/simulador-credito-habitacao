@@ -18435,8 +18435,8 @@ function App(){
                       React.createElement("span", {style:{fontSize:11,color:"#9ca3af",marginLeft:"auto"}}, new Date(c.ts).toLocaleDateString("pt-PT"))
                     ),
                     (c.simPt||c.realPt)&&React.createElement("div", {style:{display:"flex",gap:10,marginBottom:6}},
-                      c.simPt&&React.createElement("div", {style:{fontSize:11,background:"rgba(201,168,76,0.1)",border:"1px solid rgba(201,168,76,0.3)",borderRadius:5,padding:"2px 8px",color:"#92400e"}}, "🧮 Simulado: "+c.simPt.toFixed(2).replace(".",",")+"/mês"),
-                      c.realPt&&React.createElement("div", {style:{fontSize:11,background:"rgba(5,150,105,0.08)",border:"1px solid rgba(5,150,105,0.25)",borderRadius:5,padding:"2px 8px",color:"#065f46"}}, "✅ Real: "+c.realPt.toFixed(2).replace(".",",")+"/mês")
+                      c.simPt!=null&&c.simPt!==""&&Number.isFinite(Number(c.simPt))&&React.createElement("div", {style:{fontSize:11,background:"rgba(201,168,76,0.1)",border:"1px solid rgba(201,168,76,0.3)",borderRadius:5,padding:"2px 8px",color:"#92400e"}}, "🧮 Simulado: "+Number(c.simPt).toFixed(2).replace(".",",")+"/mês"),
+                      c.realPt!=null&&c.realPt!==""&&Number.isFinite(Number(c.realPt))&&React.createElement("div", {style:{fontSize:11,background:"rgba(5,150,105,0.08)",border:"1px solid rgba(5,150,105,0.25)",borderRadius:5,padding:"2px 8px",color:"#065f46"}}, "✅ Real: "+Number(c.realPt).toFixed(2).replace(".",",")+"/mês")
                     ),
                     React.createElement("div", {style:{fontSize:13,color:"#374151",lineHeight:1.5}}, c.text),
                     React.createElement("div", {style:{display:"flex",alignItems:"center",gap:8,marginTop:8}},
