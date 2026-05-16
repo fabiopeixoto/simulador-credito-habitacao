@@ -64,7 +64,7 @@ function ReverseCalcPage({onBack,onSimulate,onOpenComments,commentCount,EUR}){
     ),
     React.createElement("div",{style:{maxWidth:1440,margin:"0 auto",padding:"12px 14px"}},
       React.createElement("div",{style:{display:"flex",borderRadius:9,overflow:"hidden",border:"1px solid rgba(0,0,0,0.07)",marginBottom:10}},
-        [{id:false,icon:"🏠",label:"Crédito Normal (LTV 80%)",c:Au},{id:true,icon:"🎓",label:"Crédito Jovem ≤35a",c:G}].map(({id,icon,label,c})=>
+        [{id:false,icon:"🏦",label:"Crédito Normal (LTV 80%)",c:Au},{id:true,icon:"🎓",label:"Crédito Jovem ≤35a",c:G}].map(({id,icon,label,c})=>
           React.createElement("button",{key:String(id),onClick:()=>{setMJ(id);setJovemLTV(0.9);},style:{flex:1,padding:"9px",border:"none",background:mJ===id?"rgba("+(id?"74,222,128":"201,168,76")+",0.08)":"rgba(255,255,255,1)",borderBottom:"2px solid "+(mJ===id?c:"transparent"),color:mJ===id?c:"#4b5563",fontSize:13,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600}},icon+" "+label)
         )
       ),
