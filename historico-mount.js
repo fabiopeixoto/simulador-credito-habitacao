@@ -18,6 +18,12 @@
     var spreadsCache=_spr[0]; var setSpreadsCache=_spr[1];
     var _ld=useState(true);
     var loading=_ld[0]; var setLoading=_ld[1];
+    var _sc=useState(false);
+    var showComments=_sc[0]; var setShowComments=_sc[1];
+    var _scom=useState([]);
+    var comments=_scom[0]; var setComments=_scom[1];
+
+    var commentTotal=comments.reduce(function(t,c){return t+1+((c.replies||[]).length);},0);
 
     useEffect(function(){
       var alive=true;
@@ -37,6 +43,17 @@
     },[]);
 
     useEffect(function(){
+      var alive=true;
+      fetch('/api/comments')
+        .then(function(r){return r.ok?r.json():[];})
+        .then(function(data){
+          if(!alive)return;
+          setComments(function(prev){return prev.length>0?prev:data;});
+        }).catch(function(){});
+      return function(){alive=false;};
+    },[]);
+
+    useEffect(function(){
       if(!selectedBank)return;
       if(spreadsCache[selectedBank]!==undefined)return;
       var alive=true;
@@ -46,7 +63,6 @@
           if(!alive)return;
           setSpreadsCache(function(prev){
             var next=Object.assign({},prev);
-            // reverse to ASC order (API returns DESC)
             next[selectedBank]=(data&&data.history?data.history:[]).slice().reverse();
             return next;
           });
@@ -56,15 +72,25 @@
       return function(){alive=false;};
     },[selectedBank]);
 
+    var CommentsModal=window.CommentsModal||function(){return null;};
     if(!window.HistoricoPage)return h("div",null,"A carregar…");
-    return h(window.HistoricoPage,{
-      euriborData:euriborData,
-      spreadsData:spreadsCache[selectedBank]||[],
-      banks:banks,
-      selectedBank:selectedBank,
-      onSelectBank:setSelectedBank,
-      loading:loading,
-    });
+    return h(React.Fragment,null,
+      h(window.HistoricoPage,{
+        euriborData:euriborData,
+        spreadsData:spreadsCache[selectedBank]||[],
+        banks:banks,
+        selectedBank:selectedBank,
+        onSelectBank:setSelectedBank,
+        loading:loading,
+        commentCount:commentTotal,
+        onOpenComments:function(){setShowComments(true);},
+      }),
+      showComments&&h(CommentsModal,{
+        onClose:function(){setShowComments(false);},
+        comments:comments,
+        setComments:setComments,
+      })
+    );
   }
 
   ReactDOM.createRoot(document.getElementById('root')).render(h(HistoricoRoot,null));

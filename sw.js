@@ -1,4 +1,4 @@
-const CACHE = "simulador-v17";
+const CACHE = "simulador-v18";
 
 /** URLs exactas referenciadas em index.html / quanto-posso-pedir.html / historico.html (incl. query ?v=). */
 const PRECACHE = [
@@ -10,10 +10,11 @@ const PRECACHE = [
   "/icon.svg",
   "/react-runtime.js?v=1",
   "/inversa-bootstrap.js?v=1",
+  "/comments-modal.js?v=1",
   "/reverse-calc-page.js?v=13",
-  "/inversa-mount.js?v=3",
-  "/historico-page.js?v=2",
-  "/historico-mount.js?v=1",
+  "/inversa-mount.js?v=4",
+  "/historico-page.js?v=3",
+  "/historico-mount.js?v=2",
 ];
 
 self.addEventListener("install", (e) => {

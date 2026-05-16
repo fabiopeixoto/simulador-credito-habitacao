@@ -119,6 +119,8 @@
     var selectedBank=props.selectedBank;
     var onSelectBank=props.onSelectBank;
     var loading=props.loading;
+    var commentCount=props.commentCount||0;
+    var onOpenComments=props.onOpenComments||function(){};
 
     var mergedEur=useMemo(function(){return mergeEur(euriborData);},[euriborData]);
 
@@ -169,6 +171,7 @@
           ),
           h("div",{style:{display:"flex",borderRadius:9,overflow:"hidden",border:"1px solid rgba(0,0,0,0.07)"}},
             h("button",{onClick:function(){window.location.href="/";},style:navBase},"🏠 Simulador"),
+            h("button",{onClick:onOpenComments,style:{flex:1,padding:"9px",border:"none",background:"rgba(255,255,255,1)",borderBottom:"2px solid transparent",color:"#4b5563",fontSize:13,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600}},"💬 Comentários"+(commentCount>0?" ("+commentCount+")":"")),
             h("button",{onClick:function(){window.location.href="/quanto-posso-pedir.html";},style:navBase},"💰 Quanto Posso Pedir?"),
             h("button",{style:navActive},"📈 Histórico")
           ),
