@@ -7,6 +7,8 @@
   var Au=window._SIM.Au;
   var N=window._SIM.N;
   var Sky=window._SIM.Sky;
+  var FALLBACK_EUR=window._SIM.FALLBACK_EUR;
+  var EUR_COLORS=window._SIM.EUR_COLORS;
 
   var EUR_SERIES=[
     {key:"3m",  label:"Euribor 3m",  color:"#f97316"},
@@ -156,14 +158,21 @@
     var titleS={fontSize:11,letterSpacing:3,color:Au,fontFamily:"monospace",marginBottom:10};
 
     return h("div",{style:{fontFamily:"'Inter',system-ui,sans-serif",background:N,minHeight:"100vh",color:"#111827"}},
-      h("div",{style:{background:"linear-gradient(135deg,#ffffff 0%,#eff6ff 55%,#ffffff 100%)",borderBottom:"1px solid rgba(37,99,235,0.4)",padding:"10px 16px"}},
+      h("div",{style:{background:"linear-gradient(135deg,#ffffff 0%,#eff6ff 55%,#ffffff 100%)",borderBottom:"1px solid rgba(37,99,235,0.4)",padding:"10px 16px 0"}},
         h("div",{style:{maxWidth:1440,margin:"0 auto"}},
-          h("div",{style:{display:"flex",borderRadius:9,overflow:"hidden",border:"1px solid rgba(0,0,0,0.07)",marginBottom:6}},
+          h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8,paddingBottom:10}},
+            h("div",null,
+              h("a",{href:"/",style:{display:"flex",alignItems:"center",gap:8,textDecoration:"none",color:"inherit"}},h("svg",{width:26,height:26,viewBox:"0 0 24 24",fill:"none",stroke:"#2563eb",strokeWidth:2,strokeLinecap:"round",strokeLinejoin:"round",style:{flexShrink:0}},h("path",{d:"M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"}),h("polyline",{points:"9 22 9 12 15 12 15 22"})),h("h1",{style:{margin:0,fontSize:21,fontWeight:700,color:"#111827",letterSpacing:-0.3,fontFamily:"'Inter',system-ui,sans-serif"}},"Simulador Crédito Habitação")),
+              h("div",{style:{fontSize:11,color:"#4b5563",fontFamily:"sans-serif",marginTop:2}},"Portugal · 13 bancos · Euribor em tempo real"),
+              h("div",{style:{display:"flex",gap:5,marginTop:7,flexWrap:"wrap"}},["3m","6m","12m"].map(function(k){var last=euriborData&&euriborData[k]&&euriborData[k].length?euriborData[k][euriborData[k].length-1]:null;var fb=FALLBACK_EUR[k];var valor=last?last.value:fb.valor;var parts=last&&last.date?last.date.split("-"):null;var meses=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];var dataLabel=parts?(meses[parseInt(parts[1],10)-1]||parts[1])+". "+parts[0]:fb.data;var ec=EUR_COLORS[k][0],ebg=EUR_COLORS[k][1];return h("div",{key:k,style:{display:"flex",alignItems:"center",gap:5,padding:"3px 9px",background:ebg,borderRight:"1px solid rgba(0,0,0,0.04)",borderRadius:4}},h("span",{style:{color:ec,fontWeight:700,fontSize:10,fontFamily:"monospace",letterSpacing:1}},"EUR "+k.toUpperCase()),h("span",{style:{color:"#111827",fontSize:13,fontWeight:700,fontFamily:"monospace"}},valor.toFixed(3).replace(".",",")+"%"),dataLabel&&h("span",{style:{color:"#4b5563",fontSize:10,fontFamily:"sans-serif",marginLeft:2}},dataLabel));})            )
+            )
+          ),
+          h("div",{style:{display:"flex",borderRadius:9,overflow:"hidden",border:"1px solid rgba(0,0,0,0.07)"}},
             h("button",{onClick:function(){window.location.href="/";},style:navBase},"🏠 Simulador"),
             h("button",{onClick:function(){window.location.href="/quanto-posso-pedir.html";},style:navBase},"💰 Quanto Posso Pedir?"),
             h("button",{style:navActive},"📈 Histórico")
           ),
-          h("div",{style:{fontSize:11,color:"#4b5563"}},"Dados de mercado e contexto · Euribor BCE e evolução de spreads bancários")
+          h("div",{style:{fontSize:11,color:"#4b5563",paddingBottom:10}},"Dados de mercado e contexto · Euribor BCE e evolução de spreads bancários")
         )
       ),
       h("div",{style:{maxWidth:840,margin:"0 auto",padding:"16px 14px"}},
