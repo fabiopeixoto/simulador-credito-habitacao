@@ -4,7 +4,7 @@
   const{fE,fP,SliderInput,CONTRATO_FACTOR,FALLBACK_EUR,G,Au,R,N,Sky,useState,EUR_COLORS}=window._SIM;
   const React=window.React;
 
-function ReverseCalcPage({onBack,onSimulate,onOpenComments,EUR}){
+function ReverseCalcPage({onBack,onSimulate,onOpenComments,commentCount,EUR}){
   const[mJ,setMJ]=useState(false);
   const[tit,setTit]=useState(1);
   const[r1,setR1]=useState(1500);
@@ -47,7 +47,7 @@ function ReverseCalcPage({onBack,onSimulate,onOpenComments,EUR}){
     React.createElement("div",{style:{background:"linear-gradient(135deg,#ffffff 0%,#eff6ff 55%,#ffffff 100%)",borderBottom:"1px solid rgba(37,99,235,0.4)",padding:"10px 16px"}},
       React.createElement("div",{style:{maxWidth:1440,margin:"0 auto",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}},
         React.createElement("div",null,
-          React.createElement("div",{style:{display:"flex",borderRadius:9,overflow:"hidden",border:"1px solid rgba(0,0,0,0.07)",marginBottom:6}},React.createElement("button",{onClick:onBack,style:{flex:1,padding:"9px",border:"none",background:"rgba(255,255,255,1)",borderBottom:"2px solid transparent",color:"#4b5563",fontSize:13,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600}},"🏠 Simulador"),React.createElement("button",{onClick:onOpenComments,style:{flex:1,padding:"9px",border:"none",background:"rgba(255,255,255,1)",borderBottom:"2px solid transparent",color:"#4b5563",fontSize:13,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600}},"💬 Comentários"),React.createElement("button",{style:{flex:1,padding:"9px",border:"none",background:"rgba(37,99,235,0.08)",borderBottom:"2px solid "+Au,color:Au,fontSize:13,fontFamily:"sans-serif",cursor:"default",fontWeight:600}},"🔄 Calculadora Inversa")),
+          React.createElement("div",{style:{display:"flex",borderRadius:9,overflow:"hidden",border:"1px solid rgba(0,0,0,0.07)",marginBottom:6}},React.createElement("button",{onClick:onBack,style:{flex:1,padding:"9px",border:"none",background:"rgba(255,255,255,1)",borderBottom:"2px solid transparent",color:"#4b5563",fontSize:13,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600}},"🏠 Simulador"),React.createElement("button",{onClick:onOpenComments,style:{flex:1,padding:"9px",border:"none",background:"rgba(255,255,255,1)",borderBottom:"2px solid transparent",color:"#4b5563",fontSize:13,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600}},"💬 Comentários"+(commentCount>0?" ("+commentCount+")":"")),React.createElement("button",{style:{flex:1,padding:"9px",border:"none",background:"rgba(37,99,235,0.08)",borderBottom:"2px solid "+Au,color:Au,fontSize:13,fontFamily:"sans-serif",cursor:"default",fontWeight:600}},"🔄 Calculadora Inversa")),
           React.createElement("div",{style:{fontSize:11,color:"#4b5563"}},"Descobre o capital máximo que podes pedir com base na tua capacidade financeira · Indicativo")
         ),
         React.createElement("div",{style:{display:"flex",gap:5,flexWrap:"wrap"}},

@@ -65,7 +65,8 @@
 
   function CommentsModal(props) {
     var onClose = props.onClose;
-    var _sc = useState([]);         var comments = _sc[0]; var setComments = _sc[1];
+    var comments = props.comments;
+    var setComments = props.setComments;
     var _sl = useState(false);       var loading = _sl[0];  var setLoading = _sl[1];
     var _sf = useState({name:"",text:"",bank:"",simPt:"",realPt:""});
     var commentForm = _sf[0]; var setCommentForm = _sf[1];
@@ -80,6 +81,7 @@
     var _srsu = useState(false);     var replySubmit = _srsu[0]; var setReplySubmit = _srsu[1];
 
     useEffect(function () {
+      if (comments.length > 0) return;
       setLoading(true);
       fetch("/api/comments")
         .then(function (r) { return r.ok ? r.json() : []; })
@@ -215,6 +217,12 @@
     var showComments = _sc[0];
     var setShowComments = _sc[1];
 
+    var _scom = useState([]);
+    var comments = _scom[0];
+    var setComments = _scom[1];
+
+    var commentTotal = comments.reduce(function(t,c){return t+1+((c.replies||[]).length);},0);
+
     useEffect(function () {
       var alive = true;
       fetch("/api/banks")
@@ -227,14 +235,31 @@
       return function () { alive = false; };
     }, []);
 
+    useEffect(function () {
+      var alive = true;
+      fetch("/api/comments")
+        .then(function (r) { return r.ok ? r.json() : []; })
+        .then(function (data) {
+          if (!alive) return;
+          setComments(function (prev) { return prev.length > 0 ? prev : data; });
+        })
+        .catch(function () {});
+      return function () { alive = false; };
+    }, []);
+
     return h(React.Fragment, null,
       h(window.ReverseCalcPage, {
         EUR: EUR,
+        commentCount: commentTotal,
         onBack: function () { window.location.href = "/"; },
         onOpenComments: function () { setShowComments(true); },
         onSimulate: function (cap, params) { window.location.href = buildSimUrl(cap, params); },
       }),
-      showComments && h(CommentsModal, {onClose: function () { setShowComments(false); }})
+      showComments && h(CommentsModal, {
+        onClose: function () { setShowComments(false); },
+        comments: comments,
+        setComments: setComments,
+      })
     );
   }
 
