@@ -44,24 +44,24 @@ function ReverseCalcPage({onBack,onSimulate,onOpenComments,EUR}){
   const secS={background:"rgba(0,0,0,0.03)",border:"1px solid rgba(37,99,235,0.16)",borderRadius:11,padding:"13px 14px"};
   const secTitleS={fontSize:11,letterSpacing:3,color:Au,fontFamily:"monospace",marginBottom:10};
   return React.createElement("div",{style:{fontFamily:"'Inter',system-ui,sans-serif",background:N,minHeight:"100vh",color:"#111827"}},
-    React.createElement("div",{style:{background:"linear-gradient(135deg,#ffffff 0%,#f0fdf4 55%,#ffffff 100%)",borderBottom:"1px solid rgba(22,163,74,0.4)",padding:"10px 16px"}},
-      React.createElement("div",{style:{maxWidth:1000,margin:"0 auto",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}},
+    React.createElement("div",{style:{background:"linear-gradient(135deg,#ffffff 0%,#eff6ff 55%,#ffffff 100%)",borderBottom:"1px solid rgba(37,99,235,0.4)",padding:"10px 16px"}},
+      React.createElement("div",{style:{maxWidth:1440,margin:"0 auto",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}},
         React.createElement("div",null,
-          React.createElement("div",{style:{display:"flex",borderRadius:9,overflow:"hidden",border:"1px solid rgba(0,0,0,0.07)",marginBottom:6}},React.createElement("button",{onClick:onBack,style:{flex:1,padding:"9px",border:"none",background:"rgba(255,255,255,1)",borderBottom:"2px solid transparent",color:"#4b5563",fontSize:13,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600}},"🏠 Simulador"),React.createElement("button",{onClick:onOpenComments,style:{flex:1,padding:"9px",border:"none",background:"rgba(255,255,255,1)",borderBottom:"2px solid transparent",color:"#4b5563",fontSize:13,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600}},"💬 Comentários"),React.createElement("button",{style:{flex:1,padding:"9px",border:"none",background:"rgba(22,163,74,0.08)",borderBottom:"2px solid "+G,color:G,fontSize:13,fontFamily:"sans-serif",cursor:"default",fontWeight:600}},"🔄 Calculadora Inversa")),
+          React.createElement("div",{style:{display:"flex",borderRadius:9,overflow:"hidden",border:"1px solid rgba(0,0,0,0.07)",marginBottom:6}},React.createElement("button",{onClick:onBack,style:{flex:1,padding:"9px",border:"none",background:"rgba(255,255,255,1)",borderBottom:"2px solid transparent",color:"#4b5563",fontSize:13,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600}},"🏠 Simulador"),React.createElement("button",{onClick:onOpenComments,style:{flex:1,padding:"9px",border:"none",background:"rgba(255,255,255,1)",borderBottom:"2px solid transparent",color:"#4b5563",fontSize:13,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600}},"💬 Comentários"),React.createElement("button",{style:{flex:1,padding:"9px",border:"none",background:"rgba(37,99,235,0.08)",borderBottom:"2px solid "+Au,color:Au,fontSize:13,fontFamily:"sans-serif",cursor:"default",fontWeight:600}},"🔄 Calculadora Inversa")),
           React.createElement("div",{style:{fontSize:11,color:"#4b5563"}},"Descobre o capital máximo que podes pedir com base na tua capacidade financeira · Indicativo")
         ),
         React.createElement("div",{style:{display:"flex",gap:5,flexWrap:"wrap"}},
           ["3m","6m","12m"].map(k=>{
             const v=EUR[k]||FALLBACK_EUR[k];
-            return React.createElement("div",{key:k,style:{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",background:"rgba(22,163,74,0.07)",border:"1px solid rgba(22,163,74,0.2)",borderRadius:4}},
-              React.createElement("span",{style:{color:G,fontWeight:700,fontSize:10,fontFamily:"monospace",letterSpacing:1}},"EUR "+k.toUpperCase()),
+            return React.createElement("div",{key:k,style:{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",background:"rgba(37,99,235,0.07)",border:"1px solid rgba(37,99,235,0.2)",borderRadius:4}},
+              React.createElement("span",{style:{color:Au,fontWeight:700,fontSize:10,fontFamily:"monospace",letterSpacing:1}},"EUR "+k.toUpperCase()),
               React.createElement("span",{style:{color:"#111827",fontSize:12,fontWeight:700,fontFamily:"monospace"}},v.valor.toFixed(3).replace(".",",")+"%")
             );
           })
         )
       )
     ),
-    React.createElement("div",{style:{maxWidth:1000,margin:"0 auto",padding:"12px 14px"}},
+    React.createElement("div",{style:{maxWidth:1440,margin:"0 auto",padding:"12px 14px"}},
       React.createElement("div",{style:{display:"flex",borderRadius:9,overflow:"hidden",border:"1px solid rgba(0,0,0,0.07)",marginBottom:10}},
         [{id:false,icon:"🏠",label:"Crédito Normal (LTV 80%)",c:Au},{id:true,icon:"🎓",label:"Crédito Jovem ≤35a",c:G}].map(({id,icon,label,c})=>
           React.createElement("button",{key:String(id),onClick:()=>{setMJ(id);setJovemLTV(0.9);},style:{flex:1,padding:"9px",border:"none",background:mJ===id?"rgba("+(id?"74,222,128":"201,168,76")+",0.08)":"rgba(255,255,255,1)",borderBottom:"2px solid "+(mJ===id?c:"transparent"),color:mJ===id?c:"#4b5563",fontSize:13,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600}},icon+" "+label)
@@ -115,9 +115,9 @@ function ReverseCalcPage({onBack,onSimulate,onOpenComments,EUR}){
             React.createElement(SliderInput,{min:10,max:50,step:1,value:dsti,onChange:setDsti,color:dsti>40?R:dsti>33?Au:G,suffix:"%",formatFn:v=>v.toString()}),
             React.createElement("div",{style:{fontSize:10,color:dsti>40?R:dsti>33?Au:G,marginTop:2}},dsti<=33?"✓ BdP recomenda ≤33%":dsti<=40?"⚠️ Acima da recomendação BdP (33%)":"⚠️ Muito elevado — aprovação improvável acima de 40%")
           ),
-          React.createElement("div",{style:{marginTop:12,padding:"8px 10px",background:"rgba(22,163,74,0.07)",border:"1px solid rgba(22,163,74,0.2)",borderRadius:8}},
+          React.createElement("div",{style:{marginTop:12,padding:"8px 10px",background:"rgba(37,99,235,0.07)",border:"1px solid rgba(37,99,235,0.2)",borderRadius:8}},
             React.createElement("div",{style:{fontSize:10,color:"#4b5563",fontFamily:"monospace",letterSpacing:1,marginBottom:4}},"RENDIMENTO CONSIDERADO"),
-            React.createElement("div",{style:{fontSize:18,fontWeight:700,color:G}},fE(rendT)+"/mês"),
+            React.createElement("div",{style:{fontSize:18,fontWeight:700,color:Au}},fE(rendT)+"/mês"),
             (is2||dep>0)&&React.createElement("div",{style:{fontSize:10,color:"#6b7280",marginTop:2}},
               "T1 "+fE(ra1)+(ra1!==r1?" ("+Math.round((CF[c1]||1)*100)+"%)":"")+(is2?" + T2 "+fE(ra2)+(ra2!==r2?" ("+Math.round((CF[c2]||1)*100)+"%)":""):"")+( dep>0?" − dep. "+fE(dep*400):"")
             )
@@ -171,11 +171,11 @@ function ReverseCalcPage({onBack,onSimulate,onOpenComments,EUR}){
             React.createElement(SliderInput,{min:5,max:40,step:1,value:pz,onChange:setPz,color:Au,suffix:" anos",formatFn:v=>v.toString()}),
             React.createElement("div",{style:{fontSize:10,color:"#6b7280",marginTop:2}},"BdP: máx. 40a (idade ≤ 30 anos)")
           ),
-          React.createElement("div",{style:{background:"rgba(22,163,74,0.06)",border:"1px solid rgba(22,163,74,0.25)",borderRadius:9,padding:14,marginTop:4}},
-            React.createElement("div",{style:{fontSize:10,color:G,fontFamily:"monospace",letterSpacing:2,marginBottom:12}},"RESULTADO CALCULADORA INVERSA"),
+          React.createElement("div",{style:{background:"rgba(37,99,235,0.06)",border:"1px solid rgba(37,99,235,0.25)",borderRadius:9,padding:14,marginTop:4}},
+            React.createElement("div",{style:{fontSize:10,color:Au,fontFamily:"monospace",letterSpacing:2,marginBottom:12}},"RESULTADO CALCULADORA INVERSA"),
             React.createElement("div",{style:{marginBottom:10}},
               React.createElement("div",{style:{fontSize:11,color:"#4b5563"}},"Capital máximo que podes pedir"),
-              React.createElement("div",{style:{fontSize:28,fontWeight:700,color:capMax>0?G:R,lineHeight:1.1}},fE(capMax)),
+              React.createElement("div",{style:{fontSize:28,fontWeight:700,color:capMax>0?Au:R,lineHeight:1.1}},fE(capMax)),
               capMax>0&&React.createElement("div",{style:{fontSize:10,color:"#6b7280",marginTop:2}},pz+"a · TAN "+tan.toFixed(3).replace(".",",")+"% · prest. "+fE(pMax)+"/mês")
             ),
             React.createElement("div",{style:{marginBottom:10}},
@@ -219,10 +219,10 @@ function ReverseCalcPage({onBack,onSimulate,onOpenComments,EUR}){
                 const cellBase={padding:"6px 8px",border:isSelected?"1px solid rgba(37,99,235,0.18)":"1px solid transparent"};
                 return React.createElement("tr",{key:p,style:{background:isSelected?"rgba(37,99,235,0.06)":"transparent"}},
                   React.createElement("td",{style:{...cellBase,textAlign:"center",fontWeight:isSelected?700:400,color:isSelected?Au:"#374151",borderRadius:isSelected?"6px 0 0 6px":"0",borderRight:"none"}},p+" anos"),
-                  React.createElement("td",{style:{...cellBase,textAlign:"right",fontWeight:isSelected?700:400,color:isSelected?G:"#374151",borderLeft:"none",borderRight:"none"}},fE(cap)),
+                  React.createElement("td",{style:{...cellBase,textAlign:"right",fontWeight:isSelected?700:400,color:isSelected?Au:"#374151",borderLeft:"none",borderRight:"none"}},fE(cap)),
                   React.createElement("td",{style:{...cellBase,textAlign:"right",color:isSelected?Au:"#374151",borderLeft:"none",borderRight:"none"}},fE(val)),
                   React.createElement("td",{style:{...cellBase,textAlign:"right",color:"#7c3aed",borderLeft:"none",borderRight:"none"}},fE(ent)),
-                  React.createElement("td",{style:{...cellBase,textAlign:"right",color:diff&&diff>0?G:diff&&diff<0?R:"#6b7280",borderRadius:isSelected?"0 6px 6px 0":"0",borderLeft:"none"}},diff!==null&&diff>0?"+"+fE(diff):"—")
+                  React.createElement("td",{style:{...cellBase,textAlign:"right",color:diff&&diff>0?Au:diff&&diff<0?R:"#6b7280",borderRadius:isSelected?"0 6px 6px 0":"0",borderLeft:"none"}},diff!==null&&diff>0?"+"+fE(diff):"—")
                 );
               })
             )
