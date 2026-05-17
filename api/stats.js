@@ -32,25 +32,32 @@ try {
 }
 
 const _ipCache = new Map();
-const _pending = new Set();
+const _pending = new Map(); // ip → queued visit count while lookup is in flight
 
-function incrementLocation(city, countryCode, countryName) {
+function incrementLocation(city, countryCode, countryName, n) {
   if (!sqliteDb || !city || !countryCode) return;
   sqliteDb.prepare(`
-    INSERT INTO visitor_locations (city, country_code, country_name, count) VALUES (?, ?, ?, 1)
-    ON CONFLICT(city, country_code) DO UPDATE SET count = count + 1, country_name = excluded.country_name
-  `).run(city, countryCode, countryName || countryCode);
+    INSERT INTO visitor_locations (city, country_code, country_name, count) VALUES (?, ?, ?, ?)
+    ON CONFLICT(city, country_code) DO UPDATE SET count = count + excluded.count, country_name = excluded.country_name
+  `).run(city, countryCode, countryName || countryCode, n || 1);
+}
+
+function isLoopback(ip) {
+  return ip === '::1' || ip === '127.0.0.1' || ip.startsWith('::ffff:127.');
 }
 
 async function recordVisitorLocation(ip) {
-  if (!sqliteDb || !ip || ip === '::1' || ip === '127.0.0.1' || ip === 'unknown') return;
+  if (!sqliteDb || !ip || ip === 'unknown' || isLoopback(ip)) return;
   if (_ipCache.has(ip)) {
     const loc = _ipCache.get(ip);
     if (loc) incrementLocation(loc.city, loc.country_code, loc.country_name);
     return;
   }
-  if (_pending.has(ip)) return;
-  _pending.add(ip);
+  if (_pending.has(ip)) {
+    _pending.set(ip, _pending.get(ip) + 1); // queue visit; applied when lookup resolves
+    return;
+  }
+  _pending.set(ip, 1);
   try {
     const r = await fetch(
       `http://ip-api.com/json/${encodeURIComponent(ip)}?fields=status,city,regionName,country,countryCode`,
@@ -61,7 +68,7 @@ async function recordVisitorLocation(ip) {
       const loc = { city: d.city || d.regionName || '?', country_code: d.countryCode, country_name: d.country };
       if (_ipCache.size >= 50000) _ipCache.clear();
       _ipCache.set(ip, loc);
-      incrementLocation(loc.city, loc.country_code, loc.country_name);
+      incrementLocation(loc.city, loc.country_code, loc.country_name, _pending.get(ip));
     } else {
       _ipCache.set(ip, null);
     }
