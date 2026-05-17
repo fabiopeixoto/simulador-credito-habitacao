@@ -84,7 +84,7 @@
           )
         ),
         h(NavTabs,{activePage:activePage,commentCount:commentCount,onOpenComments:onOpenComments}),
-        subtitle&&h("div",{style:{fontSize:11,color:"#4b5563",paddingBottom:10}},subtitle)
+        h("div",{style:{paddingBottom:8}},subtitle&&h("span",{style:{fontSize:11,color:"#4b5563"}},subtitle))
       )
     );
   }
