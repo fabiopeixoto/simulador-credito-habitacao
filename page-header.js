@@ -56,13 +56,13 @@
             style:activePage==="inversa"?navActive:navBase
           },"💰 Quanto Posso Pedir?"),
           h("button",{
-            onClick:activePage==="historico"?undefined:function(){window.location.href="/historico.html";},
-            style:activePage==="historico"?navActive:navBase
-          },"📈 Histórico"),
-          h("button",{
             onClick:activePage==="transferencia"?undefined:function(){window.location.href="/transferencia.html";},
             style:activePage==="transferencia"?navActive:navBase
-          },"🔄 Transferência")
+          },"🔄 Transferência"),
+          h("button",{
+            onClick:activePage==="historico"?undefined:function(){window.location.href="/historico.html";},
+            style:activePage==="historico"?navActive:navBase
+          },"📈 Histórico")
         ),
         subtitle&&h("div",{style:{fontSize:11,color:"#4b5563",paddingBottom:10}},subtitle)
       )
