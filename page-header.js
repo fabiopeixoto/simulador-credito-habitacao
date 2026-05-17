@@ -59,6 +59,7 @@
     var activePage=props.activePage;
     var commentCount=props.commentCount||0;
     var onOpenComments=props.onOpenComments||function(){};
+    var onOpenGlossario=props.onOpenGlossario||null;
     var subtitle=props.subtitle||"";
 
     return h("div",{style:{background:"linear-gradient(135deg,#ffffff 0%,#eff6ff 55%,#ffffff 100%)",borderBottom:"1px solid rgba(37,99,235,0.4)",padding:"10px 16px 0"}},
@@ -81,7 +82,8 @@
                 );
               })
             )
-          )
+          ),
+          onOpenGlossario&&h("button",{onClick:onOpenGlossario,style:{padding:"6px 13px",border:"1px solid rgba(37,99,235,0.25)",borderRadius:7,background:"rgba(255,255,255,0.85)",color:Au,fontSize:12,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600,alignSelf:"flex-start",whiteSpace:"nowrap"}},"📖 Glossário")
         ),
         h(NavTabs,{activePage:activePage,commentCount:commentCount,onOpenComments:onOpenComments}),
         h("div",{style:{paddingBottom:8}},subtitle&&h("span",{style:{fontSize:11,color:"#4b5563"}},subtitle))

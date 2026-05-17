@@ -20,6 +20,8 @@
     var loading=_ld[0]; var setLoading=_ld[1];
     var _sc=useState(false);
     var showComments=_sc[0]; var setShowComments=_sc[1];
+    var _sg=useState(false);
+    var showGlossario=_sg[0]; var setShowGlossario=_sg[1];
     var _scom=useState([]);
     var comments=_scom[0]; var setComments=_scom[1];
 
@@ -73,6 +75,7 @@
     },[selectedBank]);
 
     var CommentsModal=window.CommentsModal||function(){return null;};
+    var GlossarioModal=window.GlossarioModal||null;
     if(!window.HistoricoPage)return h("div",null,"A carregar…");
     return h(React.Fragment,null,
       h(window.HistoricoPage,{
@@ -84,11 +87,15 @@
         loading:loading,
         commentCount:commentTotal,
         onOpenComments:function(){setShowComments(true);},
+        onOpenGlossario:function(){setShowGlossario(true);},
       }),
       showComments&&h(CommentsModal,{
         onClose:function(){setShowComments(false);},
         comments:comments,
         setComments:setComments,
+      }),
+      showGlossario&&GlossarioModal&&h(GlossarioModal,{
+        onClose:function(){setShowGlossario(false);},
       })
     );
   }
