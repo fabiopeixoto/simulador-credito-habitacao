@@ -136,6 +136,7 @@
     <div id="statsAdmin7d" class="stats-admin-col-table stats-admin-7d"></div>
     <div id="statsAdminGrid" class="stats-admin-col-cards"></div>
   </div>
+  <div id="statsAdminLocations" style="margin-top:14px;"></div>
 </section>
 
 <div class="ai-box">
@@ -367,8 +368,10 @@ document.getElementById('tokenInput').addEventListener('input', () => {
   if (cs) { cs.textContent = ''; cs.className = 'status'; }
   const sg = document.getElementById('statsAdminGrid');
   const s7 = document.getElementById('statsAdmin7d');
+  const sl = document.getElementById('statsAdminLocations');
   if (sg) sg.innerHTML = '';
   if (s7) s7.innerHTML = '';
+  if (sl) sl.innerHTML = '';
 });
 
 function getToken() { return document.getElementById('tokenInput').value; }
@@ -417,6 +420,20 @@ async function loadStatsAdmin() {
         `<tr><td>${escapeHtml(x.day)}</td><td>${fmtNum(x.homepage)}</td><td>${fmtNum(x.admin)}</td></tr>`
       ).join('');
       t7.innerHTML = '<table><thead><tr><th>Dia (UTC)</th><th>Início</th><th>Admin</th></tr></thead><tbody>' + rows + '</tbody></table>';
+    }
+    const locEl = document.getElementById('statsAdminLocations');
+    if (locEl) {
+      if (d.locations && d.locations.length) {
+        const flag = cc => cc && cc.length === 2
+          ? String.fromCodePoint(...[...cc.toUpperCase()].map(c => 0x1F1E6 - 65 + c.charCodeAt(0)))
+          : '';
+        const rows = d.locations.map(l =>
+          `<tr><td>${flag(l.country_code)} ${escapeHtml(l.city)}</td><td style="color:var(--muted)">${escapeHtml(l.country_name || l.country_code)}</td><td>${fmtNum(l.count)}</td></tr>`
+        ).join('');
+        locEl.innerHTML = `<h3 style="font-size:13px;font-weight:600;margin:0 0 8px;color:var(--text)">🌍 Localização dos visitantes</h3><div class="stats-admin-7d"><table><thead><tr><th>Cidade</th><th>País</th><th>Visitas</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+      } else {
+        locEl.innerHTML = '<p class="status" style="margin:4px 0;font-size:12px;">Sem dados de localização ainda.</p>';
+      }
     }
   } catch (e) {
     if (grid) grid.innerHTML = '<p class="status error">Não foi possível carregar estatísticas: ' + escapeHtml(e.message.slice(0, 120)) + '</p>';

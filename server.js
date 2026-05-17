@@ -192,8 +192,13 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === "GET") {
       try {
-        if (pathname === "/" || normalizedPath === "index.html") statsHandler.recordHomepageView();
-        else if (normalizedPath === "admin.html") statsHandler.recordAdminPageView();
+        if (pathname === "/" || normalizedPath === "index.html") {
+          statsHandler.recordHomepageView();
+          const fwdFor = req.headers["x-forwarded-for"] || "";
+          const realIp = req.headers["x-real-ip"] || "";
+          const ip = fwdFor.split(",")[0]?.trim() || realIp || req.socket?.remoteAddress || "";
+          if (ip) statsHandler.recordVisitorLocation(ip).catch(() => {});
+        } else if (normalizedPath === "admin.html") statsHandler.recordAdminPageView();
       } catch (_) {}
     }
 
