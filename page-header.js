@@ -38,7 +38,7 @@
       h("button",{
         onClick:activePage==="historico"?undefined:function(){window.location.href="/historico.html";},
         style:activePage==="historico"?navActive:navBase
-      },"📈 Histórico"),
+      },"📈 Histórico de Euribor e Spreads"),
       h("button",{onClick:onOpenComments,style:{flex:1,padding:"9px",border:"none",background:"rgba(255,255,255,1)",borderBottom:"2px solid transparent",color:"#4b5563",fontSize:13,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600}},
         "💬 Comentários"+(commentCount>0?" ("+commentCount+")":"")
       )
