@@ -37,6 +37,12 @@
     BNI:   [{max:80,add:0},{max:90,add:0.10}],
   };
 
+  var BANK_DOMAINS={
+    CA:"creditoagricola.pt",CTT:"ctt.pt",BNKTR:"bankinter.pt",ABANCA:"abanca.com",
+    BCP:"millenniumbcp.pt",ACTVO:"activobank.pt",BPI:"bpi.pt",MNTPO:"bancomontepio.pt",
+    SANTR:"santander.pt",NB:"novobanco.pt",CGD:"cgd.pt",UCI:"uci.es",BNI:"bnieuropa.pt"
+  };
+
   function getLTVAddon(bankCode,ltv){
     var brackets=LTV_BRACKETS[bankCode]||[];
     for(var i=0;i<brackets.length;i++){if(ltv<=brackets[i].max)return brackets[i].add;}
@@ -297,7 +303,19 @@
                         h("td",{style:tdSL},
                           h("div",{style:{display:"flex",alignItems:"center",gap:8}},
                             isTop&&h("span",{style:{fontSize:12,color:Au,fontWeight:700,fontFamily:"monospace",whiteSpace:"nowrap"}},"★ "),
-                            h("span",{style:{width:11,height:11,borderRadius:"50%",background:row.color,display:"inline-block",flexShrink:0}}),
+                            h("div",{style:{width:30,height:26,borderRadius:5,background:"rgba(0,0,0,0.04)",border:"1px solid "+row.color+"55",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,overflow:"hidden"}},
+                              h("img",{
+                                src:"https://www.google.com/s2/favicons?domain="+(BANK_DOMAINS[row.code]||"bank.pt")+"&sz=32",
+                                width:22,height:22,
+                                style:{objectFit:"contain",display:"block"},
+                                alt:row.code,
+                                onError:function(e){
+                                  var d=e.currentTarget.parentElement;
+                                  d.innerHTML='<span style="font-size:8px;font-weight:700;font-family:monospace;color:'+row.color+'">'+row.code+'</span>';
+                                  e.currentTarget.onError=null;
+                                }
+                              })
+                            ),
                             h("span",{style:{fontWeight:700,color:"#111827",fontSize:15}},row.name),
                             row.refMismatch&&h("span",{style:{fontSize:11,color:"#b45309",marginLeft:4}},"("+row.useRef+")")
                           )
