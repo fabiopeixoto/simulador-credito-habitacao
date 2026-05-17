@@ -169,35 +169,33 @@
 
     return h("div",{style:{fontFamily:"'Inter',system-ui,sans-serif",background:N,minHeight:"100vh",color:"#111827"}},
       h(window.PageHeader||function(){return null;},{EUR:pageEUR,activePage:"historico",commentCount:commentCount,onOpenComments:onOpenComments,subtitle:"Dados de mercado e contexto · Euribor BCE e evolução de spreads bancários"}),
-      h("div",{style:{maxWidth:1200,margin:"0 auto",padding:"16px 14px"}},
-        h("div",{style:{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}},
-          h("div",{style:Object.assign({},cardS,{flex:"1 1 340px",marginBottom:0})},
-            h("div",{style:titleS},"EURIBOR — HISTÓRICO BCE"),
-            h(LegendRow,{series:EUR_SERIES,latest:eurLatest}),
-            loading?
-              h("div",{style:{height:210,display:"flex",alignItems:"center",justifyContent:"center",color:"#9ca3af",fontSize:13}},"A carregar dados BCE…"):
-            eurSvg?
-              h("div",{style:{overflow:"visible"},dangerouslySetInnerHTML:{__html:eurSvg}}):
-              h("div",{style:{height:210,display:"flex",alignItems:"center",justifyContent:"center",color:"#9ca3af",fontSize:13}},"Dados indisponíveis")
+      h("div",{style:{maxWidth:840,margin:"0 auto",padding:"16px 14px"}},
+        h("div",{style:cardS},
+          h("div",{style:titleS},"EURIBOR — HISTÓRICO BCE"),
+          h(LegendRow,{series:EUR_SERIES,latest:eurLatest}),
+          loading?
+            h("div",{style:{height:210,display:"flex",alignItems:"center",justifyContent:"center",color:"#9ca3af",fontSize:13}},"A carregar dados BCE…"):
+          eurSvg?
+            h("div",{style:{overflow:"visible"},dangerouslySetInnerHTML:{__html:eurSvg}}):
+            h("div",{style:{height:210,display:"flex",alignItems:"center",justifyContent:"center",color:"#9ca3af",fontSize:13}},"Dados indisponíveis")
+        ),
+        h("div",{style:cardS},
+          h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8,marginBottom:10}},
+            h("div",{style:titleS},"SPREADS — HISTÓRICO POR BANCO"),
+            banks.length>0&&h("select",{
+              value:selectedBank||"",
+              onChange:function(e){onSelectBank(e.target.value);},
+              style:{fontSize:13,padding:"4px 8px",borderRadius:6,border:"1px solid rgba(37,99,235,0.3)",color:"#111827",background:"#fff",cursor:"pointer",fontFamily:"sans-serif"}
+            },banks.map(function(b){return h("option",{key:b.code,value:b.code},b.name);}))
           ),
-          h("div",{style:Object.assign({},cardS,{flex:"1 1 340px",marginBottom:0})},
-            h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8,marginBottom:10}},
-              h("div",{style:titleS},"SPREADS — HISTÓRICO POR BANCO"),
-              banks.length>0&&h("select",{
-                value:selectedBank||"",
-                onChange:function(e){onSelectBank(e.target.value);},
-                style:{fontSize:13,padding:"4px 8px",borderRadius:6,border:"1px solid rgba(37,99,235,0.3)",color:"#111827",background:"#fff",cursor:"pointer",fontFamily:"sans-serif"}
-              },banks.map(function(b){return h("option",{key:b.code,value:b.code},b.name);}))
-            ),
-            h(LegendRow,{series:SPR_SERIES,latest:sprLatest}),
-            loading&&!sprData.length?
-              h("div",{style:{height:180,display:"flex",alignItems:"center",justifyContent:"center",color:"#9ca3af",fontSize:13}},"A carregar…"):
-            sprSvg?
-              h("div",{style:{overflow:"visible"},dangerouslySetInnerHTML:{__html:sprSvg}}):
-              h("div",{style:{height:180,display:"flex",alignItems:"center",justifyContent:"center",color:"#9ca3af",fontSize:13,textAlign:"center",padding:"0 20px"}},
-                spreadsData.length===0?"Sem histórico de spreads — os dados ficam registados a cada atualização":"Histórico insuficiente para gráfico (mínimo 2 registos)"
-              )
-          )
+          h(LegendRow,{series:SPR_SERIES,latest:sprLatest}),
+          loading&&!sprData.length?
+            h("div",{style:{height:180,display:"flex",alignItems:"center",justifyContent:"center",color:"#9ca3af",fontSize:13}},"A carregar…"):
+          sprSvg?
+            h("div",{style:{overflow:"visible"},dangerouslySetInnerHTML:{__html:sprSvg}}):
+            h("div",{style:{height:180,display:"flex",alignItems:"center",justifyContent:"center",color:"#9ca3af",fontSize:13,textAlign:"center",padding:"0 20px"}},
+              spreadsData.length===0?"Sem histórico de spreads — os dados ficam registados a cada atualização":"Histórico insuficiente para gráfico (mínimo 2 registos)"
+            )
         )
       )
     );
