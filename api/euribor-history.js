@@ -1,3 +1,6 @@
+const fs = require("fs");
+const path = require("path");
+
 const BCE_BASE = "https://data-api.ecb.europa.eu/service/data/FM/";
 const BCE_SERIES = {
   "3m":  "M.U2.EUR.RT.MM.EURIBOR3MD_.HSTA",
@@ -22,12 +25,64 @@ function parseAllRows(csv) {
   return out;
 }
 
-let _cache    = null;
-let _cacheAt  = 0;
+// ── SQLite persistence (banks.sqlite / kv_store) ───────────────────────────
+let sqliteDb = null;
+const dbDir = path.join(__dirname, "..", "data");
+const dbPath = path.join(dbDir, "banks.sqlite");
+
+try {
+  const Database = require("better-sqlite3");
+  fs.mkdirSync(dbDir, { recursive: true });
+  sqliteDb = new Database(dbPath);
+  sqliteDb.pragma("journal_mode = WAL");
+  sqliteDb.exec(`
+    CREATE TABLE IF NOT EXISTS kv_store (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+    );
+  `);
+} catch (e) {
+  console.error("euribor-history.js: SQLite init:", e.message);
+}
+
 const CACHE_TTL = 6 * 3600 * 1000;
+const KV_KEY = "euribor_history";
+
+function readFromDb() {
+  if (!sqliteDb) return null;
+  try {
+    const row = sqliteDb.prepare("SELECT value, updated_at FROM kv_store WHERE key = ?").get(KV_KEY);
+    if (!row || Date.now() - row.updated_at > CACHE_TTL) return null;
+    return { data: JSON.parse(row.value), cachedAt: row.updated_at };
+  } catch (_) {
+    return null;
+  }
+}
+
+function writeToDb(data) {
+  if (!sqliteDb) return;
+  try {
+    sqliteDb.prepare(`
+      INSERT INTO kv_store (key, value, updated_at) VALUES (?, ?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+    `).run(KV_KEY, JSON.stringify(data), Date.now());
+  } catch (_) {}
+}
+
+let _cache   = null;
+let _cacheAt = 0;
 
 async function fetchHistory() {
   if (_cache && Date.now() - _cacheAt < CACHE_TTL) return _cache;
+
+  const dbEntry = readFromDb();
+  if (dbEntry) {
+    _cache   = dbEntry.data;
+    _cacheAt = dbEntry.cachedAt;
+    return _cache;
+  }
+
   const result = {};
   await Promise.allSettled(
     Object.entries(BCE_SERIES).map(async ([key, series]) => {
@@ -39,8 +94,12 @@ async function fetchHistory() {
       result[key] = parseAllRows(await r.text());
     })
   );
-  _cache   = result;
-  _cacheAt = Date.now();
+
+  if (Object.keys(result).length > 0) {
+    _cache   = result;
+    _cacheAt = Date.now();
+    writeToDb(result);
+  }
   return result;
 }
 
