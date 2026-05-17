@@ -581,8 +581,11 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ history });
     }
 
-    const maxFetchedAt = sqliteDb.prepare("SELECT MAX(fetched_at) AS mx FROM spreads").get()?.mx || 0;
-    const etag = `"banks-${maxFetchedAt}"`;
+    const maxSpreadAt = sqliteDb.prepare("SELECT MAX(fetched_at) AS mx FROM spreads").get()?.mx || 0;
+    const eurRow = sqliteDb.prepare("SELECT updated_at FROM kv_store WHERE key = 'euribor'").get();
+    const eurUpdatedAt = eurRow?.updated_at || 0;
+    const maxBankAt = sqliteDb.prepare("SELECT MAX(updated_at) AS mx FROM banks").get()?.mx || 0;
+    const etag = `"banks-${maxSpreadAt}-${eurUpdatedAt}-${maxBankAt}"`;
     if (req.headers["if-none-match"] === etag) {
       res.writeHead(304);
       return res.end();

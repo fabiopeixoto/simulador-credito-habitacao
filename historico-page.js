@@ -131,6 +131,7 @@
       },{});
     },[euriborData]);
 
+
     var mergedEur=useMemo(function(){return mergeEur(euriborData);},[euriborData]);
 
     var eurSvg=useMemo(function(){
