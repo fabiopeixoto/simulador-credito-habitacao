@@ -56,8 +56,8 @@
     return h("button",{
       onClick:onClick,
       style:{
-        padding:"6px 12px",border:"none",borderRadius:6,cursor:"pointer",fontSize:12,fontWeight:600,
-        fontFamily:"sans-serif",
+        padding:"6px 13px",border:"none",borderRadius:6,cursor:"pointer",
+        fontSize:13,fontWeight:600,
         background:active?"rgba(37,99,235,0.12)":"rgba(0,0,0,0.05)",
         color:active?Au:"#4b5563",
         borderBottom:active?"2px solid "+Au:"2px solid transparent"
@@ -164,16 +164,17 @@
 
     var ltvColor=ltv<=80?G:ltv<=90?"#b45309":R;
 
+    // Sistema tipográfico consistente — herda Inter do wrapper, sem "sans-serif" explícito
     var cardS={background:"#fff",borderRadius:11,padding:"14px 16px",marginBottom:12,border:"1px solid rgba(0,0,0,0.07)"};
-    var secTitleS={fontSize:10,letterSpacing:3,color:Au,fontFamily:"monospace",marginBottom:10,fontWeight:700,textTransform:"uppercase"};
-    var labelS={fontSize:12,color:"#4b5563",fontFamily:"sans-serif",marginBottom:4,fontWeight:600};
+    var secTitleS={fontSize:11,letterSpacing:3,color:Au,fontFamily:"monospace",marginBottom:12,fontWeight:700,textTransform:"uppercase"};
+    var labelS={fontSize:13,color:"#374151",marginBottom:5,fontWeight:600};
     var fieldS={marginBottom:14};
-    var thS={padding:"8px 10px",fontSize:11,color:"#4b5563",fontWeight:700,fontFamily:"sans-serif",borderBottom:"1px solid rgba(0,0,0,0.08)",background:"rgba(37,99,235,0.04)",textAlign:"right",whiteSpace:"nowrap"};
-    var thSL={padding:"8px 10px",fontSize:11,color:"#4b5563",fontWeight:700,fontFamily:"sans-serif",borderBottom:"1px solid rgba(0,0,0,0.08)",background:"rgba(37,99,235,0.04)",textAlign:"left"};
-    var tdS={padding:"8px 10px",fontSize:13,fontFamily:"sans-serif",borderBottom:"1px solid rgba(0,0,0,0.05)",textAlign:"right",verticalAlign:"middle"};
-    var tdSL={padding:"8px 10px",fontSize:13,fontFamily:"sans-serif",borderBottom:"1px solid rgba(0,0,0,0.05)",textAlign:"left",verticalAlign:"middle"};
+    var thS={padding:"9px 12px",fontSize:12,color:"#4b5563",fontWeight:700,borderBottom:"1px solid rgba(0,0,0,0.08)",background:"rgba(37,99,235,0.04)",textAlign:"right",whiteSpace:"nowrap"};
+    var thSL={padding:"9px 12px",fontSize:12,color:"#4b5563",fontWeight:700,borderBottom:"1px solid rgba(0,0,0,0.08)",background:"rgba(37,99,235,0.04)",textAlign:"left"};
+    var tdS={padding:"9px 12px",fontSize:14,borderBottom:"1px solid rgba(0,0,0,0.05)",textAlign:"right",verticalAlign:"middle"};
+    var tdSL={padding:"9px 12px",fontSize:14,borderBottom:"1px solid rgba(0,0,0,0.05)",textAlign:"left",verticalAlign:"middle"};
 
-    return h("div",{style:{background:N,minHeight:"100vh",fontFamily:"'Inter',system-ui,sans-serif"}},
+    return h("div",{style:{background:N,minHeight:"100vh",fontFamily:"'Inter',system-ui,sans-serif",color:"#111827"}},
       h(window.PageHeader,{EUR:EUR,activePage:"transferencia",commentCount:commentCount,onOpenComments:onOpenComments}),
       h("div",{style:{maxWidth:1440,margin:"0 auto",padding:"14px 14px 40px"}},
 
@@ -196,9 +197,9 @@
                     type:"number",step:"0.01",min:"0",max:"15",
                     value:taxaAtualStr,
                     onChange:function(e){setTaxaAtualStr(e.target.value);},
-                    style:{width:90,padding:"5px 8px",background:"rgba(37,99,235,0.08)",border:"1px solid rgba(37,99,235,0.35)",borderRadius:6,color:"#111827",fontSize:14,fontWeight:700,fontFamily:"sans-serif",textAlign:"right",outline:"none"}
+                    style:{width:90,padding:"5px 8px",background:"rgba(37,99,235,0.08)",border:"1px solid rgba(37,99,235,0.35)",borderRadius:6,color:"#111827",fontSize:15,fontWeight:700,textAlign:"right",outline:"none"}
                   }),
-                  h("span",{style:{fontSize:13,color:"#4b5563",fontFamily:"sans-serif"}},"%")
+                  h("span",{style:{fontSize:14,color:"#4b5563"}},"%")
                 )
               ),
               h("div",{style:fieldS},
@@ -230,21 +231,21 @@
             )
           ),
 
-          h("div",{style:{display:"flex",flexWrap:"wrap",gap:16,marginTop:4,padding:"10px 14px",background:"rgba(37,99,235,0.05)",borderRadius:8,border:"1px solid rgba(37,99,235,0.12)"}},
+          h("div",{style:{display:"flex",flexWrap:"wrap",gap:20,marginTop:4,padding:"12px 16px",background:"rgba(37,99,235,0.05)",borderRadius:8,border:"1px solid rgba(37,99,235,0.12)"}},
             h("div",null,
-              h("div",{style:{fontSize:11,color:"#4b5563",fontFamily:"sans-serif",marginBottom:2}},"Prestação atual (est.)"),
-              h("div",{style:{fontSize:20,fontWeight:700,color:"#111827",fontFamily:"monospace"}},
+              h("div",{style:{fontSize:12,color:"#4b5563",marginBottom:3,fontWeight:500}},"Prestação atual (est.)"),
+              h("div",{style:{fontSize:22,fontWeight:700,color:"#111827",fontFamily:"monospace"}},
                 isFinite(prestacaoAtual)&&prestacaoAtual>0?fE(prestacaoAtual)+"/mês":"—"
               )
             ),
             h("div",null,
-              h("div",{style:{fontSize:11,color:"#4b5563",fontFamily:"sans-serif",marginBottom:2}},"LTV atual"),
-              h("div",{style:{fontSize:20,fontWeight:700,color:ltvColor,fontFamily:"monospace"}},fP(ltv))
+              h("div",{style:{fontSize:12,color:"#4b5563",marginBottom:3,fontWeight:500}},"LTV atual"),
+              h("div",{style:{fontSize:22,fontWeight:700,color:ltvColor,fontFamily:"monospace"}},fP(ltv))
             ),
             h("div",null,
-              h("div",{style:{fontSize:11,color:"#4b5563",fontFamily:"sans-serif",marginBottom:2}},"Penalização reembolso ant."),
-              h("div",{style:{fontSize:20,fontWeight:700,color:"#111827",fontFamily:"monospace"}},
-                fE(penaltyCost)," ",h("span",{style:{fontSize:11,color:"#4b5563",fontWeight:400}},"("+(penaltyRate*100).toFixed(1).replace(".0","").replace(".",",")+"% do capital)")
+              h("div",{style:{fontSize:12,color:"#4b5563",marginBottom:3,fontWeight:500}},"Penalização reembolso ant."),
+              h("div",{style:{fontSize:22,fontWeight:700,color:"#111827",fontFamily:"monospace"}},
+                fE(penaltyCost)," ",h("span",{style:{fontSize:12,color:"#4b5563",fontWeight:400}},"("+(penaltyRate*100).toFixed(1).replace(".0","").replace(".",",")+"% do capital)")
               )
             )
           )
@@ -262,8 +263,8 @@
         ),
 
         banksFromApi.length===0
-          ?h("div",{style:Object.assign({},cardS,{textAlign:"center",padding:"32px",color:"#4b5563",fontSize:14})},
-              h("div",{style:{marginBottom:8,fontSize:24}},"⏳"),
+          ?h("div",{style:Object.assign({},cardS,{textAlign:"center",padding:"32px",color:"#4b5563",fontSize:15})},
+              h("div",{style:{marginBottom:8,fontSize:26}},"⏳"),
               "A carregar dados dos bancos…"
             )
           :h("div",{style:{overflowX:"auto"}},
@@ -282,7 +283,7 @@
                 ),
                 h("tbody",null,
                   resultados.length===0
-                    ?h("tr",null,h("td",{colSpan:8,style:{padding:"24px",textAlign:"center",color:"#6b7280",fontSize:13,fontFamily:"sans-serif"}},"Nenhum banco elegível para o capital e prazo indicados."))
+                    ?h("tr",null,h("td",{colSpan:8,style:{padding:"24px",textAlign:"center",color:"#6b7280",fontSize:14}},"Nenhum banco elegível para o capital e prazo indicados."))
                     :resultados.map(function(row,idx){
                       var isTop=idx===0&&row.compensador;
                       var rowBg=isTop?"rgba(37,99,235,0.06)":row.compensador&&idx<3?"rgba(22,163,74,0.04)":"#fff";
@@ -294,14 +295,14 @@
                       var eqLabel=!isFinite(eqM)||eqM>=remainingMonths?"Não compensa":(eqM<12?eqM+" meses":(Math.ceil(eqM/12))+"a "+((eqM%12)>0?(eqM%12)+"m":""));
                       return h("tr",{key:row.code,style:{background:rowBg,outline:rowBorder?rowBorder:"none",position:"relative"}},
                         h("td",{style:tdSL},
-                          h("div",{style:{display:"flex",alignItems:"center",gap:7}},
-                            isTop&&h("span",{style:{fontSize:10,color:Au,fontWeight:700,fontFamily:"monospace",whiteSpace:"nowrap"}},"★ "),
-                            h("span",{style:{width:10,height:10,borderRadius:"50%",background:row.color,display:"inline-block",flexShrink:0}}),
-                            h("span",{style:{fontWeight:600,color:"#111827",fontFamily:"sans-serif",fontSize:13}},row.name),
-                            row.refMismatch&&h("span",{style:{fontSize:10,color:"#b45309",fontFamily:"sans-serif",marginLeft:4}},"("+row.useRef+")")
+                          h("div",{style:{display:"flex",alignItems:"center",gap:8}},
+                            isTop&&h("span",{style:{fontSize:12,color:Au,fontWeight:700,fontFamily:"monospace",whiteSpace:"nowrap"}},"★ "),
+                            h("span",{style:{width:11,height:11,borderRadius:"50%",background:row.color,display:"inline-block",flexShrink:0}}),
+                            h("span",{style:{fontWeight:700,color:"#111827",fontSize:15}},row.name),
+                            row.refMismatch&&h("span",{style:{fontSize:11,color:"#b45309",marginLeft:4}},"("+row.useRef+")")
                           )
                         ),
-                        h("td",{style:Object.assign({},tdS,{fontFamily:"monospace",fontSize:12})},
+                        h("td",{style:Object.assign({},tdS,{fontFamily:"monospace",fontSize:13})},
                           fP(row.spread)+(row.ltvAddon>0?" +"+fP(row.ltvAddon)+" LTV":"")
                         ),
                         h("td",{style:Object.assign({},tdS,{fontFamily:"monospace"})},fP(row.newTAN)),
@@ -311,9 +312,9 @@
                         h("td",{style:Object.assign({},tdS,{fontFamily:"monospace",fontWeight:700,color:poupMensal>0?G:R})},
                           poupMensal>0?"+"+fE(poupMensal):fE(poupMensal)
                         ),
-                        h("td",{style:Object.assign({},tdS,{fontFamily:"monospace",fontSize:12})},
+                        h("td",{style:Object.assign({},tdS,{fontFamily:"monospace",fontSize:13})},
                           h("div",null,fE(row.custoTransf)),
-                          h("div",{style:{fontSize:10,color:"#6b7280"}},"penal. "+fE(penaltyCost)+" + comis. "+fE(row.setupCosts))
+                          h("div",{style:{fontSize:11,color:"#6b7280",marginTop:2}},"penal. "+fE(penaltyCost)+" + comis. "+fE(row.setupCosts))
                         ),
                         h("td",{style:Object.assign({},tdS,{fontWeight:700,color:eqColor,fontFamily:"monospace"})},eqLabel),
                         h("td",{style:Object.assign({},tdS,{fontWeight:700,color:poupTotal>0?G:R,fontFamily:"monospace"})},
@@ -325,11 +326,11 @@
               )
             ),
 
-        h("div",{style:{marginTop:18,padding:"10px 14px",background:"rgba(0,0,0,0.03)",borderRadius:8,fontSize:11,color:"#6b7280",fontFamily:"sans-serif",lineHeight:1.6}},
+        h("div",{style:{marginTop:18,padding:"12px 16px",background:"rgba(0,0,0,0.03)",borderRadius:8,fontSize:12,color:"#6b7280",lineHeight:1.7}},
           h("strong",null,"Nota: "),"Simulação indicativa. A penalização legal por reembolso antecipado é 0,5% do capital em dívida para taxas variáveis/mistas e 2% para taxas fixas (DL 74-A/2017). Os custos de transferência incluem a penalização e as comissões estimadas do novo banco (abertura de dossier, avaliação e minutas). Seguros, TAEG e outros encargos não estão incluídos. Consulte a FINE de cada banco antes de decidir. ",
           h("button",{
             onClick:function(){window.location.href="/";},
-            style:{background:"none",border:"none",color:Au,cursor:"pointer",fontWeight:600,fontSize:11,fontFamily:"sans-serif",textDecoration:"underline",padding:0}
+            style:{background:"none",border:"none",color:Au,cursor:"pointer",fontWeight:600,fontSize:12,textDecoration:"underline",padding:0}
           },"Ver simulador completo →")
         )
       )
