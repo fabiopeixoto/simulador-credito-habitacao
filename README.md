@@ -1,6 +1,6 @@
 # Simulador Crédito Habitação Portugal
 
-Aplicação web para **simular e comparar** crédito habitação em Portugal: prestação, TAEG, MTIC, DSTI, cenários de Euribor, amortizações, custos iniciais e comentários da comunidade. O frontend é uma **SPA React** embutida em `index.html`; o backend é um servidor HTTP minimalista em Node.js com APIs REST e **SQLite** (`better-sqlite3`).
+Aplicação web para **simular e comparar** crédito habitação em Portugal: prestação, TAEG, MTIC, DSTI, cenários de Euribor, amortizações, custos iniciais e comentários da comunidade. O frontend é uma **SPA React** servida como ficheiros estáticos separados (sem build step); o backend é um servidor HTTP minimalista em Node.js com APIs REST e **SQLite** (`better-sqlite3`).
 
 > Simulação meramente **indicativa**. Confirmar sempre as condições na **FINE** e na proposta do banco.
 
@@ -11,11 +11,13 @@ Aplicação web para **simular e comparar** crédito habitação em Portugal: pr
 - Comparação entre **13 bancos** (dados editáveis na base com valores seed).
 - Modos **crédito normal** e **crédito jovem** (regras BdP, LTV, finalidade HPP / 2.ª habitação / arrendamento).
 - Taxa **variável, mista ou fixa**; vários indexantes Euribor onde aplicável.
-- **Euribor** (3m / 6m / 12m) obtido via **API do BCE** (CSV), com cache no servidor.
+- **Euribor** (3m / 6m / 12m) obtido via **API do BCE** (CSV), com cache em memória e persistência SQLite.
 - **Spreads e comissões** lidos da API `GET /api/banks` com fallback local em caso de falha de rede.
 - Gráficos e tabelas (cenários Euribor, barras de prestação, amortização, seguros, etc.).
 - **Partilha por URL**, histórico local (localStorage), secção de **comentários** com respostas.
-- **PWA**: `manifest.json`, `icon.svg`, Service Worker (`sw.js`) com cache de assets; pedidos `GET /api/*` **não** são cacheados pelo SW.
+- **Calculadora inversa** (`/quanto-posso-pedir.html`): capital máximo dado rendimento, DSTI e taxa.
+- **Histórico** (`/historico.html`): gráfico da Euribor BCE (3m/6m/12m) e evolução de spreads por banco.
+- **PWA**: `manifest.json`, `icon.svg`, Service Worker (`sw.js`) com precache de assets; pedidos `GET /api/*` **não** são cacheados pelo SW.
 
 ---
 
@@ -26,7 +28,7 @@ Aplicação web para **simular e comparar** crédito habitação em Portugal: pr
 | Runtime | Node.js 20 |
 | Servidor | `server.js` — `http.createServer`, ficheiros estáticos, **Brotli/Gzip** quando o cliente aceita |
 | Base de dados | SQLite em `data/` (vários ficheiros; ver abaixo) |
-| Frontend | React compilado num único `index.html` (sem build step no repo) |
+| Frontend | React servido em ficheiros separados e cacheados (`react-runtime.js`, `app.js`, etc.) — sem build step |
 | Container | `Dockerfile` — `node:20-slim`, `npm install --production`, `CMD node server.js` |
 
 ---
@@ -34,23 +36,41 @@ Aplicação web para **simular e comparar** crédito habitação em Portugal: pr
 ## Estrutura do repositório
 
 ```text
-├── index.html           # App React (bundle), meta tags e HTML estático inicial
-├── admin.html           # Painel admin (gestão de bancos e spreads; token no cabeçalho)
-├── server.js            # Encaminhamento estático + APIs
-├── sw.js                # Service Worker (cache v5)
-├── manifest.json        # PWA
+├── index.html               # Página inicial — carrega react-runtime + app + index-mount
+├── quanto-posso-pedir.html  # Calculadora inversa (capital máximo por rendimento)
+├── historico.html           # Histórico Euribor BCE + spreads por banco
+├── admin.html               # Painel admin (bancos, spreads, comentários, estatísticas)
+├── server.js                # Encaminhamento estático + APIs
+├── sw.js                    # Service Worker (precache de assets)
+├── manifest.json            # PWA
 ├── icon.svg, og-image.svg
+│
+├── react-runtime.js         # React + ReactDOM (imutável, partilhado entre páginas)
+├── recharts-polyfill.js     # Polyfill SVG Recharts (imutável)
+├── app.js                   # Componente App principal + utilitários
+├── index-mount.js           # Mount do App na página inicial + registo SW
+├── inversa-bootstrap.js     # Globals partilhados (_SIM): utilitários, constantes, SliderInput
+├── page-header.js           # NavHeader partilhado (Euribor badges + tabs de navegação)
+├── reverse-calc-page.js     # Componente da calculadora inversa
+├── inversa-mount.js         # Mount da calculadora inversa
+├── historico-page.js        # Componente da página de histórico
+├── historico-mount.js       # Mount da página de histórico
+├── comments-modal.js        # Modal de comentários (partilhado entre páginas)
+│
 ├── api/
-│   ├── banks.js         # CRUD bancos/spreads, Euribor, seed SQLite
-│   ├── spreads.js       # POST: Anthropic + BCE, cache/rate limit
-│   └── comments.js      # Comentários + respostas (SQLite)
-├── data/                # Criado em runtime — SQLite (persistente em Docker volume)
+│   ├── banks.js             # CRUD bancos/spreads, Euribor, seed SQLite; ETag em GET
+│   ├── spreads.js           # POST: Anthropic + BCE, cache/rate limit
+│   ├── comments.js          # Comentários + respostas (SQLite, cache 30s, UUID)
+│   ├── stats.js             # Estatísticas de visitas + localização por cidade
+│   └── euribor-history.js   # Histórico BCE (3m/6m/12m) com cache SQLite
+│
+├── data/                    # Criado em runtime — SQLite (persistente em Docker volume)
 ├── scripts/
 │   └── download-precarios-bancos.sh   # Descarrega PDFs listados em reference/
 ├── reference/precarios-pdf/           # Metadados JSON + PDFs locais (opcional / manual)
-├── Jenkinsfile          # CI/CD Docker + deploy + Discord
+├── Jenkinsfile              # CI/CD Docker + deploy + Discord
 ├── Dockerfile
-├── AUDITORIA.md         # Template para validar resultados vs simuladores oficiais
+├── AUDITORIA.md             # Template para validar resultados vs simuladores oficiais
 └── README.md
 ```
 
@@ -66,6 +86,7 @@ Público. Devolve `{ banks, euribor }`:
 
 - **`banks`**: lista de bancos activos com `spreads` mais recentes por banco.
 - **`euribor`**: objecto em cache (servidor refresca a partir do BCE quando expira TTL ~6 h).
+- Suporta **ETag** (`If-None-Match`) baseado nos timestamps de spreads, Euribor e metadados de bancos — devolve `304` quando nada mudou.
 
 Query opcional:
 
@@ -83,12 +104,20 @@ Requer **`x-admin-token`**. Desactiva o banco (`active = 0`).
 
 ---
 
+### `GET /api/euribor-history`
+
+Público. Devolve `{ "3m": [{date, value}], "6m": […], "12m": […] }` — série histórica desde 2015 obtida da **API do BCE**.
+
+Cache em memória + persistência em `banks.sqlite` (`kv_store`) com TTL 6 h. Após o primeiro fetch bem-sucedido, respostas a cold-starts são imediatas.
+
+---
+
 ### `POST /api/spreads`
 
 Actualização massiva via **Anthropic** (modelo configurado em código) + Euribor BCE.
 
 - **Com `x-admin-token` válido**: ignora cache e limites diários (uso administrativo / Jenkins).
-- **Sem token**: **rate limit** por IP (~20 pedidos/h) e **limite global** ~2 chamadas “frescas” ao modelo por dia por instância (com cache SQLite ~25 h e cache em memória). Serve dados em cache quando excede limites.
+- **Sem token**: **rate limit** por IP (~20 pedidos/h) e **limite global** ~2 chamadas "frescas" ao modelo por dia por instância (com cache SQLite ~25 h e cache em memória). Serve dados em cache quando excede limites.
 
 Persistência: grava spreads em `banks.sqlite` via `bulkInsertSpreads`; Euribor também em cache (`banks.js`).
 
@@ -100,10 +129,31 @@ Variável obrigatória no servidor: **`ANTHROPIC_API_KEY`**.
 
 | Método | Auth | Descrição |
 |--------|------|-----------|
-| `GET` | — | Lista até 100 comentários raiz com `replies` encadeadas. |
-| `POST` | — | Novo comentário ou resposta (`parentId`). Texto 5–500 caracteres. |
+| `GET` | — | Lista até 100 comentários raiz com `replies` encadeadas. Cache em memória de 30 s, invalidado em escrita. |
+| `POST` | — | Novo comentário ou resposta (`parentId`). Texto 5–500 caracteres. IDs gerados com `crypto.randomUUID()`. |
 | `DELETE` | `x-admin-token` | Apaga por `?id=` (inclui respostas ao mesmo id). |
 | `GET ?debug=1&secret=` | `DEBUG_SECRET` | Diagnóstico SQLite (uso interno). |
+
+---
+
+### `GET /api/stats`
+
+Requer **`x-admin-token`**. Devolve:
+
+```json
+{
+  "homepageTotal": 12345,
+  "adminTotal": 42,
+  "today": { "date": "2025-05-17", "homepage": 80, "admin": 2 },
+  "recordedSince": "2025-01-01",
+  "last7Days": [ { "day": "…", "homepage": 0, "admin": 0 } ],
+  "commentsTotal": 99,
+  "locations": [ { "city": "Lisboa", "country_code": "PT", "country_name": "Portugal", "count": 500 } ],
+  "generatedAt": "…"
+}
+```
+
+`locations` mostra as cidades de origem dos visitantes da página inicial (top 100 por contagem), obtidas via [ip-api.com](http://ip-api.com) em background. Os IPs nunca são persistidos — apenas cidade + código do país ficam em `stats.sqlite`.
 
 ---
 
@@ -123,8 +173,8 @@ Variável obrigatória no servidor: **`ANTHROPIC_API_KEY`**.
 - Lista de bancos com ícones (favicon por domínio), edição de spreads/comissões, histórico por banco.
 - Botão **Actualizar spreads via AI** chama `POST /api/spreads` com o token introduzido na página.
 - Operações sensíveis enviam **`x-admin-token`** no header.
-- **Estatísticas** (`GET /api/stats`, token no header): visitas cumulativas e por dia (UTC) à página inicial e ao painel; tabela dos últimos 7 dias; contagem de linhas de comentários. Persistido em `data/stats.sqlite`. Após **Carregar** com token.
-- **Moderação de comentários** (`DELETE /api/comments`): lista e apagar na própria página admin, abaixo dos bancos, após validar o token com **Carregar** (não há moderação na app principal).
+- **Estatísticas** (`GET /api/stats`): visitas cumulativas e por dia (UTC); tabela dos últimos 7 dias; contagem de comentários; tabela **"🌍 Localização dos visitantes"** com cidade, país e número de visitas.
+- **Moderação de comentários** (`DELETE /api/comments`): lista e apagar na própria página admin.
 
 ---
 
@@ -178,9 +228,10 @@ O ambiente de exemplo publica com **`-p 3999:3000`** (host 3999 → app 3000). A
 
 | Ficheiro | Conteúdo |
 |----------|----------|
-| `banks.sqlite` | Tabelas `banks`, `spreads` (histórico por `fetched_at`), `kv_store` (cache Euribor) |
+| `banks.sqlite` | Tabelas `banks`, `spreads` (histórico por `fetched_at`), `kv_store` (cache Euribor + histórico BCE) |
 | `spreads.sqlite` | Cache KV / contadores para limites do endpoint Anthropic |
 | `comments.sqlite` | Comentários e respostas |
+| `stats.sqlite` | Visitas diárias (`daily`), totais (`meta`), localização por cidade (`visitor_locations`) |
 
 ---
 
