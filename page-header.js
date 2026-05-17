@@ -37,7 +37,7 @@
       h("button",{
         onClick:activePage==="transferencia"?undefined:function(){window.location.href="/transferencia.html";},
         style:activePage==="transferencia"?navActive:navBase
-      },"🔄 Transferência"),
+      },"🔄 Transferência de Crédito"),
       h("button",{
         onClick:activePage==="historico"?undefined:function(){window.location.href="/historico.html";},
         style:activePage==="historico"?navActive:navBase
@@ -66,7 +66,7 @@
         h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8,paddingBottom:10}},
           h("div",null,
             h("a",{href:"/",style:{display:"flex",alignItems:"center",gap:8,textDecoration:"none",color:"inherit"}},
-              h("img",{src:"/images/logo.png",alt:"Simulador Crédito Habitação",style:{height:40,width:"auto",flexShrink:0,mixBlendMode:"multiply"}}),
+              h("img",{src:"/images/logo.png",alt:"Simulador Crédito Habitação",style:{height:40,width:"auto",flexShrink:0}}),
               h("h1",{style:{margin:0,fontSize:21,fontWeight:700,color:"#111827",letterSpacing:-0.3,fontFamily:"'Inter',system-ui,sans-serif"}},"Simulador Crédito Habitação")
             ),
             h("div",{style:{fontSize:11,color:"#4b5563",fontFamily:"sans-serif",marginTop:2}},"Portugal · 13 bancos · Euribor em tempo real"),
