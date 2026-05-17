@@ -19,9 +19,54 @@ try {
       key TEXT PRIMARY KEY,
       value INTEGER NOT NULL DEFAULT 0
     );
+    CREATE TABLE IF NOT EXISTS visitor_locations (
+      city         TEXT NOT NULL,
+      country_code TEXT NOT NULL,
+      country_name TEXT NOT NULL DEFAULT '',
+      count        INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (city, country_code)
+    );
   `);
 } catch (e) {
   console.error("stats.js: SQLite init:", e.message);
+}
+
+const _ipCache = new Map();
+const _pending = new Set();
+
+function incrementLocation(city, countryCode, countryName) {
+  if (!sqliteDb || !city || !countryCode) return;
+  sqliteDb.prepare(`
+    INSERT INTO visitor_locations (city, country_code, country_name, count) VALUES (?, ?, ?, 1)
+    ON CONFLICT(city, country_code) DO UPDATE SET count = count + 1, country_name = excluded.country_name
+  `).run(city, countryCode, countryName || countryCode);
+}
+
+async function recordVisitorLocation(ip) {
+  if (!sqliteDb || !ip || ip === '::1' || ip === '127.0.0.1' || ip === 'unknown') return;
+  if (_ipCache.has(ip)) {
+    const loc = _ipCache.get(ip);
+    if (loc) incrementLocation(loc.city, loc.country_code, loc.country_name);
+    return;
+  }
+  if (_pending.has(ip)) return;
+  _pending.add(ip);
+  try {
+    const r = await fetch(
+      `http://ip-api.com/json/${encodeURIComponent(ip)}?fields=status,city,regionName,country,countryCode`,
+      { signal: AbortSignal.timeout(5000) }
+    );
+    const d = await r.json();
+    if (d.status === 'success') {
+      const loc = { city: d.city || d.regionName || '?', country_code: d.countryCode, country_name: d.country };
+      if (_ipCache.size >= 50000) _ipCache.clear();
+      _ipCache.set(ip, loc);
+      incrementLocation(loc.city, loc.country_code, loc.country_name);
+    } else {
+      _ipCache.set(ip, null);
+    }
+  } catch (_) { /* não cacheado em erro — tenta de novo na próxima visita */ }
+  finally { _pending.delete(ip); }
 }
 
 function utcToday() {
@@ -117,6 +162,10 @@ function getSnapshot() {
     }));
   }
 
+  const locations = sqliteDb
+    ? sqliteDb.prepare(`SELECT city, country_code, country_name, count FROM visitor_locations ORDER BY count DESC LIMIT 100`).all()
+    : [];
+
   return {
     homepageTotal: metaNum("homepage_total"),
     adminTotal: metaNum("admin_total"),
@@ -124,6 +173,7 @@ function getSnapshot() {
     recordedSince,
     last7Days,
     commentsTotal: countCommentsReadonly(),
+    locations,
     generatedAt: new Date().toISOString(),
   };
 }
@@ -149,3 +199,4 @@ module.exports = async function handler(req, res) {
 
 module.exports.recordHomepageView = recordHomepageView;
 module.exports.recordAdminPageView = recordAdminPageView;
+module.exports.recordVisitorLocation = recordVisitorLocation;
