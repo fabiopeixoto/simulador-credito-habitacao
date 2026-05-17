@@ -244,7 +244,7 @@
             h("div",null,
               h("div",{style:{fontSize:11,color:"#4b5563",fontFamily:"sans-serif",marginBottom:2}},"Penalização reembolso ant."),
               h("div",{style:{fontSize:20,fontWeight:700,color:"#111827",fontFamily:"monospace"}},
-                fE(penaltyCost)," ",h("span",{style:{fontSize:11,color:"#4b5563",fontWeight:400}},"("+Math.round(penaltyRate*100)+"% do capital)")
+                fE(penaltyCost)," ",h("span",{style:{fontSize:11,color:"#4b5563",fontWeight:400}},"("+(penaltyRate*100).toFixed(1).replace(".0","").replace(".",",")+"% do capital)")
               )
             )
           )
