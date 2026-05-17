@@ -8,7 +8,7 @@ const PRECACHE = [
   "/historico.html",
   "/manifest.json",
   "/icon.svg",
-  "/logo.png",
+  "/images/logo.png",
   "/react-runtime.js?v=1",
   "/recharts-polyfill.js?v=1",
   "/app.js?v=1",
