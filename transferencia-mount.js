@@ -11,6 +11,7 @@
   var useEffect=React.useEffect;
   var h=React.createElement;
   var CommentsModal=window.CommentsModal||function(){return null;};
+  var GlossarioModal=window.GlossarioModal||null;
 
   function mergeEurFromApi(raw){
     var fe=window._SIM.FALLBACK_EUR;
@@ -31,6 +32,8 @@
     var banks=_b[0]; var setBanks=_b[1];
     var _sc=useState(false);
     var showComments=_sc[0]; var setShowComments=_sc[1];
+    var _sg=useState(false);
+    var showGlossario=_sg[0]; var setShowGlossario=_sg[1];
     var _scom=useState([]);
     var comments=_scom[0]; var setComments=_scom[1];
 
@@ -76,11 +79,15 @@
         banks:banks,
         commentCount:commentTotal,
         onOpenComments:function(){setShowComments(true);},
+        onOpenGlossario:function(){setShowGlossario(true);},
       }),
       showComments&&h(CommentsModal,{
         onClose:function(){setShowComments(false);},
         comments:comments,
         setComments:setComments,
+      }),
+      showGlossario&&GlossarioModal&&h(GlossarioModal,{
+        onClose:function(){setShowGlossario(false);},
       })
     );
   }
