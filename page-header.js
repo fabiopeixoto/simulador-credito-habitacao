@@ -8,10 +8,48 @@
   var FALLBACK_EUR=window._SIM.FALLBACK_EUR;
   var EUR_COLORS=window._SIM.EUR_COLORS;
 
+  var navBase={flex:1,padding:"9px",border:"none",background:"rgba(255,255,255,1)",borderBottom:"2px solid transparent",color:"#4b5563",fontSize:13,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600};
+  var navActive={flex:1,padding:"9px",border:"none",background:"rgba(37,99,235,0.08)",borderBottom:"2px solid "+Au,color:Au,fontSize:13,fontFamily:"sans-serif",cursor:"default",fontWeight:600};
+
   /**
+   * Barra de navegação partilhada por todas as páginas.
    * Props:
-   *   EUR           {3m:{valor,data}, 6m:..., 12m:...}  — normalized badge values
-   *   activePage    "inversa" | "historico"
+   *   activePage     "simulador" | "inversa" | "transferencia" | "historico"
+   *   commentCount   number
+   *   onOpenComments function
+   */
+  function NavTabs(props){
+    var activePage=props.activePage||"";
+    var commentCount=props.commentCount||0;
+    var onOpenComments=props.onOpenComments||function(){};
+    return h("div",{style:{display:"flex",borderRadius:9,overflow:"hidden",border:"1px solid rgba(0,0,0,0.07)"}},
+      h("button",{
+        onClick:activePage==="simulador"?undefined:function(){window.location.href="/";},
+        style:activePage==="simulador"?navActive:navBase
+      },"🏠 Simulador"),
+      h("button",{onClick:onOpenComments,style:{flex:1,padding:"9px",border:"none",background:"rgba(255,255,255,1)",borderBottom:"2px solid transparent",color:"#4b5563",fontSize:13,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600}},
+        "💬 Comentários"+(commentCount>0?" ("+commentCount+")":"")
+      ),
+      h("button",{
+        onClick:activePage==="inversa"?undefined:function(){window.location.href="/quanto-posso-pedir.html";},
+        style:activePage==="inversa"?navActive:navBase
+      },"💰 Quanto Posso Pedir?"),
+      h("button",{
+        onClick:activePage==="transferencia"?undefined:function(){window.location.href="/transferencia.html";},
+        style:activePage==="transferencia"?navActive:navBase
+      },"🔄 Transferência"),
+      h("button",{
+        onClick:activePage==="historico"?undefined:function(){window.location.href="/historico.html";},
+        style:activePage==="historico"?navActive:navBase
+      },"📈 Histórico")
+    );
+  }
+
+  /**
+   * Cabeçalho completo (logo + Euribor + NavTabs).
+   * Props:
+   *   EUR           {3m:{valor,data}, 6m:..., 12m:...}
+   *   activePage    string — passado ao NavTabs
    *   commentCount  number
    *   onOpenComments function
    *   subtitle      string shown below the nav bar
@@ -22,9 +60,6 @@
     var commentCount=props.commentCount||0;
     var onOpenComments=props.onOpenComments||function(){};
     var subtitle=props.subtitle||"";
-
-    var navBase={flex:1,padding:"9px",border:"none",background:"rgba(255,255,255,1)",borderBottom:"2px solid transparent",color:"#4b5563",fontSize:13,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600};
-    var navActive={flex:1,padding:"9px",border:"none",background:"rgba(37,99,235,0.08)",borderBottom:"2px solid "+Au,color:Au,fontSize:13,fontFamily:"sans-serif",cursor:"default",fontWeight:600};
 
     return h("div",{style:{background:"linear-gradient(135deg,#ffffff 0%,#eff6ff 55%,#ffffff 100%)",borderBottom:"1px solid rgba(37,99,235,0.4)",padding:"10px 16px 0"}},
       h("div",{style:{maxWidth:1440,margin:"0 auto"}},
@@ -48,26 +83,12 @@
             )
           )
         ),
-        h("div",{style:{display:"flex",borderRadius:9,overflow:"hidden",border:"1px solid rgba(0,0,0,0.07)"}},
-          h("button",{onClick:function(){window.location.href="/";},style:navBase},"🏠 Simulador"),
-          h("button",{onClick:onOpenComments,style:{flex:1,padding:"9px",border:"none",background:"rgba(255,255,255,1)",borderBottom:"2px solid transparent",color:"#4b5563",fontSize:13,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600}},"💬 Comentários"+(commentCount>0?" ("+commentCount+")":"")),
-          h("button",{
-            onClick:activePage==="inversa"?undefined:function(){window.location.href="/quanto-posso-pedir.html";},
-            style:activePage==="inversa"?navActive:navBase
-          },"💰 Quanto Posso Pedir?"),
-          h("button",{
-            onClick:activePage==="transferencia"?undefined:function(){window.location.href="/transferencia.html";},
-            style:activePage==="transferencia"?navActive:navBase
-          },"🔄 Transferência"),
-          h("button",{
-            onClick:activePage==="historico"?undefined:function(){window.location.href="/historico.html";},
-            style:activePage==="historico"?navActive:navBase
-          },"📈 Histórico")
-        ),
+        h(NavTabs,{activePage:activePage,commentCount:commentCount,onOpenComments:onOpenComments}),
         subtitle&&h("div",{style:{fontSize:11,color:"#4b5563",paddingBottom:10}},subtitle)
       )
     );
   }
 
+  window.NavTabs=NavTabs;
   window.PageHeader=PageHeader;
 })();
