@@ -4,7 +4,7 @@
   const{fE,fP,SliderInput,CONTRATO_FACTOR,FALLBACK_EUR,G,Au,R,N,Sky,useState,EUR_COLORS}=window._SIM;
   const React=window.React;
 
-function ReverseCalcPage({onBack,onSimulate,onOpenComments,EUR}){
+function ReverseCalcPage({onBack,onSimulate,onOpenComments,commentCount,EUR}){
   const[mJ,setMJ]=useState(false);
   const[tit,setTit]=useState(1);
   const[r1,setR1]=useState(1500);
@@ -44,27 +44,10 @@ function ReverseCalcPage({onBack,onSimulate,onOpenComments,EUR}){
   const secS={background:"rgba(0,0,0,0.03)",border:"1px solid rgba(37,99,235,0.16)",borderRadius:11,padding:"13px 14px"};
   const secTitleS={fontSize:11,letterSpacing:3,color:Au,fontFamily:"monospace",marginBottom:10};
   return React.createElement("div",{style:{fontFamily:"'Inter',system-ui,sans-serif",background:N,minHeight:"100vh",color:"#111827"}},
-    React.createElement("div",{style:{background:"linear-gradient(135deg,#ffffff 0%,#eff6ff 55%,#ffffff 100%)",borderBottom:"1px solid rgba(37,99,235,0.4)",padding:"10px 16px"}},
-      React.createElement("div",{style:{maxWidth:1440,margin:"0 auto",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}},
-        React.createElement("div",null,
-          React.createElement("div",{style:{display:"flex",borderRadius:9,overflow:"hidden",border:"1px solid rgba(0,0,0,0.07)",marginBottom:6}},React.createElement("button",{onClick:onBack,style:{flex:1,padding:"9px",border:"none",background:"rgba(255,255,255,1)",borderBottom:"2px solid transparent",color:"#4b5563",fontSize:13,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600}},"🏠 Simulador"),React.createElement("button",{onClick:onOpenComments,style:{flex:1,padding:"9px",border:"none",background:"rgba(255,255,255,1)",borderBottom:"2px solid transparent",color:"#4b5563",fontSize:13,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600}},"💬 Comentários"),React.createElement("button",{style:{flex:1,padding:"9px",border:"none",background:"rgba(37,99,235,0.08)",borderBottom:"2px solid "+Au,color:Au,fontSize:13,fontFamily:"sans-serif",cursor:"default",fontWeight:600}},"🔄 Calculadora Inversa")),
-          React.createElement("div",{style:{fontSize:11,color:"#4b5563"}},"Descobre o capital máximo que podes pedir com base na tua capacidade financeira · Indicativo")
-        ),
-        React.createElement("div",{style:{display:"flex",gap:5,flexWrap:"wrap"}},
-          ["3m","6m","12m"].map(k=>{
-            const v=EUR[k]||FALLBACK_EUR[k];
-            const[ec,ebg]=EUR_COLORS[k];
-            return React.createElement("div",{key:k,style:{display:"flex",alignItems:"center",gap:4,padding:"3px 9px",background:ebg,borderRight:"1px solid rgba(0,0,0,0.04)",borderRadius:4}},
-              React.createElement("span",{style:{color:ec,fontWeight:700,fontSize:10,fontFamily:"monospace",letterSpacing:1}},"EUR "+k.toUpperCase()),
-              React.createElement("span",{style:{color:"#111827",fontSize:13,fontWeight:700,fontFamily:"monospace"}},v.valor.toFixed(3).replace(".",",")+"%")
-            );
-          })
-        )
-      )
-    ),
+    React.createElement(window.PageHeader||function(){return null;},{EUR:EUR,activePage:"inversa",commentCount:commentCount,onOpenComments:onOpenComments,subtitle:"Descobre o capital máximo que podes pedir com base na tua capacidade financeira · Indicativo"}),
     React.createElement("div",{style:{maxWidth:1440,margin:"0 auto",padding:"12px 14px"}},
       React.createElement("div",{style:{display:"flex",borderRadius:9,overflow:"hidden",border:"1px solid rgba(0,0,0,0.07)",marginBottom:10}},
-        [{id:false,icon:"🏠",label:"Crédito Normal (LTV 80%)",c:Au},{id:true,icon:"🎓",label:"Crédito Jovem ≤35a",c:G}].map(({id,icon,label,c})=>
+        [{id:false,icon:"🏦",label:"Crédito Normal (LTV 80%)",c:Au},{id:true,icon:"🎓",label:"Crédito Jovem ≤35a",c:G}].map(({id,icon,label,c})=>
           React.createElement("button",{key:String(id),onClick:()=>{setMJ(id);setJovemLTV(0.9);},style:{flex:1,padding:"9px",border:"none",background:mJ===id?"rgba("+(id?"74,222,128":"201,168,76")+",0.08)":"rgba(255,255,255,1)",borderBottom:"2px solid "+(mJ===id?c:"transparent"),color:mJ===id?c:"#4b5563",fontSize:13,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600}},icon+" "+label)
         )
       ),
@@ -173,7 +156,7 @@ function ReverseCalcPage({onBack,onSimulate,onOpenComments,EUR}){
             React.createElement("div",{style:{fontSize:10,color:"#6b7280",marginTop:2}},"BdP: máx. 40a (idade ≤ 30 anos)")
           ),
           React.createElement("div",{style:{background:"rgba(37,99,235,0.06)",border:"1px solid rgba(37,99,235,0.25)",borderRadius:9,padding:14,marginTop:4}},
-            React.createElement("div",{style:{fontSize:10,color:Au,fontFamily:"monospace",letterSpacing:2,marginBottom:12}},"RESULTADO CALCULADORA INVERSA"),
+            React.createElement("div",{style:{fontSize:10,color:Au,fontFamily:"monospace",letterSpacing:2,marginBottom:12}},"RESULTADO — QUANTO POSSO PEDIR?"),
             React.createElement("div",{style:{marginBottom:10}},
               React.createElement("div",{style:{fontSize:11,color:"#4b5563"}},"Capital máximo que podes pedir"),
               React.createElement("div",{style:{fontSize:28,fontWeight:700,color:capMax>0?Au:R,lineHeight:1.1}},fE(capMax)),

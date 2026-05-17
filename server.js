@@ -9,6 +9,7 @@ const spreadsHandler = require(path.join(root, "api", "spreads.js"));
 const commentsHandler = require(path.join(root, "api", "comments.js"));
 const banksHandler = require(path.join(root, "api", "banks.js"));
 const statsHandler = require(path.join(root, "api", "stats.js"));
+const euriborHistoryHandler = require(path.join(root, "api", "euribor-history.js"));
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
@@ -134,6 +135,14 @@ const server = http.createServer(async (req, res) => {
 
     const requestUrl = new URL(req.url, `http://${req.headers.host}`);
     const pathname = requestUrl.pathname;
+
+    if (pathname === "/api/euribor-history") {
+      if (!["GET", "OPTIONS"].includes(req.method)) {
+        res.writeHead(405, { Allow: "GET", "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({ error: "Método não suportado" }));
+      }
+      return runApiHandler(req, res, requestUrl, euriborHistoryHandler);
+    }
 
     if (pathname === "/api/spreads") {
       if (req.method !== "POST") {

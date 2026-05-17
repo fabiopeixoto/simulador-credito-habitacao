@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const { randomUUID } = require("crypto");
 
 // ── SQLite ────────────────────────────────────────────────────────────────
 let sqliteDb = null;
@@ -35,12 +36,21 @@ try {
 }
 
 const MAX_COMMENTS = 100;
+const TREE_CACHE_TTL = 30 * 1000;
+
+let _treeCache = null;
+let _treeCacheAt = 0;
+
+function invalidateTreeCache() {
+  _treeCache = null;
+}
 
 function hasSqlite() {
   return !!sqliteDb;
 }
 
 async function listComments() {
+  if (_treeCache && Date.now() - _treeCacheAt < TREE_CACHE_TTL) return _treeCache;
   if (!hasSqlite()) return [];
   const rows = sqliteDb
     .prepare("SELECT id, ts, name, text, bank, simPt, realPt, parentId FROM comments ORDER BY ts DESC LIMIT ?")
@@ -63,6 +73,8 @@ async function listComments() {
   });
   roots.sort((a, b) => b.ts - a.ts);
   roots.forEach((comment) => comment.replies.sort((a, b) => a.ts - b.ts));
+  _treeCache = roots;
+  _treeCacheAt = Date.now();
   return roots;
 }
 
@@ -89,12 +101,14 @@ async function insertComment(comment) {
     trimOrphanReplies.run();
   });
   tx(comment);
+  invalidateTreeCache();
   return true;
 }
 
 async function deleteCommentById(id) {
   if (!hasSqlite()) return false;
   sqliteDb.prepare("DELETE FROM comments WHERE id = ? OR parentId = ?").run(id, id);
+  invalidateTreeCache();
   return true;
 }
 
@@ -159,7 +173,7 @@ module.exports = async function handler(req, res) {
     };
 
     const comment = {
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+      id: randomUUID(),
       ts: Date.now(),
       name: (typeof name === "string" ? name.trim().slice(0, 50) : "") || "Anónimo",
       text: t.slice(0, 500),

@@ -13,6 +13,8 @@
 
   var useState = React.useState;
   var useEffect = React.useEffect;
+  var useCallback = React.useCallback;
+  var h = React.createElement;
 
   function buildSimUrl(cap, params) {
     var p = params || {};
@@ -61,6 +63,8 @@
     };
   }
 
+  var CommentsModal = window.CommentsModal || function () { return null; };
+
   function InversaRoot() {
     var fe = window._SIM.FALLBACK_EUR;
     var _u = useState({
@@ -71,40 +75,58 @@
     var EUR = _u[0];
     var setEUR = _u[1];
 
+    var _sc = useState(false);
+    var showComments = _sc[0];
+    var setShowComments = _sc[1];
+
+    var _scom = useState([]);
+    var comments = _scom[0];
+    var setComments = _scom[1];
+
+    var commentTotal = comments.reduce(function(t,c){return t+1+((c.replies||[]).length);},0);
+
     useEffect(function () {
       var alive = true;
       fetch("/api/banks")
-        .then(function (r) {
-          return r.ok ? r.json() : null;
-        })
+        .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (raw) {
           if (!alive || !raw) return;
-          try {
-            setEUR(mergeEurFromApi(raw));
-          } catch (_) {}
+          try { setEUR(mergeEurFromApi(raw)); } catch (_) {}
         })
         .catch(function () {});
-      return function () {
-        alive = false;
-      };
+      return function () { alive = false; };
     }, []);
 
-    return React.createElement(window.ReverseCalcPage, {
-      EUR: EUR,
-      onBack: function () {
-        window.location.href = "/";
-      },
-      onOpenComments: function () {
-        window.location.href = "/?comments=1";
-      },
-      onSimulate: function (cap, params) {
-        window.location.href = buildSimUrl(cap, params);
-      },
-    });
+    useEffect(function () {
+      var alive = true;
+      fetch("/api/comments")
+        .then(function (r) { return r.ok ? r.json() : []; })
+        .then(function (data) {
+          if (!alive) return;
+          setComments(function (prev) { return prev.length > 0 ? prev : data; });
+        })
+        .catch(function () {});
+      return function () { alive = false; };
+    }, []);
+
+    return h(React.Fragment, null,
+      h(window.ReverseCalcPage, {
+        EUR: EUR,
+        commentCount: commentTotal,
+        onBack: function () { window.location.href = "/"; },
+        onOpenComments: function () { setShowComments(true); },
+        onSimulate: function (cap, params) { window.location.href = buildSimUrl(cap, params); },
+      }),
+      showComments && h(CommentsModal, {
+        onClose: function () { setShowComments(false); },
+        comments: comments,
+        setComments: setComments,
+      })
+    );
   }
 
   var el = document.getElementById("root");
   if (!el) return;
   var root = ReactDOM.createRoot(el);
-  root.render(React.createElement(InversaRoot, null));
+  root.render(h(InversaRoot, null));
 })();
