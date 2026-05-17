@@ -10,7 +10,7 @@
   "categories": ["finance"],
   "prefer_related_applications": false,
   "icons": [
-    { "src": "/icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
-    { "src": "/icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "maskable" }
+    { "src": "/favicon.png", "type": "image/png", "sizes": "64x64", "purpose": "any" },
+    { "src": "/images/logo.png", "type": "image/png", "sizes": "161x120", "purpose": "any" }
   ]
 }
