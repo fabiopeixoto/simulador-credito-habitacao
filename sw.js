@@ -22,7 +22,7 @@ const PRECACHE = [
   "/transferencia-page.js?v=5",
   "/transferencia-mount.js?v=2",
   "/reverse-calc-page.js?v=15",
-  "/inversa-mount.js?v=4",
+  "/inversa-mount.js?v=5",
   "/historico-page.js?v=5",
   "/historico-mount.js?v=3",
 ];
