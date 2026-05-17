@@ -1141,7 +1141,7 @@ React.createElement("button", {onClick:handleSave,"aria-label":"Guardar simulaç
                 ))
               )
             )
-  ,showGlossario&&window.GlossarioModal&&React.createElement(window.GlossarioModal,{onClose:()=>setShowGlossario(false)})));
+  ),showGlossario&&window.GlossarioModal&&React.createElement(window.GlossarioModal,{onClose:()=>setShowGlossario(false)}));
 }
 window._App=App;
 }catch(e){
