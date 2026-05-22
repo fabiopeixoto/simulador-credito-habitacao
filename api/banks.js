@@ -154,6 +154,7 @@ const SEED_BANKS = [
   { code: "CGD", name: "CGD", color: "#006633", refs: ["6m"], jOk: true, carenciaMax: 0, tipos: ["variável", "mista", "fixa"], promos: ["Banco público", "CH Reg. Geral: E6 + spread 0,70%–2,90% (folh. 18)", "Medida Jovem: spreads no simulador CGD", "Cert. A/B: -0,15%"], prod: "Pack Vinculação + Pack Ligação (Fidelidade Vida + Multi)", jProd: "Reg. Geral E6+0,70–2,90% (mai.2026); Medida Jovem 0,65% no simulador oficial" },
   { code: "UCI", name: "UCI", color: "#1a3a6b", refs: ["6m"], jOk: true, carenciaMax: 0, tipos: ["variável", "mista"], promos: ["CH variável: E6 + spread 1,43–2,30% (§18.1 mai.2026)", "Mista: TAN 4,09–5,09% (5–10a fixo + E6)", "Montante 12,5k–1M€", "Sem conta obrigatória"], prod: "Seg. Vida + Multirriscos", jProd: "100% c/ garantia Estado (ver condições UCI)" },
   { code: "BNI", name: "BNI Europa", color: "#4a235a", refs: ["3m", "6m", "12m"], jOk: false, carenciaMax: 0, tipos: ["variável", "mista", "fixa"], promos: ["CH garantia hipotecária: spread 2,0–3,1% (Euribor 3/6/12m; §18.1 mai.2026)", "Mista: TAN fixa ilustr. 24m + fase var. (notas TAEG)", "Estudo processo 0,5% (mín. 750€) + avaliação 200€"], prod: "Domiciliação + Seguros", jProd: "Quadro sem CH Jovem dedicado no §18.1 analisado" },
+  { code: "BEST", name: "Banco Best", color: "#e85520", refs: ["3m", "6m", "12m"], jOk: false, carenciaMax: 24, tipos: ["variável", "mista", "fixa"], promos: ["Intermediário de crédito Novo Banco (entidade mutuante NB)", "CH variável: E3/E6/E12m + spread 0,90–1,90% (mai.2026)", "Mista e taxa fixa disponíveis", "GamaLife + Mudum (mesmos seguros que NB)"], prod: "Conta 360° + Dom. ordenado + Seg. Vida GamaLife + Multirriscos Mudum", jProd: "Sem linha de CH Jovem dedicada" },
 ];
 
 /** Valores canónicos servidos via GET /api/banks (SQLite). Actualizar aqui + deploy; `reconcileSeedSpreadsToDb` insere linha nova se divergirem. */
@@ -171,6 +172,7 @@ const SEED_SPREADS = {
   CGD: { sCom: 0.70, sSem: 2.90, mCom: 3.15, mSem: 5.35, fCom: 4.75, fSem: 6.95, jsCom: 0.65, jsSem: 1.35, promoPeriodo: 24, promoSpread: null, dossier: 250, avaliacao: 200, contaMes: 6.30, contaNota: "Conta Caixadirecta €6,30/mês IS incluído (reconfirmar folheto comissões particulares)", capMin: 5000, capMax: 3000000, vRef: 29.82, mAno: 110, insV: "Fidelidade", insM: "Fidelidade Casa", minutas: 0, jovemIsenta: true },
   UCI: { sCom: 1.43, sSem: 2.30, mCom: 4.09, mSem: 5.09, fCom: 4.09, fSem: 5.09, jsCom: 1.43, jsSem: 2.30, promoPeriodo: 0, promoSpread: null, dossier: 600, avaliacao: 225, contaMes: 0, contaNota: "Sem conta obrigatória", capMin: 12500, capMax: 1000000, vRef: 19.00, mAno: 150, insV: "(est.)", insM: "(est.)", minutas: 400, jovemIsenta: false },
   BNI: { sCom: 2.00, sSem: 3.10, mCom: 4.45, mSem: 5.55, fCom: 5.30, fSem: 6.20, jsCom: 2.00, jsSem: 3.10, promoPeriodo: 0, promoSpread: null, dossier: 750, avaliacao: 200, contaMes: 3.00, contaNota: "Conta DO (estimativa; fora do quadro §18.1)", capMin: 25000, capMax: 1000000, vRef: 19.00, mAno: 150, insV: "(est.)", insM: "(est.)", minutas: 0, jovemIsenta: false },
+  BEST: { sCom: 0.90, sSem: 1.90, mCom: 3.65, mSem: 4.60, fCom: 4.41, fSem: 5.99, jsCom: 0.90, jsSem: 1.90, promoPeriodo: 0, promoSpread: null, dossier: 333, avaliacao: 322, contaMes: 8.84, contaNota: "Conta 360° 8,84€/mês IS incluído (est.; intermediário NB)", capMin: 10000, capMax: 1800000, vRef: 17.55, mAno: 123, insV: "GamaLife", insM: "Mudum", minutas: 0, jovemIsenta: false },
 };
 
 function seedIfEmpty() {
@@ -263,10 +265,15 @@ function reconcileSeedSpreadsToDb() {
 }
 reconcileSeedSpreadsToDb();
 
-/** Em cada arranque: alinha metadados canónicos na tabela `banks` a `SEED_BANKS` quando divergem (deploy sem POST manual). Corrige instalações antigas em que `INSERT OR IGNORE` deixou `refs`, `tipos`, etc. desactualizados (ex. CA só «12m», CTT/Montepio sem 3m/6m). Não altera `sort_order` nem `active`. */
+/** Em cada arranque: alinha metadados canónicos na tabela `banks` a `SEED_BANKS` quando divergem (deploy sem POST manual). Corrige instalações antigas em que `INSERT OR IGNORE` deixou `refs`, `tipos`, etc. desactualizados (ex. CA só «12m», CTT/Montepio sem 3m/6m). Não altera `sort_order` nem `active`. Insere bancos novos do seed que ainda não existam na BD. */
 function reconcileSeedBankMetadataToDb() {
   if (!sqliteDb) return;
   try {
+    const exists = sqliteDb.prepare(`SELECT code FROM banks WHERE code = ?`);
+    const ins = sqliteDb.prepare(`
+      INSERT OR IGNORE INTO banks (code, name, color, refs, jOk, carenciaMax, tipos, promos, prod, jProd, sort_order)
+      VALUES (@code, @name, @color, @refs, @jOk, @carenciaMax, @tipos, @promos, @prod, @jProd, @sort_order)
+    `);
     const sel = sqliteDb.prepare(`
       SELECT code, name, color, refs, jOk, carenciaMax, tipos, promos, prod, jProd
       FROM banks WHERE code = ? AND active = 1
@@ -277,7 +284,23 @@ function reconcileSeedBankMetadataToDb() {
         tipos = @tipos, promos = @promos, prod = @prod, jProd = @jProd, updated_at = @updated_at
       WHERE code = @code
     `);
-    for (const bank of SEED_BANKS) {
+    for (const [i, bank] of SEED_BANKS.entries()) {
+      if (!exists.get(bank.code)) {
+        ins.run({
+          code: bank.code,
+          name: bank.name,
+          color: bank.color || "#666666",
+          refs: JSON.stringify(bank.refs && bank.refs.length ? bank.refs : ["12m"]),
+          jOk: bank.jOk ? 1 : 0,
+          carenciaMax: Number(bank.carenciaMax) || 0,
+          tipos: JSON.stringify(bank.tipos && bank.tipos.length ? bank.tipos : ["variável"]),
+          promos: JSON.stringify(bank.promos || []),
+          prod: bank.prod || "",
+          jProd: bank.jProd || "",
+          sort_order: i,
+        });
+        continue;
+      }
       const row = sel.get(bank.code);
       if (!row) continue;
       const refs = JSON.stringify(bank.refs && bank.refs.length ? bank.refs : ["12m"]);
