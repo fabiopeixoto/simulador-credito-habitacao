@@ -1,4 +1,4 @@
-const CACHE = "simulador-v42";
+const CACHE = "simulador-v43";
 
 /** URLs exactas referenciadas em index.html / quanto-posso-pedir.html / historico.html (incl. query ?v=). */
 const PRECACHE = [
@@ -12,16 +12,16 @@ const PRECACHE = [
   "/images/logo.svg",
   "/react-runtime.js?v=1",
   "/recharts-polyfill.js?v=1",
-  "/app.js?v=16",
+  "/app.js?v=17",
   "/index-mount.js?v=1",
   "/inversa-bootstrap.js?v=1",
   "/comments-modal.js?v=1",
-  "/page-header.js?v=11",
+  "/page-header.js?v=12",
   "/glossario-modal.js?v=1",
   "/transferencia.html",
   "/transferencia-page.js?v=5",
   "/transferencia-mount.js?v=2",
-  "/reverse-calc-page.js?v=15",
+  "/reverse-calc-page.js?v=16",
   "/inversa-mount.js?v=5",
   "/historico-page.js?v=5",
   "/historico-mount.js?v=3",
