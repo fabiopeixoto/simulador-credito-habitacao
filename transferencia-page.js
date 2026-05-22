@@ -35,12 +35,13 @@
     CGD:   [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
     UCI:   [{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
     BNI:   [{max:80,add:0},{max:90,add:0.10}],
+    BEST:  [{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
   };
 
   var BANK_DOMAINS={
     CA:"creditoagricola.pt",CTT:"ctt.pt",BNKTR:"bankinter.pt",ABANCA:"abanca.com",
     BCP:"millenniumbcp.pt",ACTVO:"activobank.pt",BPI:"bpi.pt",MNTPO:"bancomontepio.pt",
-    SANTR:"santander.pt",NB:"novobanco.pt",CGD:"cgd.pt",UCI:"uci.es",BNI:"bnieuropa.pt"
+    SANTR:"santander.pt",NB:"novobanco.pt",CGD:"cgd.pt",UCI:"uci.es",BNI:"bnieuropa.pt",BEST:"bancobest.pt"
   };
 
   function getLTVAddon(bankCode,ltv){
