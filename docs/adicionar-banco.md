@@ -147,7 +147,27 @@ const BANK_DOMAINS = { ..., XXXX: 'banco.pt' };
 
 ---
 
-## 4. `api/spreads.js` — Prompt da IA
+## 4. `transferencia-page.js` — Página de transferência
+
+Este ficheiro tem as suas próprias cópias independentes de `LTV_BRACKETS` e `BANK_DOMAINS`. **A ausência do banco aqui faz o logo aparecer errado e os cálculos de LTV incorrectos na página de transferência.**
+
+### 4a. `LTV_BRACKETS`
+
+```js
+XXXX: [{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
+```
+
+### 4b. `BANK_DOMAINS`
+
+```js
+BEST:"bancobest.pt"
+```
+
+Após editar, bumpar `transferencia-page.js?vXX` em `transferencia.html` e no precache do `sw.js`.
+
+---
+
+## 6. `api/spreads.js` — Prompt da IA
 
 A IA usa este prompt para actualizar spreads automaticamente via painel de administração. **Dois sítios** a editar na constante `PROMPT`:
 
@@ -163,7 +183,7 @@ A IA usa este prompt para actualizar spreads automaticamente via painel de admin
 
 ---
 
-## 5. `admin.html` — BANK_DOMAINS
+## 7. `admin.html` — BANK_DOMAINS
 
 O painel de administração tem a sua própria cópia do `BANK_DOMAINS` para favicons:
 
@@ -173,7 +193,7 @@ const BANK_DOMAINS = { ..., XXXX: 'banco.pt' };
 
 ---
 
-## 6. Cache busting — OBRIGATÓRIO após qualquer alteração de JS
+## 8. Cache busting — OBRIGATÓRIO após qualquer alteração de JS
 
 Sempre que um ficheiro `.js` é alterado, **todos** os seguintes têm de ser actualizados:
 
@@ -182,6 +202,7 @@ Sempre que um ficheiro `.js` é alterado, **todos** os seguintes têm de ser act
 | `app.js` | `index.html` (`app.js?v=XX`) + `sw.js` precache |
 | `page-header.js` | `index.html`, `transferencia.html`, `historico.html`, `quanto-posso-pedir.html` + `sw.js` precache |
 | `reverse-calc-page.js` | `quanto-posso-pedir.html` + `sw.js` precache |
+| `transferencia-page.js` | `transferencia.html` + `sw.js` precache |
 
 Além disso, sempre que o `sw.js` é alterado:
 - Bumpar o nome do cache: `const CACHE = "simulador-vXX"`
@@ -191,7 +212,7 @@ E quando a resposta da API `/api/banks` muda estruturalmente:
 
 ---
 
-## 7. Contadores de texto — "N bancos"
+## 9. Contadores de texto — "N bancos"
 
 Pesquisar o número concreto (ex: `"14 bancos"`) em todo o repositório e actualizar:
 
@@ -211,21 +232,24 @@ Ficheiros típicos a actualizar:
 ## Checklist resumida
 
 ```
-[ ] 1. Recolher todos os dados do banco (spreads, comissões, seguros)
-[ ] 2. api/banks.js → SEED_BANKS
-[ ] 3. api/banks.js → SEED_SPREADS
-[ ] 4. app.js → FALLBACK_BANK_DATA
-[ ] 5. app.js → SEG
-[ ] 6. app.js → COM
-[ ] 7. app.js → LTV_BRACKETS
-[ ] 8. app.js → CAPITAL_LIMITS
-[ ] 9. app.js → CONTA_MES
-[  ] 10. app.js → BANKS_STATIC
+[ ] 1.  Recolher todos os dados do banco (spreads, comissões, seguros)
+[ ] 2.  api/banks.js → SEED_BANKS
+[ ] 3.  api/banks.js → SEED_SPREADS
+[ ] 4.  app.js → FALLBACK_BANK_DATA
+[ ] 5.  app.js → SEG
+[ ] 6.  app.js → COM
+[ ] 7.  app.js → LTV_BRACKETS
+[ ] 8.  app.js → CAPITAL_LIMITS
+[ ] 9.  app.js → CONTA_MES
+[ ] 10. app.js → BANKS_STATIC
 [ ] 11. app.js → BANK_DOMAINS
-[ ] 12. api/spreads.js → PROMPT (lista de códigos + exemplo JSON)
-[ ] 13. admin.html → BANK_DOMAINS
-[ ] 14. Cache bust: app.js?vXX em index.html + sw.js precache
-[ ] 15. Cache bust: sw.js → simulador-vXX
-[ ] 16. Actualizar contadores "N bancos" em todos os ficheiros
-[ ] 17. Verificar: grep -rn "[0-9]\+ bancos" . --include="*.js" --include="*.html"
+[ ] 12. transferencia-page.js → LTV_BRACKETS
+[ ] 13. transferencia-page.js → BANK_DOMAINS
+[ ] 14. api/spreads.js → PROMPT (lista de códigos + exemplo JSON)
+[ ] 15. admin.html → BANK_DOMAINS
+[ ] 16. Cache bust: app.js?vXX em index.html + sw.js precache
+[ ] 17. Cache bust: transferencia-page.js?vXX em transferencia.html + sw.js precache
+[ ] 18. Cache bust: sw.js → simulador-vXX
+[ ] 19. Actualizar contadores "N bancos" em todos os ficheiros
+[ ] 20. Verificar: grep -rn "[0-9]\+ bancos" . --include="*.js" --include="*.html"
 ```
