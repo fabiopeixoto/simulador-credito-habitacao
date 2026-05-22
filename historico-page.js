@@ -145,8 +145,9 @@
 
     var eurSvg=useMemo(function(){
       if(!mergedEur.length)return null;
-      return buildSVG(mergedEur,EUR_SERIES,600,210,{top:20,right:48,bottom:20,left:40},function(d){
-        return d.date?fmtYearMonth(d.date):"";
+      var step=Math.max(1,Math.ceil(mergedEur.length/8));
+      return buildSVG(mergedEur,EUR_SERIES,600,210,{top:20,right:48,bottom:20,left:40},function(d,i){
+        return i%step===0?fmtYearMonth(d.date):"";
       });
     },[mergedEur]);
 
