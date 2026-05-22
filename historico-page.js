@@ -10,6 +10,14 @@
   var FALLBACK_EUR=window._SIM.FALLBACK_EUR;
   var EUR_COLORS=window._SIM.EUR_COLORS;
 
+  var PT_MONTHS=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+  function fmtYearMonth(d){
+    if(!d)return"";
+    var parts=d.slice(0,7).split("-");
+    var m=parseInt(parts[1],10)-1;
+    return PT_MONTHS[m]+". "+parts[0];
+  }
+
   var EUR_SERIES=[
     {key:"3m",  label:"Euribor 3m",  color:"#f97316"},
     {key:"6m",  label:"Euribor 6m",  color:Sky},
@@ -137,8 +145,9 @@
 
     var eurSvg=useMemo(function(){
       if(!mergedEur.length)return null;
-      return buildSVG(mergedEur,EUR_SERIES,600,210,{top:20,right:48,bottom:20,left:40},function(d){
-        return d.date?d.date.slice(0,4):"";
+      var step=Math.max(1,Math.ceil(mergedEur.length/8));
+      return buildSVG(mergedEur,EUR_SERIES,600,210,{top:20,right:48,bottom:20,left:40},function(d,i){
+        return i%step===0?fmtYearMonth(d.date):"";
       });
     },[mergedEur]);
 
@@ -152,7 +161,7 @@
       if(sprData.length<2)return null;
       var step=Math.max(1,Math.ceil(sprData.length/6));
       return buildSVG(sprData,SPR_SERIES,600,180,{top:20,right:48,bottom:20,left:40},function(d,i){
-        return i%step===0?d.date.slice(0,7):"";
+        return i%step===0?fmtYearMonth(d.date):"";
       });
     },[sprData]);
 
