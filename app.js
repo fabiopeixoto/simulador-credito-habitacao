@@ -27,7 +27,7 @@ const FALLBACK_BANK_DATA = {
   BNI:   {sCom:2.00,sSem:3.10,mCom:4.45,mSem:5.55,fCom:5.30,fSem:6.20,jsCom:2.00,jsSem:3.10,promoPeriodo:0, promoSpread:null,dossier:750,avaliacao:200,contaMes:3.00,capMin:25000, capMax:1000000,vRef:19.00,mAno:150,minutas:0,  jovemIsenta:false}, // §18.1 taxas mai.2026: CH c/ garantia hipotecária Euribor 3/6/12m + spread 2,0–3,1% (fin./garantia ≤80%); E6 abr.2026 2,454%+2,0/3,1%→TAN 4,454%/5,554% nos ex. TAEG. Mista: TAN fixa ilustr. 24m 5,299%/6,199% + mesma fase var. Comissões §2.1: estudo 0,5% mín.750€ máx.2500€ +IS; avaliação 200€+IS. js: sem linha jovem no PDF — igual ao quadro geral
   BEST:  {sCom:0.90,sSem:1.90,mCom:3.65,mSem:4.60,fCom:4.41,fSem:5.99,jsCom:0.90,jsSem:1.90,promoPeriodo:0, promoSpread:null,dossier:333,avaliacao:322,contaMes:8.84,capMin:10000, capMax:1800000,vRef:17.55,mAno:123,minutas:0,  jovemIsenta:false}, // Intermediário de crédito Novo Banco (entidade mutuante NB; mai.2026). sSem confirmado via ex. TAEG: E6 3,002%+1,90%→TAN 4,902%. sCom est. alinhado ao produto NB (0,90% spread mínimo). Conta 360° 8,84€/mês IS incluído. Seguros NB: GamaLife (vida) + Mudum (multi). Cap. máx. 1,8M€. Sem linha CH Jovem.
 };
-const CACHE_KEY   = "credito_cache_v10";
+const CACHE_KEY   = "credito_cache_v11";
 const CACHE_H     = 8;
 const HIST_KEY    = 'simulador-hist-v1';
 const HIST_MAX  = 5;

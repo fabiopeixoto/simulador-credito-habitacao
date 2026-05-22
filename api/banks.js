@@ -245,6 +245,7 @@ function seedIfEmpty() {
 }
 
 seedIfEmpty();
+reconcileSeedBankMetadataToDb();
 
 /** Em cada arranque: se `SEED_SPREADS` diverge do último registo do banco, insere uma linha nova (deploy sem POST manual). Não sobrepõe spreads `source=manual` (POST admin). */
 function reconcileSeedSpreadsToDb() {
@@ -343,7 +344,6 @@ function reconcileSeedBankMetadataToDb() {
     console.error("banks.js: reconcileSeedBankMetadataToDb:", e.message);
   }
 }
-reconcileSeedBankMetadataToDb();
 
 /** sCom = spread normal (fora da promo); promoSpread = durante a promo (≤ sCom). Corrige inversões da API. */
 function normalizeCampaignSpreadPair(d) {
