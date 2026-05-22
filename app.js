@@ -25,6 +25,7 @@ const FALLBACK_BANK_DATA = {
   CGD:   {sCom:0.70,sSem:2.90,mCom:3.15,mSem:5.35,fCom:4.75,fSem:6.95,jsCom:0.65,jsSem:1.35,promoPeriodo:24,promoSpread:null,dossier:250,avaliacao:200,contaMes:6.30,capMin:5000,  capMax:3000000,vRef:29.82,mAno:110,minutas:0,  jovemIsenta:true}, // Folheto taxas 18.pdf particulares (mai.2026): CH Regime Geral E6+0,70% a +2,90%; E6 ilustr. 2,454%; TAN mista/fixa alinh. taxa base 30a 4,05%+spread. Montante mín. 5k€. Medida Jovem: spreads 0,65/1,35 no useMemo (simulador). Comissões dossier/avaliação: folheto 10.pdf é «Outros clientes» — valores mantidos
   UCI:   {sCom:1.43,sSem:2.30,mCom:4.09,mSem:5.09,fCom:4.09,fSem:5.09,jsCom:1.43,jsSem:2.30,promoPeriodo:0, promoSpread:null,dossier:600,avaliacao:225,contaMes:0,   capMin:12500, capMax:1000000,vRef:19.00,mAno:150,minutas:400,  jovemIsenta:false}, // PRE-FT mai.2026 §18.1: CH taxa var. E6 + spread 1,43–2,30%; TAEG ex. TAN 4,754%=E6 2,454%+2,30%. Mista: TAN 4,09–5,09% (Notas 2–3: 5–10a fixo + E6). PRE-FC mar.2026 §2.1: abertura máx.600€+IS, aval.225€+IS, prep.documentação 400€+IS. Nota 5: montante 12,5k–1M€. js: sem CH Jovem dedicado no folheto
   BNI:   {sCom:2.00,sSem:3.10,mCom:4.45,mSem:5.55,fCom:5.30,fSem:6.20,jsCom:2.00,jsSem:3.10,promoPeriodo:0, promoSpread:null,dossier:750,avaliacao:200,contaMes:3.00,capMin:25000, capMax:1000000,vRef:19.00,mAno:150,minutas:0,  jovemIsenta:false}, // §18.1 taxas mai.2026: CH c/ garantia hipotecária Euribor 3/6/12m + spread 2,0–3,1% (fin./garantia ≤80%); E6 abr.2026 2,454%+2,0/3,1%→TAN 4,454%/5,554% nos ex. TAEG. Mista: TAN fixa ilustr. 24m 5,299%/6,199% + mesma fase var. Comissões §2.1: estudo 0,5% mín.750€ máx.2500€ +IS; avaliação 200€+IS. js: sem linha jovem no PDF — igual ao quadro geral
+  BEST:  {sCom:0.90,sSem:1.90,mCom:3.65,mSem:4.60,fCom:4.41,fSem:5.99,jsCom:0.90,jsSem:1.90,promoPeriodo:0, promoSpread:null,dossier:333,avaliacao:322,contaMes:8.84,capMin:10000, capMax:1800000,vRef:17.55,mAno:123,minutas:0,  jovemIsenta:false}, // Intermediário de crédito Novo Banco (entidade mutuante NB; mai.2026). sSem confirmado via ex. TAEG: E6 3,002%+1,90%→TAN 4,902%. sCom est. alinhado ao produto NB (0,90% spread mínimo). Conta 360° 8,84€/mês IS incluído. Seguros NB: GamaLife (vida) + Mudum (multi). Cap. máx. 1,8M€. Sem linha CH Jovem.
 };
 const CACHE_KEY   = "credito_cache_v10";
 const CACHE_H     = 8;
@@ -46,6 +47,7 @@ const SEG = {
   CGD:   {vRef:29.82,vCap:150000,vAge:30,insV:"Fidelidade",       mAno:110, pRef:200000,insM:"Fidelidade Casa"},
   UCI:   {vRef:19.00,vCap:150000,vAge:30,insV:"(est.)",           mAno:150, pRef:200000,insM:"(est.)"},
   BNI:   {vRef:19.00,vCap:150000,vAge:30,insV:"(est.)",           mAno:150, pRef:200000,insM:"(est.)"},
+  BEST:  {vRef:17.55,vCap:150000,vAge:30,insV:"GamaLife",         mAno:123, pRef:200000,insM:"Mudum"},
 };
 
 // ── Comissões por banco (dossier + avaliação + preparação minutas) ─────────
@@ -64,6 +66,7 @@ const COM = {
   CGD:   {dossier:250,  avaliacao:200, minutas:0,   total2hab:450,  jovemIsenta:true},
   UCI:   {dossier:600,  avaliacao:225, minutas:400, total2hab:1225, jovemIsenta:false},
   BNI:   {dossier:750,  avaliacao:200, minutas:0,   total2hab:950,  jovemIsenta:false},
+  BEST:  {dossier:333,  avaliacao:322, minutas:0,   total2hab:655,  jovemIsenta:false},
 };
 
 // ── Escalões de spread por LTV (verificados Mai.2026) ────────────────────
@@ -84,6 +87,7 @@ const LTV_BRACKETS = {
   CGD:   [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
   UCI:   [{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
   BNI:   [{max:80,add:0},{max:90,add:0.10}],
+  BEST:  [{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
 };
 
 function getLTVAddon(bankS, ltv) {
@@ -107,6 +111,7 @@ const CAPITAL_LIMITS = {
   CGD:   {min:5000,   max:3000000}, // Folheto 18.pdf (mai.2026): montante mínimo CH 5k€
   UCI:   {min:12500,  max:1000000},
   BNI:   {min:25000,  max:1000000},
+  BEST:  {min:10000,  max:1800000},
 };
 
 // ── Spread adicional por finalidade ──────────────────────────────────────
@@ -138,6 +143,7 @@ const CONTA_MES = {
   CGD:   {val:6.30,  nota:"Conta Caixadirecta €6,30/mês IS incluído (sem linha dedicada no 18.pdf de taxas CH)"},
   UCI:   {val:0,     nota:"Sem conta obrigatória"},
   BNI:   {val:3.00,  nota:"Conta DO (estimativa; manutenção fora do quadro §18.1 taxas mai.2026)"},
+  BEST:  {val:8.84,  nota:"Conta 360° 8,84€/mês IS incluído (est.; intermediário NB — PRE-FC mai.2026)"},
 };
 // Os bancos aplicam um factor de correcção ao rendimento declarado
 const CONTRATO_FACTOR = {
@@ -163,6 +169,7 @@ const BANKS_STATIC = [
   {name:"CGD",              s:"CGD",   color:"#006633", refs:["6m"],            jOk:true,  carenciaMax:0,  tipos:["variável","mista","fixa"], promos:["Banco público","CH Reg. Geral: E6 + spread 0,70%–2,90% (folh. 18)","Medida Jovem: spreads no simulador CGD","Cert. A/B: -0,15%"],                       prod:"Pack Vinculação + Pack Ligação (Fidelidade Vida + Multi)",                jProd:"Reg. Geral E6+0,70–2,90% (mai.2026); Medida Jovem 0,65% no simulador oficial"},
   {name:"UCI",              s:"UCI",   color:"#1a3a6b", refs:["6m"],            jOk:true,  carenciaMax:0,  tipos:["variável","mista"],         promos:["CH variável: E6 + spread 1,43–2,30% (§18.1 mai.2026)","Mista: TAN 4,09–5,09%","Montante 12,5k–1M€","Sem conta obrigatória"],                                                                   prod:"Seg. Vida + Multirriscos",                                               jProd:"100% c/ garantia Estado (condições UCI)"},
   {name:"BNI Europa",       s:"BNI",   color:"#4a235a", refs:["3m","6m","12m"], jOk:false, carenciaMax:0,  tipos:["variável","mista","fixa"], promos:["CH: spread 2,0–3,1% (Euribor 3/6/12m; §18.1 mai.2026)","Mista ilustr. 24m + variável (notas TAEG)","Estudo 0,5% (mín. 750€) + avaliação 200€"], prod:"Domiciliação + Seguros",                                                 jProd:"Sem CH Jovem no §18.1 analisado"},
+  {name:"Banco Best",        s:"BEST",  color:"#e85520", refs:["3m","6m","12m"], jOk:false, carenciaMax:24, tipos:["variável","mista","fixa"], promos:["Intermediário Novo Banco (entidade mutuante NB)","CH variável: E3/E6/E12m + spread 0,90–1,90% (mai.2026)","GamaLife + Mudum (mesmos seguros que NB)"],                                                         prod:"Conta 360° + Dom. ordenado + Seg. Vida GamaLife + Multirriscos Mudum",  jProd:"Sem linha de CH Jovem dedicada"},
 ];
 
 // ── Helpers matemáticos ───────────────────────────────────────────────────
