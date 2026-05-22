@@ -193,10 +193,10 @@ E quando a resposta da API `/api/banks` muda estruturalmente:
 
 ## 7. Contadores de texto — "N bancos"
 
-Pesquisar `"13 bancos"` (ou o número actual) em todo o repositório e actualizar:
+Pesquisar o número concreto (ex: `"14 bancos"`) em todo o repositório e actualizar:
 
 ```bash
-grep -rn "N bancos" . --include="*.js" --include="*.html"
+grep -rn "[0-9]\+ bancos" . --include="*.js" --include="*.html"
 ```
 
 Ficheiros típicos a actualizar:
@@ -227,5 +227,5 @@ Ficheiros típicos a actualizar:
 [ ] 14. Cache bust: app.js?vXX em index.html + sw.js precache
 [ ] 15. Cache bust: sw.js → simulador-vXX
 [ ] 16. Actualizar contadores "N bancos" em todos os ficheiros
-[ ] 17. Verificar: grep -rn "N bancos" . --include="*.js" --include="*.html"
+[ ] 17. Verificar: grep -rn "[0-9]\+ bancos" . --include="*.js" --include="*.html"
 ```
