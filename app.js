@@ -276,7 +276,7 @@ function amChart(C,tanA,anos,extra) {
 function prestacaoCarencia(C, tanA) { return C * tanA/100/12; }
 
 // ── Domínios dos bancos (para favicon) ────────────────────────────────────
-const BANK_DOMAINS={CA:"creditoagricola.pt",CTT:"ctt.pt",BNKTR:"bankinter.pt",ABANCA:"abanca.com",BCP:"millenniumbcp.pt",ACTVO:"activobank.pt",BPI:"bpi.pt",MNTPO:"bancomontepio.pt",SANTR:"santander.pt",NB:"novobanco.pt",CGD:"cgd.pt",UCI:"uci.es",BNI:"bnieuropa.pt"};
+const BANK_DOMAINS={CA:"creditoagricola.pt",CTT:"ctt.pt",BNKTR:"bankinter.pt",ABANCA:"abanca.com",BCP:"millenniumbcp.pt",ACTVO:"activobank.pt",BPI:"bpi.pt",MNTPO:"bancomontepio.pt",SANTR:"santander.pt",NB:"novobanco.pt",CGD:"cgd.pt",UCI:"uci.es",BNI:"bnieuropa.pt",BEST:"bancobest.pt"};
 // ── Cores e estilos ───────────────────────────────────────────────────────
 const G="#16a34a",R="#dc2626",Au="#2563eb",N="#e5e7eb",Sky="#0284c7";
 const ecC=ef=>ef<=35?G:ef<=40?Au:R;
