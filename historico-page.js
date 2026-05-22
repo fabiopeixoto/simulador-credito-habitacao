@@ -135,7 +135,7 @@
       return ["3m","6m","12m"].reduce(function(acc,k){
         var arr=euriborData&&euriborData[k]||[];
         var last=arr.length?arr[arr.length-1]:null;
-        acc[k]=last?{valor:last.value,data:last.date}:FALLBACK_EUR[k];
+        acc[k]=last?{valor:last.value,data:fmtYearMonth(last.date)}:FALLBACK_EUR[k];
         return acc;
       },{});
     },[euriborData]);
