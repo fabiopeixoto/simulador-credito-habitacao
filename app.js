@@ -13,7 +13,7 @@ const FALLBACK_BANK_DATA = {
   // Offline / primeira pintura: espelhar api/banks.js SEED_SPREADS; em produção GET /api/banks (SQLite) é a fonte.
   CA:    {sCom:0.70,sSem:1.83,mCom:3.45,mSem:4.58,fCom:4.70,fSem:5.83,jsCom:0.75,jsSem:1.88,promoPeriodo:24,promoSpread:0.45, dossier:250,avaliacao:200,contaMes:3.50,capMin:25000, capMax:2000000,vRef:22.68,mAno:160,minutas:0,  jovemIsenta:true}, // PRE-FT particulares mai.2026 §18.1: CH «CA Dedicado» Euribor 1/3/6/12m + spread 0,70–1,83% (aquisição); mista 2a base 2,50%+0,85% e fase var. 0,70–1,83%; fixa 5/10/15a TAN 4,70–5,83%. CH Jovem aquisição desde 0,75%; ex. TAEG 30a spread 1,88% (Nota 1e). E12 ilustr. 2,747% abr.2026. Campanha spread 0,45% 24m. 18–30a: isenção abertura+DO nos ex. TAEG jovem. BANKS_STATIC refs 3/6/12m (app não tem série 1m)
   CTT:   {sCom:0.85,sSem:1.45,mCom:3.05,mSem:3.65,fCom:4.10,fSem:4.70,jsCom:0.75,jsSem:1.35,jmCom:2.75,jmSem:3.35,jfCom:3.95,jfSem:4.55,promoPeriodo:0, promoSpread:null,dossier:280, avaliacao:230,contaMes:1.73,capMin:25000, capMax:1000000,vRef:21.51,mAno:207.12,minutas:160,jovemIsenta:false}, // FINE mai.2026 (bancoctt.pt): variável E3/6/12m spread 0,85%/1,45% c/s prod.; mista 2a TAN 3,05%/3,65%; fixa 30a TAN 4,10%/4,70%. CHjovem DL44: var. 0,75%/1,35%; mista 2,75%/3,35%; fixa 3,95%/4,55% (campos jmCom/jfCom). Seguro vida 258,12€/a (var., 150k, 30a); multi 207,12€/a (200k) — Generali Seguros, S.A. Conta ≈1,73€/mês. Comissões: dossier 280€+IS, aval.230€+IS, minutas 160€+IS
-  BNKTR: {sCom:0.70,sSem:1.05,mCom:2.90,mSem:3.25,fCom:3.45,fSem:3.80,jsCom:0.70,jsSem:1.05,promoPeriodo:24,promoSpread:null,dossier:270,avaliacao:220,contaMes:0,   capMin:100000,capMax:3000000,vRef:33.28,mAno:210,minutas:0,  jovemIsenta:true},  // FINE Bankinter mai.2026: variável E6 spread 0,70%/1,05% c/s pack (Δ0,35pp); mista 24m TAN 2,90%/3,25%; fixa 30a TAN 3,45%/3,80%. CHjovem sem desconto de spread — benefício=isenção aval.(220€)+estudo(260€+IS≈270€). Seguro Imóvel 210€/a Generali Seguros, S.A. (ASF 1197)
+  BNKTR: {sCom:0.70,sSem:1.05,mCom:2.90,mSem:3.25,fCom:3.45,fSem:3.80,jsCom:0.70,jsSem:1.05,promoPeriodo:24,promoSpread:null,dossier:270,avaliacao:220,contaMes:0,   capMin:100000,capMax:3000000,vRef:33.28,mAno:210,minutas:0,  jovemIsenta:true,jovemSameSpread:true},  // FINE Bankinter mai.2026: variável E6 spread 0,70%/1,05% c/s pack (Δ0,35pp); mista 24m TAN 2,90%/3,25%; fixa 30a TAN 3,45%/3,80%. CHjovem sem desconto de spread — benefício=isenção aval.(220€)+estudo(260€+IS≈270€). Seguro Imóvel 210€/a Generali Seguros, S.A. (ASF 1197)
   ABANCA:{sCom:0.70,sSem:1.70,mCom:3.45,mSem:4.45,fCom:2.70,fSem:3.50,jsCom:0.58,jsSem:1.58,promoPeriodo:0, promoSpread:null,dossier:520,avaliacao:286,contaMes:6.24,capMin:5000,  capMax:2000000,vRef:16.76,mAno:154,minutas:0,  jovemIsenta:true}, // PRE-FT mai.2026 §18.1 CH Valor+/Reg. Geral: spread Euribor 12m +0,70% a +1,70% (Nota 5: valores c/ redução máx. produtos); TAN ilustr. E12 2,747% (abr.2026)+spread; 1.º ano taxa fixa 2,50–3,50%. Nota 1 FINE: formalização 520€, avaliação 286€, conta 6,24€. Nota 3: financiamento mín. 5k€. PRE-FC mar.2026: avaliação imóvel residencial 275€+IS4%≈286€
   BCP:   {sCom:0.70,sSem:1.50,mCom:3.45,mSem:4.25,fCom:4.10,fSem:4.65,jsCom:0.85,jsSem:1.50,promoPeriodo:24,promoSpread:0,  dossier:300,avaliacao:250,contaMes:5.00,capMin:20000, capMax:3000000,vRef:19.92,mAno:256,minutas:0,  jovemIsenta:true}, // SECCAO_18.pdf (mai.2026): CH c/ garantia variável E6/E12 + spread 0,70–1,50%; TAN ilustr. E12 2,747% (abr.2026)+spread; taxa fixa 5a/25a 4,10%/4,65% (notas TAEG). CH Jovem: spr 0,85%/1,50% verif. simulador 2026 (200k/30a). FINE: comissões iniciais 748,80€ (dossier+formalização+avaliação) — modelo interno 300+250
   ACTVO: {sCom:0.75,sSem:1.50,mCom:3.85,mSem:4.75,fCom:4.00,fSem:4.75,jsCom:0.68,jsSem:1.38,promoPeriodo:24,promoSpread:0,  dossier:300,avaliacao:250,contaMes:0,   capMin:20000, capMax:3000000,vRef:19.84,mAno:256,minutas:0,  jovemIsenta:true}, // §18.1 mai.2026 (activobank.pt): variável sCom 0,75%/sSem 1,50%; mista 24m TAN 3,85% c/ prod. / 4,75% s/ prod.; taxa fixa TAN 4,00% c/ prod. / 4,75% s/ prod. Banco digital sem comissão de conta
@@ -55,7 +55,7 @@ const SEG = {
 const COM = {
   CA:    {dossier:250,  avaliacao:200, minutas:0,   total2hab:450,  jovemIsenta:true},
   CTT:   {dossier:280, avaliacao:230, minutas:160, total2hab:670,  jovemIsenta:false},
-  BNKTR: {dossier:270,  avaliacao:220, minutas:0,   total2hab:490,  jovemIsenta:true},
+  BNKTR: {dossier:270,  avaliacao:220, minutas:0,   total2hab:490,  jovemIsenta:true, jovemIsentaAval:true},
   ABANCA:{dossier:520,  avaliacao:286, minutas:0,   total2hab:806,  jovemIsenta:true},
   BCP:   {dossier:300,  avaliacao:250, minutas:0,   total2hab:550,  jovemIsenta:true},   // isenta ≤35a
   ACTVO: {dossier:300,  avaliacao:250, minutas:0,   total2hab:550,  jovemIsenta:true},
@@ -576,7 +576,7 @@ function App(){
         const acima90=capital/valorRef>0.9;
         jsc=acima90?1.65:0.65;
         jss=acima90?2.35:1.35;
-      } else if(modoJovem&&b.jOk){
+      } else if(modoJovem&&b.jOk&&!bd.jovemSameSpread){
         if(Math.abs(jsc-basesCom)<1e-6) jsc=Math.max(0.12,Math.round((basesCom-0.10)*100)/100);
         if(Math.abs(jss-basesSem)<1e-6) jss=Math.max(0.12,Math.round((basesSem-0.10)*100)/100);
       }
@@ -661,11 +661,12 @@ function App(){
         // Custos iniciais TAEG = dossier + avaliação + minutas + DPA + IS crédito
         const comB2base=COM[b.s]||{dossier:300,avaliacao:230,minutas:0,jovemIsenta:false};
         const bd2=bankData[b.s]||{};
-        const comB2={...comB2base,dossier:bd2.dossier??comB2base.dossier,avaliacao:bd2.avaliacao??comB2base.avaliacao,minutas:bd2.minutas??comB2base.minutas,jovemIsenta:bd2.jovemIsenta??comB2base.jovemIsenta};
+        const comB2={...comB2base,dossier:bd2.dossier??comB2base.dossier,avaliacao:bd2.avaliacao??comB2base.avaliacao,minutas:bd2.minutas??comB2base.minutas,jovemIsenta:bd2.jovemIsenta??comB2base.jovemIsenta,jovemIsentaAval:bd2.jovemIsentaAval??comB2base.jovemIsentaAval??false};
         const comD2=modoJovem&&comB2.jovemIsenta?0:comB2.dossier;
+        const comA2=modoJovem&&comB2.jovemIsentaAval?0:(comB2.avaliacao||0);
         const isCredTAEG=Math.round(capital*0.006);
         const regHTAEG=(modoJovem&&finalidade==="hpp")?0:Math.round(capital*0.0008+150);
-        const comInic=comD2+(comB2.avaliacao||0)+(comB2.minutas||0)+200+isCredTAEG+regHTAEG;
+        const comInic=comD2+comA2+(comB2.minutas||0)+200+isCredTAEG+regHTAEG;
         const encargoTAEG=pC+seg.tot+isM+segProtMensal+contaM;
         const taeg=calcTAEG(capital,comInic,encargoTAEG,prazoCalc*12);
         let mtic;
@@ -716,7 +717,7 @@ function App(){
   const bancoSCustos = bancoCustos || (melhor?.s) || "CA";
   const comB=COM[bancoSCustos]||{dossier:300,avaliacao:230,minutas:0,jovemIsenta:false};
   const comDossier=modoJovem&&comB.jovemIsenta?0:comB.dossier;
-  const comAval=comB.avaliacao;
+  const comAval=modoJovem&&comB.jovemIsentaAval?0:comB.avaliacao;
   const comMinutas=comB.minutas||0;
   const dpa=200;
   const notario=750;
@@ -995,7 +996,7 @@ React.createElement("button", {onClick:handleSave,"aria-label":"Guardar simulaç
                 {k:"iscred",   l:"Imp. Selo crédito (0,6%)",             v:isCred,       c:undefined, note:modoJovem?"ℹ️ Não isento (só IS escritura é isento ≤35a)":null},
                 {k:"sep2",     l:null},
                 {k:"dossier",  l:"Comissão de dossier",                  v:comDossier,   c:comDossier===0?G:"#4b5563", note:comDossier===0?"✅ Banco isenta (jovem/promoção)":null},
-                {k:"aval",     l:"Comissão de avaliação",                 v:comAval,      c:"#4b5563", note:"Perito independente (CMVM) — obrigatório"},
+                {k:"aval",     l:"Comissão de avaliação",                 v:comAval,      c:comAval===0?G:"#4b5563", note:comAval===0?"✅ Banco isenta (jovem)":"Perito independente (CMVM) — obrigatório"},
                 ...(comMinutas>0?[{k:"minutas", l:"Preparação de minutas", v:comMinutas, c:"#4b5563"}]:[]),
                 {k:"dpa",      l:"Documento Particular Autenticado (DPA)",v:dpa,          c:"#4b5563", note:"Alternativa à escritura notarial"},
                 {k:"registo",  l:"Registo de hipoteca",                   v:registoHipoteca, c:registoHipoteca===0?G:"#4b5563", note:registoHipoteca===0?"✅ Isento ≤35a HPP (DL 48-D/2024)":"Emolumentos registo predial"},
