@@ -623,7 +623,7 @@ function App(){
       if(filtroAtivo&&!b.refs.includes(filtroEuribor))return;
       const refsU=tipoTaxa==="variável"
         ?(filtroAtivo?[filtroEuribor]:b.refs)
-        :(filtroAtivo?[filtroEuribor]:[b.refs[0]]);
+        :(filtroAtivo?[filtroEuribor]:[b.refs.includes("12m")?"12m":b.refs[0]]);
       refsU.forEach(ref=>{
         const ev=(EUR[ref]||FALLBACK_EUR[ref]).valor;
         let tanC,tanS;
