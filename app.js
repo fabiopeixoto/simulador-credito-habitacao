@@ -12,7 +12,7 @@ const FALLBACK_EUR = {
 const FALLBACK_BANK_DATA = {
   // Offline / primeira pintura: espelhar api/banks.js SEED_SPREADS; em produção GET /api/banks (SQLite) é a fonte.
   CA:    {sCom:0.70,sSem:1.83,mCom:3.45,mSem:4.58,fCom:4.70,fSem:5.83,jsCom:0.75,jsSem:1.88,promoPeriodo:24,promoSpread:0.45, dossier:250,avaliacao:200,contaMes:3.50,capMin:25000, capMax:2000000,vRef:22.68,mAno:160,minutas:0,  jovemIsenta:true}, // PRE-FT particulares mai.2026 §18.1: CH «CA Dedicado» Euribor 1/3/6/12m + spread 0,70–1,83% (aquisição); mista 2a base 2,50%+0,85% e fase var. 0,70–1,83%; fixa 5/10/15a TAN 4,70–5,83%. CH Jovem aquisição desde 0,75%; ex. TAEG 30a spread 1,88% (Nota 1e). E12 ilustr. 2,747% abr.2026. Campanha spread 0,45% 24m. 18–30a: isenção abertura+DO nos ex. TAEG jovem. BANKS_STATIC refs 3/6/12m (app não tem série 1m)
-  CTT:   {sCom:0.70,sSem:2.60,mCom:2.70,mSem:3.30,fCom:3.90,fSem:4.50,jsCom:0.70,jsSem:2.60,promoPeriodo:0, promoSpread:null,dossier:280, avaliacao:230,contaMes:1.73,capMin:25000, capMax:1000000,vRef:15.71,mAno:170,minutas:160,jovemIsenta:false}, // §18.1 mai.2026 (bancoctt.pt): variável E3/6/12m spread 0,70–2,60%; mista 2a TAN 2,70% c/ prod. / 3,30% s/ prod.; taxa fixa 30a TAN 3,90% c/ prod. / 4,50% s/ prod. Comissões: abertura 280€+IS, aval.230€+IS, formalização 160€+IS, conta ≈1,73€/mês. CH Sinal Jovem 5% fixo. BANKS_STATIC refs 3/6/12m
+  CTT:   {sCom:0.85,sSem:1.45,mCom:3.05,mSem:3.65,fCom:4.10,fSem:4.70,jsCom:0.75,jsSem:1.35,jmCom:2.75,jmSem:3.35,jfCom:3.95,jfSem:4.55,promoPeriodo:0, promoSpread:null,dossier:280, avaliacao:230,contaMes:1.73,capMin:25000, capMax:1000000,vRef:21.51,mAno:207.12,minutas:160,jovemIsenta:false}, // FINE mai.2026 (bancoctt.pt): variável E3/6/12m spread 0,85%/1,45% c/s prod.; mista 2a TAN 3,05%/3,65%; fixa 30a TAN 4,10%/4,70%. CHjovem DL44: var. 0,75%/1,35%; mista 2,75%/3,35%; fixa 3,95%/4,55% (campos jmCom/jfCom). Seguro vida 258,12€/a (var., 150k, 30a); multi 207,12€/a (200k) — Generali Seguros, S.A. Conta ≈1,73€/mês. Comissões: dossier 280€+IS, aval.230€+IS, minutas 160€+IS
   BNKTR: {sCom:0.70,sSem:1.05,mCom:2.90,mSem:3.25,fCom:3.45,fSem:3.80,jsCom:0.62,jsSem:0.97,promoPeriodo:24,promoSpread:null,dossier:350,avaliacao:250,contaMes:0,   capMin:100000,capMax:3000000,vRef:33.28,mAno:196,minutas:0,  jovemIsenta:false}, // Normal verif. simulador Bankinter 2026 (prints): spr 0,70%/1,05% c/ pack Vida+Multi+Dom. (Δ0,35pp); 180k/30a E3→746,81€ · E6→773,92€ · E12→802,96€. CH Jovem (js): estim. −0,08pp até print próprio
   ABANCA:{sCom:0.70,sSem:1.70,mCom:3.45,mSem:4.45,fCom:2.70,fSem:3.50,jsCom:0.58,jsSem:1.58,promoPeriodo:0, promoSpread:null,dossier:520,avaliacao:286,contaMes:6.24,capMin:5000,  capMax:2000000,vRef:16.76,mAno:154,minutas:0,  jovemIsenta:true}, // PRE-FT mai.2026 §18.1 CH Valor+/Reg. Geral: spread Euribor 12m +0,70% a +1,70% (Nota 5: valores c/ redução máx. produtos); TAN ilustr. E12 2,747% (abr.2026)+spread; 1.º ano taxa fixa 2,50–3,50%. Nota 1 FINE: formalização 520€, avaliação 286€, conta 6,24€. Nota 3: financiamento mín. 5k€. PRE-FC mar.2026: avaliação imóvel residencial 275€+IS4%≈286€
   BCP:   {sCom:0.70,sSem:1.50,mCom:3.45,mSem:4.25,fCom:4.10,fSem:4.65,jsCom:0.85,jsSem:1.50,promoPeriodo:24,promoSpread:0,  dossier:300,avaliacao:250,contaMes:5.00,capMin:20000, capMax:3000000,vRef:19.92,mAno:256,minutas:0,  jovemIsenta:true}, // SECCAO_18.pdf (mai.2026): CH c/ garantia variável E6/E12 + spread 0,70–1,50%; TAN ilustr. E12 2,747% (abr.2026)+spread; taxa fixa 5a/25a 4,10%/4,65% (notas TAEG). CH Jovem: spr 0,85%/1,50% verif. simulador 2026 (200k/30a). FINE: comissões iniciais 748,80€ (dossier+formalização+avaliação) — modelo interno 300+250
@@ -27,7 +27,7 @@ const FALLBACK_BANK_DATA = {
   BNI:   {sCom:2.00,sSem:3.10,mCom:4.45,mSem:5.55,fCom:5.30,fSem:6.20,jsCom:2.00,jsSem:3.10,promoPeriodo:0, promoSpread:null,dossier:750,avaliacao:200,contaMes:3.00,capMin:25000, capMax:1000000,vRef:19.00,mAno:150,minutas:0,  jovemIsenta:false}, // §18.1 taxas mai.2026: CH c/ garantia hipotecária Euribor 3/6/12m + spread 2,0–3,1% (fin./garantia ≤80%); E6 abr.2026 2,454%+2,0/3,1%→TAN 4,454%/5,554% nos ex. TAEG. Mista: TAN fixa ilustr. 24m 5,299%/6,199% + mesma fase var. Comissões §2.1: estudo 0,5% mín.750€ máx.2500€ +IS; avaliação 200€+IS. js: sem linha jovem no PDF — igual ao quadro geral
   BEST:  {sCom:0.90,sSem:1.90,mCom:3.65,mSem:4.60,fCom:4.41,fSem:5.99,jsCom:0.90,jsSem:1.90,promoPeriodo:0, promoSpread:null,dossier:333,avaliacao:322,contaMes:8.84,capMin:10000, capMax:1800000,vRef:17.55,mAno:123,minutas:0,  jovemIsenta:false}, // Intermediário de crédito Novo Banco (entidade mutuante NB; mai.2026). sSem confirmado via ex. TAEG: E6 3,002%+1,90%→TAN 4,902%. sCom est. alinhado ao produto NB (0,90% spread mínimo). Conta 360° 8,84€/mês IS incluído. Seguros NB: GamaLife (vida) + Mudum (multi). Cap. máx. 1,8M€. Sem linha CH Jovem.
 };
-const CACHE_KEY   = "credito_cache_v12";
+const CACHE_KEY   = "credito_cache_v13";
 const CACHE_H     = 8;
 const HIST_KEY    = 'simulador-hist-v1';
 const HIST_MAX  = 5;
@@ -35,7 +35,7 @@ const HIST_MAX  = 5;
 // ── Seguros ───────────────────────────────────────────────────────────────
 const SEG = {
   CA:    {vRef:22.68,vCap:150000,vAge:30,insV:"CA Seguros",       mAno:160, pRef:200000,insM:"CA Seguros"},
-  CTT:   {vRef:15.71,vCap:150000,vAge:30,insV:"CTT Seguros",      mAno:170, pRef:200000,insM:"CTT Seguros"},
+  CTT:   {vRef:21.51,vCap:150000,vAge:30,insV:"Generali Seguros, S.A.",mAno:207.12,pRef:200000,insM:"Generali Seguros, S.A."},
   BNKTR: {vRef:33.28,vCap:150000,vAge:36,insV:"Bankinter Seguros",mAno:196, pRef:200000,insM:"Bankinter Seguros"},
   ABANCA:{vRef:16.76,vCap:150000,vAge:30,insV:"Abanca Seguros",   mAno:154, pRef:200000,insM:"Abanca Seguros"},
   BCP:   {vRef:19.92,vCap:150000,vAge:30,insV:"Ocidental Vida",   mAno:256, pRef:200000,insM:"Ageas/Ocidental"},
@@ -157,7 +157,7 @@ const CONTRATO_FACTOR = {
 // ── Bancos estáticos ──────────────────────────────────────────────────────
 const BANKS_STATIC = [
   {name:"Crédito Agrícola", s:"CA",    color:"#2d6a2d", refs:["3m","6m","12m"], jOk:true,  carenciaMax:0,  tipos:["variável","mista","fixa"], promos:["CH CA Dedicado: spread 0,70–1,83% (PRE-FT: Euribor 1/3/6/12m; simulador 3/6/12m)", "Spread promocional 0,45% primeiros 24m","Taxa fixa ilustr. 4,70–5,83% (5/10/15a)"], prod:"Dom. ordenado + Seg. Vida CA + Multirriscos CA",                          jProd:"18–30a: isenção comissão abertura + manutenção DO nos exemplos TAEG"},
-  {name:"Banco CTT",        s:"CTT",   color:"#e30613", refs:["3m","6m","12m"], jOk:true,  carenciaMax:0,  tipos:["variável","mista","fixa"],  promos:["Spread CH 0,70–2,60% (§18.1; Euribor 3/6/12m)","Mista 2a: TAN 2,70% c/ prod. / 3,30% s/ prod.","Taxa fixa 30a: TAN 3,90% c/ prod. / 4,50% s/ prod.","CH Sinal Jovem: TAN fixa 5% (produto distinto)"], prod:"Seg. Vida + Multirriscos + Dom. CTT",                              jProd:"Mista 2a TAN 2,70% c/ prod.; taxa fixa 30a 3,90% c/ prod.; Sinal Jovem 5%"},
+  {name:"Banco CTT",        s:"CTT",   color:"#e30613", refs:["3m","6m","12m"], jOk:true,  carenciaMax:0,  tipos:["variável","mista","fixa"],  promos:["Spread CH Normal: 0,85% c/ prod. / 1,45% s/ prod. (Euribor 3/6/12m)","Mista 2a: TAN 3,05% c/ prod. / 3,65% s/ prod.","Taxa fixa 30a: TAN 4,10% c/ prod. / 4,70% s/ prod.","CH Jovem DL44: var. 0,75%/1,35%; mista 2,75%/3,35%; fixa 3,95%/4,55%"], prod:"Seg. Vida + Multirriscos + Dom. CTT (Generali Seguros, S.A.)",              jProd:"CH Jovem: var. 0,75% c/ prod.; mista 2,75%; fixa 3,95% (Garantia Estado DL44/2024)"},
   {name:"Bankinter",        s:"BNKTR", color:"#f7941d", refs:["3m","6m","12m"], jOk:true,  carenciaMax:12, tipos:["variável","mista","fixa"], promos:["Crédito normal: spr.mín. 0,70% c/ pack (−0,35pp vs sem) — verif. simulador","CH Jovem ≤35: spread estim. mais favorável (−0,08pp vs normal)","Euribor 3m · 6m · 12m","Aceita seguros externos"],                                                  prod:"Seg. Vida + Multirriscos + Dom. ordenado",                               jProd:"TAN fixa 2,25% 2 anos; 100% garantia Estado"},
   {name:"Abanca",           s:"ABANCA",color:"#00529b", refs:["6m","12m"],       jOk:true,  carenciaMax:0,  tipos:["variável","mista"],         promos:["Indexante Euribor 6m ou 12m","Taxa fixa 2,70% 1.º/2.º ano"],                                                                                   prod:"Dom. ≥1.000€ + Seg. Vida + Multi + Cartão",                              jProd:"TAN fixa 2,70% 1.º ano → spread 0,70%"},
   {name:"Millennium BCP",   s:"BCP",   color:"#c8102e", refs:["3m","6m","12m"], jOk:true,  carenciaMax:0,  tipos:["variável","mista","fixa"], promos:["CH: spread 0,70–1,50% (SECCAO_18 mai.2026)","CH Jovem: 0,85%/1,50% (verif. simulador)","Spread 0% primeiros 2 anos","Isenção comissões ≤35a","3 indexantes"],                                              prod:"Cartão créd.≥100€ + Créd.pessoal + Dom. + Seg. Ocidental + Ageas",      jProd:"Promo 24m + packs; isenção comissões ≤35a"},
@@ -582,7 +582,12 @@ function App(){
       }
       const jovMF=(x)=>!x||x<=0?x:Math.max(0.15,Math.round((x-0.12)*100)/100);
       let mC=bd.mCom??b.mCom??0,mS=bd.mSem??b.mSem??0,fC=bd.fCom??b.fCom??0,fS=bd.fSem??b.fSem??0;
-      if(modoJovem&&b.jOk){mC=jovMF(mC);mS=jovMF(mS);fC=jovMF(fC);fS=jovMF(fS);}
+      if(modoJovem&&b.jOk){
+        mC=bd.jmCom!=null?bd.jmCom:jovMF(mC);
+        mS=bd.jmSem!=null?bd.jmSem:jovMF(mS);
+        fC=bd.jfCom!=null?bd.jfCom:jovMF(fC);
+        fS=bd.jfSem!=null?bd.jfSem:jovMF(fS);
+      }
       return{
         ...b,
         sCom:Math.max(0,(modoJovem?jsc:basesCom)-certB+ltvAddon+finalAddon),
