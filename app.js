@@ -605,7 +605,7 @@ function App(){
   const registoHipoteca=modoJovem&&finalidade==="hpp"?0:Math.round(capital*0.0008+150); // emolumentos
   // Banco seleccionado para custos (usa o melhor como default)
   const bancoSCustos = bancoCustos || (melhor?.s) || "CA";
-  const bdCustos=bankData[bancoSCustos]||{};
+  const bdCustos=bankData?.[bancoSCustos]||{};
   const comB={dossier:bdCustos.dossier??300,avaliacao:bdCustos.avaliacao??230,minutas:bdCustos.minutas??0,jovemIsenta:bdCustos.jovemIsenta??false,jovemIsentaAval:bdCustos.jovemIsentaAval??false};
   const comDossier=modoJovem&&comB.jovemIsenta?0:comB.dossier;
   const comAval=modoJovem&&comB.jovemIsentaAval?0:comB.avaliacao;
