@@ -36,14 +36,11 @@ Aplicação web para **simular e comparar** crédito habitação em Portugal: pr
 ## Estrutura do repositório
 
 ```text
-├── index.html               # Página inicial — carrega react-runtime + sim-shared + app + index-mount
+├── index.html               # Página inicial — carrega react-runtime + app + index-mount
 ├── quanto-posso-pedir.html  # Calculadora inversa (capital máximo por rendimento)
 ├── historico.html           # Histórico Euribor BCE + spreads por banco
 ├── admin.html               # Painel admin (bancos, spreads, comentários, estatísticas)
 ├── server.js                # Encaminhamento estático + APIs
-├── lib/
-│   └── open-sqlite.js       # Helper comum: abrir SQLite (WAL, schema, hook)
-├── sim-shared-constants.js  # Euribor fallback, factores contrato, cores (partilhado browser)
 ├── sw.js                    # Service Worker (precache de assets)
 ├── manifest.json            # PWA
 ├── icon.svg, og-image.svg
@@ -73,7 +70,9 @@ Aplicação web para **simular e comparar** crédito habitação em Portugal: pr
 ├── reference/precarios-pdf/           # Metadados JSON + PDFs locais (opcional / manual)
 ├── Jenkinsfile              # CI/CD Docker + deploy + Discord
 ├── Dockerfile
-├── AUDITORIA.md             # Template para validar resultados vs simuladores oficiais
+├── docs/
+│   ├── auditoria.md         # Método + evidências: validar vs simuladores oficiais
+│   └── adicionar-banco.md   # Checklist para acrescentar um banco ao simulador
 └── README.md
 ```
 
@@ -246,7 +245,7 @@ O ambiente de exemplo publica com **`-p 3999:3000`** (host 3999 → app 3000). A
 
 ## Auditoria de resultados
 
-Ver **`AUDITORIA.md`**: comparar inputs e outputs com simuladores oficiais dos bancos e registar desvios dentro das tolerâncias definidas.
+Ver **`docs/auditoria.md`**: comparar inputs e outputs com simuladores oficiais dos bancos e registar desvios dentro das tolerâncias definidas.
 
 ---
 
