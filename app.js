@@ -264,7 +264,7 @@ window._SIM={fE,fP,SliderInput,CONTRATO_FACTOR,FALLBACK_EUR,G,Au,R,N,Sky,useStat
 
 function App(props){
   // Euribor / spreads
-  const[EUR,setEUR]=useState(FALLBACK_EUR);
+  const[EUR,setEUR]=useState(props.initialEUR||FALLBACK_EUR);
   const[bankData,setBankData]=useState(props.initialBankData||null);
   const[status,setStatus]=useState("idle");
   const[msg,setMsg]=useState("");
