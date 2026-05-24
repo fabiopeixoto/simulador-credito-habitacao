@@ -90,6 +90,7 @@ try {
   ];
   for (const sql of newCols) { try { sqliteDb.exec(sql); } catch (_) {} }
   try { sqliteDb.exec("ALTER TABLE banks ADD COLUMN ltvBrackets TEXT DEFAULT NULL"); } catch (_) {}
+  try { sqliteDb.exec("ALTER TABLE banks ADD COLUMN preferSource TEXT DEFAULT 'api'"); } catch (_) {}
 } catch (e) {
   console.error("banks.js: SQLite init error:", e.message);
 }
@@ -463,7 +464,7 @@ function spreadComparableEqual(stored, incomingNorm) {
 function getAllBanks() {
   if (!sqliteDb) return [];
   return sqliteDb.prepare(`
-    SELECT code, name, color, refs, jOk, carenciaMax, tipos, promos, prod, jProd, active, sort_order, updated_at, ltvBrackets
+    SELECT code, name, color, refs, jOk, carenciaMax, tipos, promos, prod, jProd, active, sort_order, updated_at, ltvBrackets, preferSource
     FROM banks WHERE active = 1 ORDER BY sort_order
   `).all().filter(row => !DROPPED_BANK_CODES.has(row.code)).map(row => ({
     ...row,
@@ -471,6 +472,7 @@ function getAllBanks() {
     tipos: JSON.parse(row.tipos),
     promos: JSON.parse(row.promos),
     ltvBrackets: row.ltvBrackets ? JSON.parse(row.ltvBrackets) : (SEED_LTV_BRACKETS[row.code] || null),
+    preferSource: row.preferSource || 'api',
     jOk: !!row.jOk,
     active: !!row.active,
   }));
@@ -479,11 +481,27 @@ function getAllBanks() {
 function getLatestSpreads() {
   if (!sqliteDb) return {};
   const rows = sqliteDb.prepare(`
-    SELECT s.* FROM spreads s
-    INNER JOIN (
+    WITH pref AS (
+      SELECT s.bank_code, MAX(s.fetched_at) AS max_fetched
+      FROM spreads s
+      JOIN banks b ON b.code = s.bank_code
+      WHERE (COALESCE(b.preferSource, 'api') = 'manual' AND s.source = 'manual')
+         OR (COALESCE(b.preferSource, 'api') != 'manual' AND s.source IN ('seed', 'anthropic'))
+      GROUP BY s.bank_code
+    ),
+    fallback AS (
       SELECT bank_code, MAX(fetched_at) AS max_fetched
-      FROM spreads GROUP BY bank_code
-    ) latest ON s.bank_code = latest.bank_code AND s.fetched_at = latest.max_fetched
+      FROM spreads
+      WHERE bank_code NOT IN (SELECT bank_code FROM pref)
+      GROUP BY bank_code
+    ),
+    combined AS (
+      SELECT bank_code, max_fetched FROM pref
+      UNION ALL
+      SELECT bank_code, max_fetched FROM fallback
+    )
+    SELECT s.* FROM spreads s
+    JOIN combined c ON s.bank_code = c.bank_code AND s.fetched_at = c.max_fetched
   `).all();
 
   const result = {};
@@ -538,14 +556,15 @@ function getSpreadsHistory(bankCode, limit = 10) {
 function upsertBank(bankData) {
   if (!sqliteDb) return false;
   const stmt = sqliteDb.prepare(`
-    INSERT INTO banks (code, name, color, refs, jOk, carenciaMax, tipos, promos, prod, jProd, active, sort_order, ltvBrackets, updated_at)
-    VALUES (@code, @name, @color, @refs, @jOk, @carenciaMax, @tipos, @promos, @prod, @jProd, @active, @sort_order, @ltvBrackets, @updated_at)
+    INSERT INTO banks (code, name, color, refs, jOk, carenciaMax, tipos, promos, prod, jProd, active, sort_order, ltvBrackets, preferSource, updated_at)
+    VALUES (@code, @name, @color, @refs, @jOk, @carenciaMax, @tipos, @promos, @prod, @jProd, @active, @sort_order, @ltvBrackets, @preferSource, @updated_at)
     ON CONFLICT(code) DO UPDATE SET
       name = excluded.name, color = excluded.color, refs = excluded.refs,
       jOk = excluded.jOk, carenciaMax = excluded.carenciaMax, tipos = excluded.tipos,
       promos = excluded.promos, prod = excluded.prod, jProd = excluded.jProd,
       active = excluded.active, sort_order = excluded.sort_order,
       ltvBrackets = COALESCE(excluded.ltvBrackets, ltvBrackets),
+      preferSource = COALESCE(excluded.preferSource, preferSource),
       updated_at = excluded.updated_at
   `);
   stmt.run({
@@ -562,6 +581,7 @@ function upsertBank(bankData) {
     active: bankData.active !== false ? 1 : 0,
     sort_order: bankData.sort_order || 0,
     ltvBrackets: bankData.ltvBrackets ? JSON.stringify(bankData.ltvBrackets) : null,
+    preferSource: bankData.preferSource === 'manual' ? 'manual' : 'api',
     updated_at: Date.now(),
   });
   return true;
