@@ -382,7 +382,7 @@ function App(){
         tipos:Array.isArray(b.tipos)?b.tipos:['variável'],
         promos:Array.isArray(b.promos)?b.promos:[],
         prod:b.prod||'',jProd:b.jProd||'',
-        sortOrder:b.sort_order||999,
+        sortOrder:b.sort_order??999,
         updated:sc!==null});
     });
     // Actualizar LTV_BRACKETS em-lugar com dados da API (fallback permanece em window._SIM.LTV_BRACKETS)
