@@ -1,15 +1,11 @@
 const fs = require("fs");
 const path = require("path");
+const { openSqliteDb } = require(path.join(__dirname, "..", "lib", "open-sqlite.js"));
 
-let sqliteDb = null;
-try {
-  const Database = require("better-sqlite3");
-  const dbDir = path.join(__dirname, "..", "data");
-  const dbPath = path.join(dbDir, "stats.sqlite");
-  fs.mkdirSync(dbDir, { recursive: true });
-  sqliteDb = new Database(dbPath);
-  sqliteDb.pragma("journal_mode = WAL");
-  sqliteDb.exec(`
+const dbDir = path.join(__dirname, "..", "data");
+const dbPath = path.join(dbDir, "stats.sqlite");
+
+const STATS_SCHEMA = `
     CREATE TABLE IF NOT EXISTS daily (
       day TEXT PRIMARY KEY,
       homepage INTEGER NOT NULL DEFAULT 0,
@@ -26,10 +22,9 @@ try {
       count        INTEGER NOT NULL DEFAULT 0,
       PRIMARY KEY (city, country_code)
     );
-  `);
-} catch (e) {
-  console.error("stats.js: SQLite init:", e.message);
-}
+  `;
+
+const { db: sqliteDb } = openSqliteDb(dbPath, { label: "stats.js", schema: STATS_SCHEMA });
 
 const _ipCache = new Map();
 const _pending = new Map(); // ip → queued visit count while lookup is in flight
@@ -59,6 +54,7 @@ async function recordVisitorLocation(ip) {
   }
   _pending.set(ip, 1);
   try {
+    // Plano gratuito ip-api: apenas HTTP (HTTPS falha sem API paga).
     const r = await fetch(
       `http://ip-api.com/json/${encodeURIComponent(ip)}?fields=status,city,regionName,country,countryCode`,
       { signal: AbortSignal.timeout(5000) }
@@ -72,7 +68,7 @@ async function recordVisitorLocation(ip) {
     } else {
       _ipCache.set(ip, null);
     }
-  } catch (_) { /* não cacheado em erro — tenta de novo na próxima visita */ }
+  } catch (e) { console.error("stats.js: recordVisitorLocation ip-api failed:", e.message); }
   finally { _pending.delete(ip); }
 }
 

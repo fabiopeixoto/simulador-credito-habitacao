@@ -21,11 +21,7 @@ pipeline {
       // Runs inside a clean Node.js container — no Docker socket needed.
       agent { docker { image 'node:20-slim' } }
       steps {
-        sh '''
-          for f in server.js api/banks.js api/spreads.js api/comments.js api/stats.js api/euribor.js; do
-            node --check "$f" || exit 1
-          done
-        '''
+        sh 'npm run lint'
       }
     }
 

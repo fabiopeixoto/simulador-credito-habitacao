@@ -36,11 +36,14 @@ Aplicação web para **simular e comparar** crédito habitação em Portugal: pr
 ## Estrutura do repositório
 
 ```text
-├── index.html               # Página inicial — carrega react-runtime + app + index-mount
+├── index.html               # Página inicial — carrega react-runtime + sim-shared + app + index-mount
 ├── quanto-posso-pedir.html  # Calculadora inversa (capital máximo por rendimento)
 ├── historico.html           # Histórico Euribor BCE + spreads por banco
 ├── admin.html               # Painel admin (bancos, spreads, comentários, estatísticas)
 ├── server.js                # Encaminhamento estático + APIs
+├── lib/
+│   └── open-sqlite.js       # Helper comum: abrir SQLite (WAL, schema, hook)
+├── sim-shared-constants.js  # Euribor fallback, factores contrato, cores (partilhado browser)
 ├── sw.js                    # Service Worker (precache de assets)
 ├── manifest.json            # PWA
 ├── icon.svg, og-image.svg

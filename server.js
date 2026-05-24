@@ -11,6 +11,14 @@ const banksHandler = require(path.join(root, "api", "banks.js"));
 const statsHandler = require(path.join(root, "api", "stats.js"));
 const euriborHistoryHandler = require(path.join(root, "api", "euribor-history.js"));
 
+const API_ROUTES = [
+  { path: "/api/euribor-history", methods: ["GET", "OPTIONS"], allowHeader: "GET, OPTIONS", handler: euriborHistoryHandler },
+  { path: "/api/spreads", methods: ["POST"], allowHeader: "POST", handler: spreadsHandler },
+  { path: "/api/comments", methods: ["GET", "POST", "DELETE", "OPTIONS"], allowHeader: "GET, POST, DELETE, OPTIONS", handler: commentsHandler },
+  { path: "/api/banks", methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], allowHeader: "GET, POST, PUT, DELETE, OPTIONS", handler: banksHandler },
+  { path: "/api/stats", methods: ["GET", "OPTIONS"], allowHeader: "GET, OPTIONS", handler: statsHandler },
+];
+
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
   ".js": "application/javascript; charset=utf-8",

@@ -1,19 +1,12 @@
-const fs = require("fs");
 const path = require("path");
+const { openSqliteDb } = require(path.join(__dirname, "..", "lib", "open-sqlite.js"));
 const { randomUUID } = require("crypto");
 
 // ── SQLite ────────────────────────────────────────────────────────────────
-let sqliteDb = null;
-let sqliteError = null;
 const dbDir = path.join(__dirname, "..", "data");
 const dbPath = path.join(dbDir, "comments.sqlite");
 
-try {
-  const Database = require("better-sqlite3");
-  fs.mkdirSync(dbDir, { recursive: true });
-  sqliteDb = new Database(dbPath);
-  sqliteDb.pragma("journal_mode = WAL");
-  sqliteDb.exec(`
+const COMMENTS_SCHEMA = `
     CREATE TABLE IF NOT EXISTS comments (
       id TEXT PRIMARY KEY,
       ts INTEGER NOT NULL,
@@ -25,15 +18,22 @@ try {
       parentId TEXT
     );
     CREATE INDEX IF NOT EXISTS idx_comments_ts ON comments(ts DESC);
-  `);
-  const columns = sqliteDb.prepare("PRAGMA table_info(comments)").all().map((column) => column.name);
+  `;
+
+function migrateComments(db) {
+  const columns = db.prepare("PRAGMA table_info(comments)").all().map((column) => column.name);
   if (!columns.includes("parentId")) {
-    sqliteDb.prepare("ALTER TABLE comments ADD COLUMN parentId TEXT").run();
+    db.prepare("ALTER TABLE comments ADD COLUMN parentId TEXT").run();
   }
-  sqliteDb.prepare("CREATE INDEX IF NOT EXISTS idx_comments_parent ON comments(parentId, ts)").run();
-} catch (error) {
-  sqliteError = error && error.message ? error.message : "SQLite init error";
+  db.prepare("CREATE INDEX IF NOT EXISTS idx_comments_parent ON comments(parentId, ts)").run();
 }
+
+const { db: sqliteDb, error: sqliteOpenError } = openSqliteDb(dbPath, {
+  label: "comments.js",
+  schema: COMMENTS_SCHEMA,
+  onOpen: migrateComments,
+});
+const sqliteError = sqliteOpenError;
 
 const MAX_COMMENTS = 100;
 const TREE_CACHE_TTL = 30 * 1000;

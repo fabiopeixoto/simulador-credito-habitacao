@@ -3,11 +3,11 @@ if(!window.React||!window.Recharts)return;try{
 const { useState, useEffect, useMemo, useCallback } = React;
 const { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } = Recharts;
 
-// ── Euribor fallback (maio 2026) ──────────────────────────────────────────
-const FALLBACK_EUR = {
+const _SIM_SHARED = typeof window !== "undefined" && window._SIM_SHARED ? window._SIM_SHARED : {};
+const FALLBACK_EUR = _SIM_SHARED.FALLBACK_EUR || {
   "3m":  { valor: 2.209, data: "maio 2026" },
   "6m":  { valor: 2.541, data: "maio 2026" },
-  "12m": { valor: 2.860, data: "maio 2026" },
+  "12m": { valor: 2.86, data: "maio 2026" },
 };
 const CACHE_KEY   = "credito_cache_v13";
 const CACHE_H     = 8;
@@ -39,7 +39,7 @@ const FINALIDADE_MAX_LTV = {
 };
 
 // Os bancos aplicam um factor de correcção ao rendimento declarado
-const CONTRATO_FACTOR = {
+const CONTRATO_FACTOR = _SIM_SHARED.CONTRATO_FACTOR || {
   efetivo:  1.00,  // Contrato sem termo — 100%
   termo:    0.90,  // Contrato a termo certo — ~90%
   parcial:  0.80,  // Part-time
@@ -69,7 +69,6 @@ const BANKS_STATIC = [
 const fE  = v => isFinite(v) ? Math.round(v).toLocaleString("pt-PT",{style:"currency",currency:"EUR",maximumFractionDigits:0}) : "—";
 const fE2 = v => isFinite(v) ? v.toLocaleString("pt-PT",{style:"currency",currency:"EUR",minimumFractionDigits:2,maximumFractionDigits:2}) : "—";
 const fP  = v => isFinite(v) ? v.toFixed(3).replace(".",",")+"%" : "—";
-const fP1 = v => v.toFixed(1).replace(".",",") + "%";
 /** Margem orientativa vs simuladores oficiais (±5% na prestação total — AUDITORIA). */
 function margemVsOficial(pt){const x=Number(pt);return isFinite(x)?Math.max(25,Math.round(x*0.05)):50;}
 
@@ -190,7 +189,7 @@ const tdBC={padding:"6px 6px"};
 const tdGC=i=>({...tdBC,background:i===0?"rgba(74,222,128,0.09)":"rgba(74,222,128,0.035)",color:"#14532d"});
 const tdRC=i=>({...tdBC,background:i===0?"rgba(248,113,113,0.09)":"rgba(248,113,113,0.03)",color:"#7f1d1d"});
 const rbg=i=>i===0?"rgba(201,168,76,0.32)":i===1?"rgba(148,163,184,0.28)":i===2?"rgba(160,108,50,0.11)":"rgba(0,0,0,0.025)";
-const EUR_COLORS={"3m":["#f97316","rgba(249,115,22,0.18)"],"6m":[Sky,"rgba(2,132,199,0.18)"],"12m":[Au,"rgba(37,99,235,0.18)"]};
+const EUR_COLORS=_SIM_SHARED.EUR_COLORS||{"3m":["#f97316","rgba(249,115,22,0.18)"],"6m":[Sky,"rgba(2,132,199,0.18)"],"12m":[Au,"rgba(37,99,235,0.18)"]};
 
 function RefBadge({refKey}){
   const[c,bg]=EUR_COLORS[refKey]||[Au,"rgba(37,99,235,0.18)"];

@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "lint": "node --check server.js && node --check sw.js && node --check lib/open-sqlite.js && node --check sim-shared-constants.js && node --check app.js && node --check inversa-bootstrap.js && node --check page-header.js && node --check comments-modal.js && node --check glossario-modal.js && node --check reverse-calc-page.js && node --check transferencia-page.js && node --check historico-page.js && node --check index-mount.js && node --check inversa-mount.js && node --check transferencia-mount.js && node --check historico-mount.js && for f in api/banks.js api/spreads.js api/comments.js api/stats.js api/euribor.js api/euribor-history.js; do node --check \"$f\" || exit 1; done"
   },
   "dependencies": {
     "better-sqlite3": "^12.9.0"
