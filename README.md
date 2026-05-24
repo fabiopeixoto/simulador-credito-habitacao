@@ -29,7 +29,7 @@ Aplicação web para **simular e comparar** crédito habitação em Portugal: pr
 | Servidor | `server.js` — `http.createServer`, ficheiros estáticos, **Brotli/Gzip** quando o cliente aceita |
 | Base de dados | SQLite em `data/` (vários ficheiros; ver abaixo) |
 | Frontend | React servido em ficheiros separados e cacheados (`react-runtime.js`, `app.js`, etc.) — sem build step |
-| Container | `Dockerfile` — `node:20-slim`, `python3`/`make`/`g++` para fallback nativo do `better-sqlite3`, `npm install --production`, `CMD node server.js` |
+| Container | `Dockerfile` — `node:20-slim`, `npm install --production`, `CMD node server.js` |
 
 ---
 
@@ -203,6 +203,8 @@ docker run -d --name simulador-credito-habitacao -p 3000:3000 \
 ```
 
 Montar **`/usr/src/app/data`** para persistir comentários, caches e base de bancos.
+
+O ficheiro **`.dockerignore`** evita enviar `node_modules/`, `data/` e `.git/` no contexto do `docker build` (menos MB e builds mais rápidos no CI).
 
 ---
 

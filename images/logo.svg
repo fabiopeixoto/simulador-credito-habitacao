@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 44" fill="none">
-  <!-- House body -->
-  <path d="M6 22L22 8L38 22" stroke="#2563eb" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M10 19V36H18.5V28H25.5V36H34V19" stroke="#2563eb" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
-  <!-- Trending arrow (gold) -->
-  <polyline points="13,30 19,23 25,26 33,16" stroke="#d4a017" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-  <polyline points="29,14 33,16 31,20" stroke="#d4a017" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>

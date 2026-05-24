@@ -1,0 +1,8 @@
+# Reduz o contexto enviado ao daemon Docker (evita copiar dependências e bases locais).
+.git
+.github
+node_modules
+data
+*.log
+npm-debug.log*
+.DS_Store
