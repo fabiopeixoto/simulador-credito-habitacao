@@ -262,10 +262,10 @@ const _qs=(k,d,o)=>{const v=_Q.get(k);return o.includes(v)?v:d;};
 
 window._SIM={fE,fP,SliderInput,CONTRATO_FACTOR,FALLBACK_EUR,G,Au,R,N,Sky,useState,EUR_COLORS,LTV_BRACKETS,BANK_DOMAINS};
 
-function App(){
+function App(props){
   // Euribor / spreads
   const[EUR,setEUR]=useState(FALLBACK_EUR);
-  const[bankData,setBankData]=useState(null);
+  const[bankData,setBankData]=useState(props.initialBankData||null);
   const[status,setStatus]=useState("idle");
   const[msg,setMsg]=useState("");
   const[ts,setTs]=useState(null);
