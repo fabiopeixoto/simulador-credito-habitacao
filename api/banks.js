@@ -55,6 +55,15 @@ try {
       insM TEXT DEFAULT '',
       minutas REAL DEFAULT 0,
       jovemIsenta INTEGER DEFAULT 0,
+      jovemSameSpread INTEGER DEFAULT 0,
+      jovemIsentaAval INTEGER DEFAULT 0,
+      jmCom REAL,
+      jmSem REAL,
+      jfCom REAL,
+      jfSem REAL,
+      vCap REAL DEFAULT 150000,
+      vAge INTEGER DEFAULT 30,
+      pRef REAL DEFAULT 200000,
       source TEXT DEFAULT 'manual',
       fetched_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
     );
@@ -67,6 +76,19 @@ try {
       updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
     );
   `);
+  // Migration: add new columns if they don't exist yet
+  const newCols = [
+    "ALTER TABLE spreads ADD COLUMN jovemSameSpread INTEGER DEFAULT 0",
+    "ALTER TABLE spreads ADD COLUMN jovemIsentaAval INTEGER DEFAULT 0",
+    "ALTER TABLE spreads ADD COLUMN jmCom REAL",
+    "ALTER TABLE spreads ADD COLUMN jmSem REAL",
+    "ALTER TABLE spreads ADD COLUMN jfCom REAL",
+    "ALTER TABLE spreads ADD COLUMN jfSem REAL",
+    "ALTER TABLE spreads ADD COLUMN vCap REAL DEFAULT 150000",
+    "ALTER TABLE spreads ADD COLUMN vAge INTEGER DEFAULT 30",
+    "ALTER TABLE spreads ADD COLUMN pRef REAL DEFAULT 200000",
+  ];
+  for (const sql of newCols) { try { sqliteDb.exec(sql); } catch (_) {} }
 } catch (e) {
   console.error("banks.js: SQLite init error:", e.message);
 }
@@ -159,20 +181,20 @@ const SEED_BANKS = [
 
 /** Valores canónicos servidos via GET /api/banks (SQLite). Actualizar aqui + deploy; `reconcileSeedSpreadsToDb` insere linha nova se divergirem. */
 const SEED_SPREADS = {
-  CA: { sCom: 0.70, sSem: 1.83, mCom: 3.45, mSem: 4.58, fCom: 4.70, fSem: 5.83, jsCom: 0.75, jsSem: 1.88, promoPeriodo: 24, promoSpread: 0.45, dossier: 250, avaliacao: 200, contaMes: 3.50, contaNota: "Manutenção DO incluída nos exemplos TAEG §18.1; valor mensal estimado fora do quadro", capMin: 25000, capMax: 2000000, vRef: 22.68, mAno: 160, insV: "CA Seguros", insM: "CA Seguros", minutas: 0, jovemIsenta: true },
-  CTT: { sCom: 0.85, sSem: 1.45, mCom: 3.05, mSem: 3.65, fCom: 4.10, fSem: 4.70, jsCom: 0.75, jsSem: 1.35, promoPeriodo: 0, promoSpread: null, dossier: 280, avaliacao: 230, contaMes: 1.73, contaNota: "20€/ano conta + IS 4% (exemplos TAEG FINE mai.2026) ≈ 1,73€/mês", capMin: 25000, capMax: 1000000, vRef: 21.51, mAno: 207.12, insV: "Generali Seguros, S.A.", insM: "Generali Seguros, S.A.", minutas: 160, jovemIsenta: false },
-  BNKTR: { sCom: 0.70, sSem: 1.05, mCom: 2.25, mSem: 2.60, fCom: 3.45, fSem: 3.80, jsCom: 0.70, jsSem: 1.05, jmCom: 2.25, jmSem: 2.60, jfCom: 3.45, jfSem: 3.80, promoPeriodo: 24, promoSpread: null, dossier: 270, avaliacao: 220, contaMes: 0, contaNota: "Sem comissão de conta obrigatória", capMin: 100000, capMax: 3000000, vRef: 33.28, mAno: 210, insV: "Generali Seguros, S.A.", insM: "Generali Seguros, S.A.", minutas: 0, jovemIsenta: true, jovemSameSpread: true, jovemIsentaAval: true },
-  ABANCA: { sCom: 0.70, sSem: 1.70, mCom: 3.45, mSem: 4.45, fCom: 2.70, fSem: 3.50, jsCom: 0.58, jsSem: 1.58, promoPeriodo: 0, promoSpread: null, dossier: 520, avaliacao: 286, contaMes: 6.24, contaNota: "Conta à ordem — exemplo FINE Nota 1 (mai.2026): 6,24€/mês incl. IS", capMin: 5000, capMax: 2000000, vRef: 16.76, mAno: 154, insV: "Abanca Seguros", insM: "Abanca Seguros", minutas: 0, jovemIsenta: true },
-  BCP: { sCom: 0.70, sSem: 1.50, mCom: 3.45, mSem: 4.25, fCom: 4.10, fSem: 4.65, jsCom: 0.85, jsSem: 1.50, promoPeriodo: 24, promoSpread: 0, dossier: 300, avaliacao: 250, contaMes: 5.00, contaNota: "Conta Millennium (estimativa; comissões conta fora do §18.1 CH)", capMin: 20000, capMax: 3000000, vRef: 19.92, mAno: 256, insV: "Ocidental Vida", insM: "Ageas/Ocidental", minutas: 0, jovemIsenta: true },
-  ACTVO: { sCom: 0.75, sSem: 1.50, mCom: 3.85, mSem: 4.75, fCom: 4.00, fSem: 4.75, jsCom: 0.68, jsSem: 1.38, promoPeriodo: 24, promoSpread: 0, dossier: 300, avaliacao: 250, contaMes: 0, contaNota: "Banco digital — sem comissão", capMin: 20000, capMax: 3000000, vRef: 19.84, mAno: 256, insV: "Ocidental Vida", insM: "Ageas/Ocidental", minutas: 0, jovemIsenta: true },
-  BPI: { sCom: 0.75, sSem: 1.50, mCom: 3.20, mSem: 3.95, fCom: 4.10, fSem: 4.85, jsCom: 0.75, jsSem: 1.50, promoPeriodo: 0, promoSpread: null, dossier: 290, avaliacao: 230, contaMes: 4.90, contaNota: "Conta Pacote BPI (estimativa; FINE CH exclui manutenção da TAEG)", capMin: 25000, capMax: 3000000, vRef: 13.12, mAno: 195, insV: "BPI Vida", insM: "BPI Seguros", minutas: 190, jovemIsenta: true },
-  MNTPO: { sCom: 0.70, sSem: 2.30, mCom: 3.05, mSem: 4.75, fCom: 4.50, fSem: 5.90, jsCom: 0.58, jsSem: 1.38, promoPeriodo: 0, promoSpread: null, dossier: 312, avaliacao: 239, contaMes: 3.11, contaNota: "Conta Base c/ domiciliação ordenado 2,99€/mês + IS 4% ≈ 3,11€ (PRE-FC mai.2026)", capMin: 10000, capMax: 2000000, vRef: 8.29, mAno: 79, insV: "Lusitania Vida", insM: "Lusitania", minutas: 0, jovemIsenta: false },
-  SANTR: { sCom: 0.80, sSem: 1.90, mCom: 2.80, mSem: 4.70, fCom: 4.40, fSem: 4.40, jsCom: 0.80, jsSem: 1.90, jmCom: 2.80, jmSem: 4.70, promoPeriodo: 36, promoSpread: 0.50, dossier: 725, avaliacao: 230, contaMes: 2.90, contaNota: "Conta (estimativa; FINE CH exclui manutenção mensal da TAEG)", capMin: 30000, capMax: 3000000, vRef: 22.55, mAno: 246, insV: "Santander Seguros", insM: "Santander Seguros", minutas: 0, jovemIsenta: false, jovemSameSpread: true },
-  NB: { sCom: 0.75, sSem: 1.70, mCom: 3.65, mSem: 4.60, fCom: 3.71, fSem: 5.99, jsCom: 0.65, jsSem: 1.60, promoPeriodo: 0, promoSpread: null, dossier: 333, avaliacao: 322, contaMes: 8.22, contaNota: "Conta Pacote (fam. 100%) 7,90€/mês + IS 4% ≈ 8,22€ (PRE-FC fev.2026)", capMin: 10000, capMax: 3000000, vRef: 17.55, mAno: 98, insV: "GamaLife", insM: "Mudum", minutas: 0, jovemIsenta: true },
-  CGD: { sCom: 0.70, sSem: 2.90, mCom: 3.15, mSem: 5.35, fCom: 4.75, fSem: 6.95, jsCom: 0.65, jsSem: 1.35, promoPeriodo: 24, promoSpread: null, dossier: 250, avaliacao: 200, contaMes: 6.30, contaNota: "Conta Caixadirecta €6,30/mês IS incluído (reconfirmar folheto comissões particulares)", capMin: 5000, capMax: 3000000, vRef: 29.82, mAno: 110, insV: "Fidelidade", insM: "Fidelidade Casa", minutas: 0, jovemIsenta: true },
-  UCI: { sCom: 1.43, sSem: 2.30, mCom: 4.09, mSem: 4.09, fCom: 4.39, fSem: 4.39, jsCom: 1.43, jsSem: 2.30, promoPeriodo: 0, promoSpread: null, dossier: 600, avaliacao: 225, contaMes: 0, contaNota: "Sem conta obrigatória", capMin: 12500, capMax: 1000000, vRef: 19.00, mAno: 150, insV: "(est.)", insM: "(est.)", minutas: 400, jovemIsenta: false },
-  BNI: { sCom: 2.00, sSem: 3.10, mCom: 4.45, mSem: 5.55, fCom: 5.30, fSem: 6.20, jsCom: 2.00, jsSem: 3.10, promoPeriodo: 0, promoSpread: null, dossier: 750, avaliacao: 200, contaMes: 3.00, contaNota: "Conta DO (estimativa; fora do quadro §18.1)", capMin: 25000, capMax: 1000000, vRef: 19.00, mAno: 150, insV: "(est.)", insM: "(est.)", minutas: 0, jovemIsenta: false },
-  BEST: { sCom: 0.90, sSem: 1.90, mCom: 3.65, mSem: 4.60, fCom: 4.41, fSem: 5.99, jsCom: 0.90, jsSem: 1.90, promoPeriodo: 0, promoSpread: null, dossier: 333, avaliacao: 322, contaMes: 8.84, contaNota: "Conta 360° 8,84€/mês IS incluído (est.; intermediário NB)", capMin: 10000, capMax: 1800000, vRef: 17.55, mAno: 123, insV: "GamaLife", insM: "Mudum", minutas: 0, jovemIsenta: false },
+  CA:    { sCom:0.70,sSem:1.83,mCom:3.45,mSem:4.58,fCom:4.70,fSem:5.83,jsCom:0.75,jsSem:1.88,promoPeriodo:24,promoSpread:0.45, dossier:250,avaliacao:200,contaMes:3.50,contaNota:"Manutenção DO incluída nos exemplos TAEG §18.1",capMin:25000,capMax:2000000,vRef:22.68,mAno:160,insV:"CA Seguros",insM:"CA Seguros",minutas:0,jovemIsenta:true, jovemSameSpread:false,jovemIsentaAval:false,jmCom:null,jmSem:null,jfCom:null,jfSem:null,vCap:150000,vAge:30,pRef:200000 },
+  CTT:   { sCom:0.85,sSem:1.45,mCom:3.05,mSem:3.65,fCom:4.10,fSem:4.70,jsCom:0.75,jsSem:1.35,jmCom:2.75,jmSem:3.35,jfCom:3.95,jfSem:4.55,promoPeriodo:0,promoSpread:null,dossier:280,avaliacao:230,contaMes:1.73,contaNota:"20€/ano conta + IS 4% (exemplos TAEG FINE mai.2026) ≈ 1,73€/mês",capMin:25000,capMax:1000000,vRef:21.51,mAno:207.12,insV:"Generali Seguros, S.A.",insM:"Generali Seguros, S.A.",minutas:160,jovemIsenta:false,jovemSameSpread:false,jovemIsentaAval:false,vCap:150000,vAge:30,pRef:200000 },
+  BNKTR: { sCom:0.70,sSem:1.05,mCom:2.25,mSem:2.60,fCom:3.45,fSem:3.80,jsCom:0.70,jsSem:1.05,jmCom:2.25,jmSem:2.60,jfCom:3.45,jfSem:3.80,promoPeriodo:24,promoSpread:null,dossier:270,avaliacao:220,contaMes:0,contaNota:"Sem comissão de conta obrigatória",capMin:100000,capMax:3000000,vRef:33.28,mAno:210,insV:"Generali Seguros, S.A.",insM:"Generali Seguros, S.A.",minutas:0,jovemIsenta:true,jovemSameSpread:true,jovemIsentaAval:true,vCap:150000,vAge:36,pRef:200000 },
+  ABANCA:{ sCom:0.70,sSem:1.70,mCom:3.45,mSem:4.45,fCom:2.70,fSem:3.50,jsCom:0.58,jsSem:1.58,promoPeriodo:0,promoSpread:null,dossier:520,avaliacao:286,contaMes:6.24,contaNota:"Conta à ordem — exemplo FINE Nota 1 (mai.2026): 6,24€/mês incl. IS",capMin:5000,capMax:2000000,vRef:16.76,mAno:154,insV:"Abanca Seguros",insM:"Abanca Seguros",minutas:0,jovemIsenta:true,jovemSameSpread:false,jovemIsentaAval:false,jmCom:null,jmSem:null,jfCom:null,jfSem:null,vCap:150000,vAge:30,pRef:200000 },
+  BCP:   { sCom:0.70,sSem:1.50,mCom:3.45,mSem:4.25,fCom:4.10,fSem:4.65,jsCom:0.85,jsSem:1.50,promoPeriodo:24,promoSpread:0,dossier:300,avaliacao:250,contaMes:5.00,contaNota:"Conta Millennium (estimativa; comissões conta fora do §18.1 CH)",capMin:20000,capMax:3000000,vRef:19.92,mAno:256,insV:"Ocidental Vida",insM:"Ageas/Ocidental",minutas:0,jovemIsenta:true,jovemSameSpread:false,jovemIsentaAval:false,jmCom:null,jmSem:null,jfCom:null,jfSem:null,vCap:150000,vAge:30,pRef:200000 },
+  ACTVO: { sCom:0.75,sSem:1.50,mCom:3.85,mSem:4.75,fCom:4.00,fSem:4.75,jsCom:0.68,jsSem:1.38,promoPeriodo:24,promoSpread:0,dossier:300,avaliacao:250,contaMes:0,contaNota:"Banco digital — sem comissão",capMin:20000,capMax:3000000,vRef:19.84,mAno:256,insV:"Ocidental Vida",insM:"Ageas/Ocidental",minutas:0,jovemIsenta:true,jovemSameSpread:false,jovemIsentaAval:false,jmCom:null,jmSem:null,jfCom:null,jfSem:null,vCap:150000,vAge:30,pRef:200000 },
+  BPI:   { sCom:0.75,sSem:1.50,mCom:3.20,mSem:3.95,fCom:4.10,fSem:4.85,jsCom:0.75,jsSem:1.50,promoPeriodo:0,promoSpread:null,dossier:290,avaliacao:230,contaMes:4.90,contaNota:"Conta Pacote BPI (estimativa; FINE CH exclui manutenção da TAEG)",capMin:25000,capMax:3000000,vRef:13.12,mAno:195,insV:"BPI Vida",insM:"BPI Seguros",minutas:190,jovemIsenta:true,jovemSameSpread:false,jovemIsentaAval:false,jmCom:null,jmSem:null,jfCom:null,jfSem:null,vCap:150000,vAge:30,pRef:200000 },
+  MNTPO: { sCom:0.70,sSem:1.50,mCom:3.05,mSem:4.75,fCom:4.50,fSem:5.90,jsCom:0.70,jsSem:1.50,promoPeriodo:0,promoSpread:null,dossier:312,avaliacao:239,contaMes:5.41,contaNota:"Conta DO 5,20€/mês + IS 4% = 5,41€ (FINE mai.2026)",capMin:10000,capMax:2000000,vRef:8.29,mAno:79,insV:"Lusitania Vida",insM:"Lusitania",minutas:208,jovemIsenta:false,jovemSameSpread:true,jovemIsentaAval:false,jmCom:null,jmSem:null,jfCom:null,jfSem:null,vCap:100000,vAge:30,pRef:100000 },
+  SANTR: { sCom:0.80,sSem:1.90,mCom:2.80,mSem:4.70,fCom:4.40,fSem:4.40,jsCom:0.80,jsSem:1.90,jmCom:2.80,jmSem:4.70,jfCom:null,jfSem:null,promoPeriodo:36,promoSpread:0.50,dossier:725,avaliacao:230,contaMes:2.90,contaNota:"Conta (estimativa; FINE CH exclui manutenção mensal da TAEG)",capMin:30000,capMax:3000000,vRef:22.55,mAno:246,insV:"Santander Seguros",insM:"Santander Seguros",minutas:0,jovemIsenta:false,jovemSameSpread:true,jovemIsentaAval:false,vCap:150000,vAge:30,pRef:200000 },
+  NB:    { sCom:0.75,sSem:1.70,mCom:3.65,mSem:4.60,fCom:3.71,fSem:5.99,jsCom:0.65,jsSem:1.60,promoPeriodo:0,promoSpread:null,dossier:333,avaliacao:322,contaMes:8.22,contaNota:"Conta Pacote (fam. 100%) 7,90€/mês + IS 4% ≈ 8,22€ (PRE-FC fev.2026)",capMin:10000,capMax:3000000,vRef:17.55,mAno:98,insV:"GamaLife",insM:"Mudum",minutas:0,jovemIsenta:true,jovemSameSpread:false,jovemIsentaAval:false,jmCom:null,jmSem:null,jfCom:null,jfSem:null,vCap:150000,vAge:30,pRef:200000 },
+  CGD:   { sCom:0.70,sSem:2.90,mCom:3.15,mSem:5.35,fCom:4.75,fSem:6.95,jsCom:0.65,jsSem:1.35,promoPeriodo:24,promoSpread:null,dossier:250,avaliacao:200,contaMes:6.30,contaNota:"Conta Caixadirecta €6,30/mês IS incluído",capMin:5000,capMax:3000000,vRef:29.82,mAno:110,insV:"Fidelidade",insM:"Fidelidade Casa",minutas:0,jovemIsenta:true,jovemSameSpread:false,jovemIsentaAval:false,jmCom:null,jmSem:null,jfCom:null,jfSem:null,vCap:150000,vAge:30,pRef:200000 },
+  UCI:   { sCom:1.43,sSem:2.30,mCom:4.09,mSem:4.09,fCom:4.39,fSem:4.39,jsCom:1.43,jsSem:2.30,promoPeriodo:0,promoSpread:null,dossier:600,avaliacao:225,contaMes:0,contaNota:"Sem conta obrigatória",capMin:12500,capMax:1000000,vRef:19.00,mAno:150,insV:"(est.)",insM:"(est.)",minutas:400,jovemIsenta:false,jovemSameSpread:false,jovemIsentaAval:false,jmCom:null,jmSem:null,jfCom:null,jfSem:null,vCap:150000,vAge:30,pRef:200000 },
+  BNI:   { sCom:2.00,sSem:3.10,mCom:4.45,mSem:5.55,fCom:5.30,fSem:6.20,jsCom:2.00,jsSem:3.10,promoPeriodo:0,promoSpread:null,dossier:750,avaliacao:200,contaMes:3.00,contaNota:"Conta DO (estimativa; fora do quadro §18.1)",capMin:25000,capMax:1000000,vRef:19.00,mAno:150,insV:"(est.)",insM:"(est.)",minutas:0,jovemIsenta:false,jovemSameSpread:false,jovemIsentaAval:false,jmCom:null,jmSem:null,jfCom:null,jfSem:null,vCap:150000,vAge:30,pRef:200000 },
+  BEST:  { sCom:0.90,sSem:1.90,mCom:3.65,mSem:4.60,fCom:4.41,fSem:5.99,jsCom:0.90,jsSem:1.90,promoPeriodo:0,promoSpread:null,dossier:333,avaliacao:322,contaMes:8.84,contaNota:"Conta 360° 8,84€/mês IS incluído (est.; intermediário NB)",capMin:10000,capMax:1800000,vRef:17.55,mAno:123,insV:"GamaLife",insM:"Mudum",minutas:0,jovemIsenta:false,jovemSameSpread:false,jovemIsentaAval:false,jmCom:null,jmSem:null,jfCom:null,jfSem:null,vCap:150000,vAge:30,pRef:200000 },
 };
 
 function seedIfEmpty() {
@@ -255,7 +277,17 @@ function reconcileSeedSpreadsToDb() {
     const map = {};
     for (const [code, sd] of Object.entries(SEED_SPREADS)) {
       const row = latest[code];
-      if (row && String(row.source || "").trim() === "manual") continue;
+      if (row && String(row.source || "").trim() === "manual") {
+        // Skip manual rows only when all new seed fields are already consistent
+        const boolsMatch = (!!row.jovemSameSpread === !!sd.jovemSameSpread)
+          && (!!row.jovemIsentaAval === !!sd.jovemIsentaAval);
+        const numsOk = (sd.jmCom == null || row.jmCom != null)
+          && (sd.jmSem == null || row.jmSem != null)
+          && (sd.jfCom == null || row.jfCom != null)
+          && (sd.jfSem == null || row.jfSem != null);
+        const capOk = row.vCap != null && row.pRef != null && row.vAge != null;
+        if (boolsMatch && numsOk && capOk) continue;
+      }
       map[code] = sd;
     }
     if (Object.keys(map).length === 0) return;
@@ -376,6 +408,7 @@ function spreadComparableEqual(stored, incomingNorm) {
   const nums = [
     "sCom", "sSem", "mCom", "mSem", "fCom", "fSem", "jsCom", "jsSem",
     "dossier", "avaliacao", "contaMes", "capMin", "capMax", "vRef", "mAno", "minutas",
+    "jmCom", "jmSem", "jfCom", "jfSem", "vCap", "vAge", "pRef",
   ];
   for (const k of nums) {
     if (!nclose(S[k], I[k])) return false;
@@ -386,6 +419,8 @@ function spreadComparableEqual(stored, incomingNorm) {
   if (String(S.insV || "").trim() !== String(I.insV || "").trim()) return false;
   if (String(S.insM || "").trim() !== String(I.insM || "").trim()) return false;
   if (!!S.jovemIsenta !== !!I.jovemIsenta) return false;
+  if (!!S.jovemSameSpread !== !!I.jovemSameSpread) return false;
+  if (!!S.jovemIsentaAval !== !!I.jovemIsentaAval) return false;
   return true;
 }
 
@@ -438,6 +473,15 @@ function getLatestSpreads() {
       insM: row.insM,
       minutas: row.minutas,
       jovemIsenta: !!row.jovemIsenta,
+      jmCom: row.jmCom ?? null,
+      jmSem: row.jmSem ?? null,
+      jfCom: row.jfCom ?? null,
+      jfSem: row.jfSem ?? null,
+      jovemSameSpread: !!row.jovemSameSpread,
+      jovemIsentaAval: !!row.jovemIsentaAval,
+      vCap: row.vCap ?? 150000,
+      vAge: row.vAge ?? 30,
+      pRef: row.pRef ?? 200000,
       source: row.source,
       fetchedAt: row.fetched_at,
     });
@@ -495,10 +539,12 @@ function insertSpreads(bankCode, spreadsData, source = "manual") {
   const stmt = sqliteDb.prepare(`
     INSERT INTO spreads (bank_code, sCom, sSem, mCom, mSem, fCom, fSem, jsCom, jsSem,
       promoPeriodo, promoSpread, dossier, avaliacao, contaMes, contaNota,
-      capMin, capMax, vRef, mAno, insV, insM, minutas, jovemIsenta, source)
+      capMin, capMax, vRef, mAno, insV, insM, minutas, jovemIsenta,
+      jovemSameSpread, jovemIsentaAval, jmCom, jmSem, jfCom, jfSem, vCap, vAge, pRef, source)
     VALUES (@bank_code, @sCom, @sSem, @mCom, @mSem, @fCom, @fSem, @jsCom, @jsSem,
       @promoPeriodo, @promoSpread, @dossier, @avaliacao, @contaMes, @contaNota,
-      @capMin, @capMax, @vRef, @mAno, @insV, @insM, @minutas, @jovemIsenta, @source)
+      @capMin, @capMax, @vRef, @mAno, @insV, @insM, @minutas, @jovemIsenta,
+      @jovemSameSpread, @jovemIsentaAval, @jmCom, @jmSem, @jfCom, @jfSem, @vCap, @vAge, @pRef, @source)
   `);
   stmt.run({
     bank_code: bankCode,
@@ -524,6 +570,15 @@ function insertSpreads(bankCode, spreadsData, source = "manual") {
     insM: spreadsData.insM || "",
     minutas: spreadsData.minutas || 0,
     jovemIsenta: spreadsData.jovemIsenta ? 1 : 0,
+    jovemSameSpread: spreadsData.jovemSameSpread ? 1 : 0,
+    jovemIsentaAval: spreadsData.jovemIsentaAval ? 1 : 0,
+    jmCom: spreadsData.jmCom ?? null,
+    jmSem: spreadsData.jmSem ?? null,
+    jfCom: spreadsData.jfCom ?? null,
+    jfSem: spreadsData.jfSem ?? null,
+    vCap: spreadsData.vCap ?? 150000,
+    vAge: spreadsData.vAge ?? 30,
+    pRef: spreadsData.pRef ?? 200000,
     source,
   });
   return true;
@@ -534,10 +589,12 @@ function bulkInsertSpreads(spreadsMap, source = "anthropic") {
   const stmt = sqliteDb.prepare(`
     INSERT INTO spreads (bank_code, sCom, sSem, mCom, mSem, fCom, fSem, jsCom, jsSem,
       promoPeriodo, promoSpread, dossier, avaliacao, contaMes, contaNota,
-      capMin, capMax, vRef, mAno, insV, insM, minutas, jovemIsenta, source)
+      capMin, capMax, vRef, mAno, insV, insM, minutas, jovemIsenta,
+      jovemSameSpread, jovemIsentaAval, jmCom, jmSem, jfCom, jfSem, vCap, vAge, pRef, source)
     VALUES (@bank_code, @sCom, @sSem, @mCom, @mSem, @fCom, @fSem, @jsCom, @jsSem,
       @promoPeriodo, @promoSpread, @dossier, @avaliacao, @contaMes, @contaNota,
-      @capMin, @capMax, @vRef, @mAno, @insV, @insM, @minutas, @jovemIsenta, @source)
+      @capMin, @capMax, @vRef, @mAno, @insV, @insM, @minutas, @jovemIsenta,
+      @jovemSameSpread, @jovemIsentaAval, @jmCom, @jmSem, @jfCom, @jfSem, @vCap, @vAge, @pRef, @source)
   `);
   const tx = sqliteDb.transaction((map) => {
     const latest = getLatestSpreads();
@@ -570,6 +627,15 @@ function bulkInsertSpreads(spreadsMap, source = "anthropic") {
         insM: d.insM || "",
         minutas: d.minutas || 0,
         jovemIsenta: d.jovemIsenta ? 1 : 0,
+        jovemSameSpread: d.jovemSameSpread ? 1 : 0,
+        jovemIsentaAval: d.jovemIsentaAval ? 1 : 0,
+        jmCom: d.jmCom ?? null,
+        jmSem: d.jmSem ?? null,
+        jfCom: d.jfCom ?? null,
+        jfSem: d.jfSem ?? null,
+        vCap: d.vCap ?? 150000,
+        vAge: d.vAge ?? 30,
+        pRef: d.pRef ?? 200000,
         source,
       });
     }
