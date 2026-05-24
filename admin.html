@@ -224,7 +224,19 @@
     <div class="form-row-3">
       <div class="form-group"><label>Conta/mês €</label><input id="f_contaMes" type="number" step="0.01" /></div>
       <div class="form-group"><label>Minutas €</label><input id="f_minutas" type="number" step="1" value="0" /></div>
-      <div class="form-group"><label>Jovem Isenta</label><select id="f_jovemIsenta"><option value="1">Sim</option><option value="0">Não</option></select></div>
+      <div class="form-group"><label>Jovem Isenta comissões</label><select id="f_jovemIsenta"><option value="1">Sim</option><option value="0">Não</option></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Jovem mesmo spread (jovemSameSpread)</label><select id="f_jovemSameSpread"><option value="0">Não</option><option value="1">Sim</option></select></div>
+      <div class="form-group"><label>Jovem isenta avaliação (jovemIsentaAval)</label><select id="f_jovemIsentaAval"><option value="0">Não</option><option value="1">Sim</option></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>TAN Jovem Mista c/ prod.</label><input id="f_jmCom" type="number" step="0.01" placeholder="vazio = igual a mCom" /></div>
+      <div class="form-group"><label>TAN Jovem Mista s/ prod.</label><input id="f_jmSem" type="number" step="0.01" placeholder="vazio = igual a mSem" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>TAN Jovem Fixa c/ prod.</label><input id="f_jfCom" type="number" step="0.01" placeholder="vazio = igual a fCom" /></div>
+      <div class="form-group"><label>TAN Jovem Fixa s/ prod.</label><input id="f_jfSem" type="number" step="0.01" placeholder="vazio = igual a fSem" /></div>
     </div>
     <div class="form-row">
       <div class="form-group"><label>Capital Mín €</label><input id="f_capMin" type="number" step="1000" /></div>
@@ -235,9 +247,18 @@
       <div class="form-group"><label>Multirriscos €/ano</label><input id="f_mAno" type="number" step="1" /></div>
       <div class="form-group"><label>Nota conta</label><input id="f_contaNota" /></div>
     </div>
+    <div class="form-row-3">
+      <div class="form-group"><label>Seg. Vida Capital ref. €</label><input id="f_vCap" type="number" step="1000" placeholder="150000" /></div>
+      <div class="form-group"><label>Idade ref. seguro (anos)</label><input id="f_vAge" type="number" step="1" placeholder="30" /></div>
+      <div class="form-group"><label>Imóvel ref. seguro €</label><input id="f_pRef" type="number" step="1000" placeholder="200000" /></div>
+    </div>
     <div class="form-row">
       <div class="form-group"><label>Seguradora Vida</label><input id="f_insV" /></div>
       <div class="form-group"><label>Seguradora Multi</label><input id="f_insM" /></div>
+    </div>
+    <div class="form-group">
+      <label>Escalões LTV (ltvBrackets — JSON, ex: [{"max":80,"add":0},{"max":90,"add":0.05},{"max":100,"add":0.10}])</label>
+      <textarea id="f_ltvBrackets" style="font-family:monospace;font-size:12px;" placeholder='[{"max":80,"add":0},{"max":90,"add":0.05},{"max":100,"add":0.10}]'></textarea>
     </div>
 
     <div class="modal-actions">
@@ -696,6 +717,16 @@ function openEditModal(code) {
   document.getElementById('f_contaNota').value = s.contaNota || '';
   document.getElementById('f_insV').value = s.insV || '';
   document.getElementById('f_insM').value = s.insM || '';
+  document.getElementById('f_jovemSameSpread').value = s.jovemSameSpread ? '1' : '0';
+  document.getElementById('f_jovemIsentaAval').value = s.jovemIsentaAval ? '1' : '0';
+  document.getElementById('f_jmCom').value = s.jmCom ?? '';
+  document.getElementById('f_jmSem').value = s.jmSem ?? '';
+  document.getElementById('f_jfCom').value = s.jfCom ?? '';
+  document.getElementById('f_jfSem').value = s.jfSem ?? '';
+  document.getElementById('f_vCap').value = s.vCap ?? '';
+  document.getElementById('f_vAge').value = s.vAge ?? '';
+  document.getElementById('f_pRef').value = s.pRef ?? '';
+  document.getElementById('f_ltvBrackets').value = b.ltvBrackets ? JSON.stringify(b.ltvBrackets) : '';
 
   updateAdminModalEuriborHint(b);
   document.getElementById('editModal').classList.add('active');
@@ -704,8 +735,10 @@ function openEditModal(code) {
 function clearForm() {
   ['f_code','f_name','f_prod','f_jProd','f_promos','f_tipos','f_refs',
    'f_sCom','f_sSem','f_jsCom','f_jsSem','f_mCom','f_mSem','f_fCom','f_fSem',
+   'f_jmCom','f_jmSem','f_jfCom','f_jfSem',
    'f_promoSpread','f_dossier','f_avaliacao','f_contaMes','f_capMin','f_capMax',
-   'f_vRef','f_mAno','f_contaNota','f_insV','f_insM'].forEach(id => {
+   'f_vRef','f_mAno','f_vCap','f_vAge','f_pRef','f_contaNota','f_insV','f_insM',
+   'f_ltvBrackets'].forEach(id => {
     document.getElementById(id).value = '';
   });
   document.getElementById('f_color').value = '#666666';
@@ -714,6 +747,8 @@ function clearForm() {
   document.getElementById('f_promoPeriodo').value = '0';
   document.getElementById('f_minutas').value = '0';
   document.getElementById('f_jovemIsenta').value = '1';
+  document.getElementById('f_jovemSameSpread').value = '0';
+  document.getElementById('f_jovemIsentaAval').value = '0';
 }
 
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
@@ -738,6 +773,11 @@ async function saveBank() {
     jProd: document.getElementById('f_jProd').value.trim(),
     active: true,
     sort_order: editingCode ? (banks.findIndex(b => b.code === editingCode)) : banks.length,
+    ltvBrackets: (() => {
+      const raw = document.getElementById('f_ltvBrackets').value.trim();
+      if (!raw) return null;
+      try { return JSON.parse(raw); } catch (_) { return null; }
+    })(),
   };
 
   const spreads = {
@@ -746,6 +786,8 @@ async function saveBank() {
     mCom: numOrNull('f_mCom'), mSem: numOrNull('f_mSem'),
     fCom: numOrNull('f_fCom'), fSem: numOrNull('f_fSem'),
     jsCom: numOrNull('f_jsCom'), jsSem: numOrNull('f_jsSem'),
+    jmCom: numOrNull('f_jmCom'), jmSem: numOrNull('f_jmSem'),
+    jfCom: numOrNull('f_jfCom'), jfSem: numOrNull('f_jfSem'),
     promoPeriodo: parseInt(document.getElementById('f_promoPeriodo').value) || 0,
     promoSpread: numOrNull('f_promoSpread'),
     dossier: numOrNull('f_dossier'),
@@ -756,12 +798,22 @@ async function saveBank() {
     capMax: numOrNull('f_capMax'),
     vRef: numOrNull('f_vRef'),
     mAno: numOrNull('f_mAno'),
+    vCap: numOrNull('f_vCap'),
+    vAge: numOrNull('f_vAge'),
+    pRef: numOrNull('f_pRef'),
     insV: document.getElementById('f_insV').value.trim(),
     insM: document.getElementById('f_insM').value.trim(),
     minutas: numOrNull('f_minutas'),
     jovemIsenta: document.getElementById('f_jovemIsenta').value === '1',
+    jovemSameSpread: document.getElementById('f_jovemSameSpread').value === '1',
+    jovemIsentaAval: document.getElementById('f_jovemIsentaAval').value === '1',
     source: 'manual',
   };
+
+  const rawLtv = document.getElementById('f_ltvBrackets').value.trim();
+  if (rawLtv && bank.ltvBrackets === null) {
+    return setStatus('ltvBrackets: JSON inválido — verifique o formato', 'error');
+  }
 
   try {
     const r = await fetch('/api/banks', {
