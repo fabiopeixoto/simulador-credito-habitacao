@@ -55,6 +55,15 @@ try {
       insM TEXT DEFAULT '',
       minutas REAL DEFAULT 0,
       jovemIsenta INTEGER DEFAULT 0,
+      jovemSameSpread INTEGER DEFAULT 0,
+      jovemIsentaAval INTEGER DEFAULT 0,
+      jmCom REAL,
+      jmSem REAL,
+      jfCom REAL,
+      jfSem REAL,
+      vCap REAL DEFAULT 150000,
+      vAge INTEGER DEFAULT 30,
+      pRef REAL DEFAULT 200000,
       source TEXT DEFAULT 'manual',
       fetched_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
     );
@@ -67,6 +76,19 @@ try {
       updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
     );
   `);
+  // Migration: add new columns if they don't exist yet
+  const newCols = [
+    "ALTER TABLE spreads ADD COLUMN jovemSameSpread INTEGER DEFAULT 0",
+    "ALTER TABLE spreads ADD COLUMN jovemIsentaAval INTEGER DEFAULT 0",
+    "ALTER TABLE spreads ADD COLUMN jmCom REAL",
+    "ALTER TABLE spreads ADD COLUMN jmSem REAL",
+    "ALTER TABLE spreads ADD COLUMN jfCom REAL",
+    "ALTER TABLE spreads ADD COLUMN jfSem REAL",
+    "ALTER TABLE spreads ADD COLUMN vCap REAL DEFAULT 150000",
+    "ALTER TABLE spreads ADD COLUMN vAge INTEGER DEFAULT 30",
+    "ALTER TABLE spreads ADD COLUMN pRef REAL DEFAULT 200000",
+  ];
+  for (const sql of newCols) { try { sqliteDb.exec(sql); } catch (_) {} }
 } catch (e) {
   console.error("banks.js: SQLite init error:", e.message);
 }
