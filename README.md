@@ -29,7 +29,7 @@ Aplicação web para **simular e comparar** crédito habitação em Portugal: pr
 | Servidor | `server.js` — `http.createServer`, ficheiros estáticos, **Brotli/Gzip** quando o cliente aceita |
 | Base de dados | SQLite em `data/` (vários ficheiros; ver abaixo) |
 | Frontend | React servido em ficheiros separados e cacheados (`react-runtime.js`, `app.js`, etc.) — sem build step |
-| Container | `Dockerfile` — `node:20-slim`, `python3`/`make`/`g++` para fallback nativo do `better-sqlite3`, `npm install --production`, `CMD node server.js` |
+| Container | `Dockerfile` — `node:20-slim`, toolchain para `better-sqlite3`, `npm ci --omit=dev`, `CMD node server.js` |
 
 ---
 
