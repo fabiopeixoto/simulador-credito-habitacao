@@ -21,28 +21,8 @@
     return C*r*Math.pow(1+r,n)/(Math.pow(1+r,n)-1);
   }
 
-  var LTV_BRACKETS={
-    CA:    [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
-    CTT:   [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
-    BNKTR: [{max:75,add:0},{max:80,add:0.05},{max:90,add:0.10},{max:100,add:0.15}],
-    ABANCA:[{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
-    BCP:   [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
-    ACTVO: [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
-    BPI:   [{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
-    MNTPO: [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
-    SANTR: [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
-    NB:    [{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
-    CGD:   [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
-    UCI:   [{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
-    BNI:   [{max:80,add:0},{max:90,add:0.10}],
-    BEST:  [{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
-  };
-
-  var BANK_DOMAINS={
-    CA:"creditoagricola.pt",CTT:"ctt.pt",BNKTR:"bankinter.pt",ABANCA:"abanca.com",
-    BCP:"millenniumbcp.pt",ACTVO:"activobank.pt",BPI:"bpi.pt",MNTPO:"bancomontepio.pt",
-    SANTR:"santander.pt",NB:"novobanco.pt",CGD:"cgd.pt",UCI:"uci.es",BNI:"bnieuropa.pt",BEST:"bancobest.pt"
-  };
+  var LTV_BRACKETS=window._SIM.LTV_BRACKETS;
+  var BANK_DOMAINS=window._SIM.BANK_DOMAINS;
 
   function getLTVAddon(bankCode,ltv){
     var brackets=LTV_BRACKETS[bankCode]||[];

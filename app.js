@@ -71,24 +71,7 @@ const COM = {
 
 // ── Escalões de spread por LTV (verificados Mai.2026) ────────────────────
 // spread adicional sobre o spread base conforme o LTV
-// padrão de mercado: ≤80%→+0, 80-90%→+0.05pp, >90%→+0.10pp
-// BNI: não financia acima de 90%; BNKTR: escalonamento mais conservador a partir de 75%
-const LTV_BRACKETS = {
-  CA:    [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
-  CTT:   [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
-  BNKTR: [{max:75,add:0},{max:80,add:0.05},{max:90,add:0.10},{max:100,add:0.15}],
-  ABANCA:[{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
-  BCP:   [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
-  ACTVO: [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
-  BPI:   [{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
-  MNTPO: [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
-  SANTR: [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
-  NB:    [{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
-  CGD:   [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
-  UCI:   [{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
-  BNI:   [{max:80,add:0},{max:90,add:0.10}],
-  BEST:  [{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
-};
+const LTV_BRACKETS = window._SIM.LTV_BRACKETS;
 
 function getLTVAddon(bankS, ltv) {
   const brackets = LTV_BRACKETS[bankS] || [];
@@ -283,7 +266,7 @@ function amChart(C,tanA,anos,extra) {
 function prestacaoCarencia(C, tanA) { return C * tanA/100/12; }
 
 // ── Domínios dos bancos (para favicon) ────────────────────────────────────
-const BANK_DOMAINS={CA:"creditoagricola.pt",CTT:"ctt.pt",BNKTR:"bankinter.pt",ABANCA:"abanca.com",BCP:"millenniumbcp.pt",ACTVO:"activobank.pt",BPI:"bpi.pt",MNTPO:"bancomontepio.pt",SANTR:"santander.pt",NB:"novobanco.pt",CGD:"cgd.pt",UCI:"uci.es",BNI:"bnieuropa.pt",BEST:"bancobest.pt"};
+const BANK_DOMAINS=window._SIM.BANK_DOMAINS;
 // ── Cores e estilos ───────────────────────────────────────────────────────
 const G="#16a34a",R="#dc2626",Au="#2563eb",N="#e5e7eb",Sky="#0284c7";
 const ecC=ef=>ef<=35?G:ef<=40?Au:R;
@@ -383,7 +366,7 @@ const _qi=(k,d)=>{const n=parseInt(_Q.get(k),10);return Number.isFinite(n)?n:d;}
 const _qb=(k)=>_Q.get(k)==='1';
 const _qs=(k,d,o)=>{const v=_Q.get(k);return o.includes(v)?v:d;};
 
-window._SIM={fE,fP,SliderInput,CONTRATO_FACTOR,FALLBACK_EUR,G,Au,R,N,Sky,useState,EUR_COLORS};
+window._SIM={fE,fP,SliderInput,CONTRATO_FACTOR,FALLBACK_EUR,G,Au,R,N,Sky,useState,EUR_COLORS,LTV_BRACKETS,BANK_DOMAINS};
 
 function App(){
   // Euribor / spreads
