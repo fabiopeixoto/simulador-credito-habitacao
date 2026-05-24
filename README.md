@@ -41,6 +41,9 @@ Aplicação web para **simular e comparar** crédito habitação em Portugal: pr
 ├── historico.html           # Histórico Euribor BCE + spreads por banco
 ├── admin.html               # Painel admin (bancos, spreads, comentários, estatísticas)
 ├── server.js                # Encaminhamento estático + APIs
+├── lib/
+│   └── open-sqlite.js       # Helper comum: abrir SQLite (WAL, schema, hook)
+├── sim-shared-constants.js  # Euribor fallback, factores contrato, cores (partilhado browser)
 ├── sw.js                    # Service Worker (precache de assets)
 ├── manifest.json            # PWA
 ├── icon.svg, og-image.svg
