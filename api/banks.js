@@ -278,8 +278,15 @@ function reconcileSeedSpreadsToDb() {
     for (const [code, sd] of Object.entries(SEED_SPREADS)) {
       const row = latest[code];
       if (row && String(row.source || "").trim() === "manual") {
-        // Skip only if new columns are already populated
-        if (row.vCap != null && row.pRef != null && row.vAge != null) continue;
+        // Skip manual rows only when all new seed fields are already consistent
+        const boolsMatch = (!!row.jovemSameSpread === !!sd.jovemSameSpread)
+          && (!!row.jovemIsentaAval === !!sd.jovemIsentaAval);
+        const numsOk = (sd.jmCom == null || row.jmCom != null)
+          && (sd.jmSem == null || row.jmSem != null)
+          && (sd.jfCom == null || row.jfCom != null)
+          && (sd.jfSem == null || row.jfSem != null);
+        const capOk = row.vCap != null && row.pRef != null && row.vAge != null;
+        if (boolsMatch && numsOk && capOk) continue;
       }
       map[code] = sd;
     }
