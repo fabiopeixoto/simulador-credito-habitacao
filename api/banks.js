@@ -486,7 +486,7 @@ function getLatestSpreads() {
       FROM spreads s
       JOIN banks b ON b.code = s.bank_code
       WHERE (COALESCE(b.preferSource, 'api') = 'manual' AND s.source = 'manual')
-         OR (COALESCE(b.preferSource, 'api') != 'manual' AND s.source IN ('seed', 'anthropic'))
+         OR (COALESCE(b.preferSource, 'api') != 'manual' AND s.source IN ('seed', 'seed-reconcile', 'anthropic'))
       GROUP BY s.bank_code
     ),
     fallback AS (
@@ -581,7 +581,7 @@ function upsertBank(bankData) {
     active: bankData.active !== false ? 1 : 0,
     sort_order: bankData.sort_order || 0,
     ltvBrackets: bankData.ltvBrackets ? JSON.stringify(bankData.ltvBrackets) : null,
-    preferSource: bankData.preferSource === 'manual' ? 'manual' : 'api',
+    preferSource: bankData.preferSource === 'manual' ? 'manual' : bankData.preferSource === 'api' ? 'api' : null,
     updated_at: Date.now(),
   });
   return true;
