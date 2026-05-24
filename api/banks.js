@@ -1,22 +1,15 @@
-const fs = require("fs");
 const path = require("path");
+const { openSqliteDb } = require(path.join(__dirname, "..", "lib", "open-sqlite.js"));
 const { fetchEuribor: fetchEuriborFromBce } = require("./euribor.js");
 
 // ── SQLite ────────────────────────────────────────────────────────────────
-let sqliteDb = null;
 const dbDir = path.join(__dirname, "..", "data");
 const dbPath = path.join(dbDir, "banks.sqlite");
 
 /** Códigos retirados do produto (podem persistir em bases antigas) — não expor na API. */
 const DROPPED_BANK_CODES = new Set(["BIC"]);
 
-try {
-  const Database = require("better-sqlite3");
-  fs.mkdirSync(dbDir, { recursive: true });
-  sqliteDb = new Database(dbPath);
-  sqliteDb.pragma("journal_mode = WAL");
-
-  sqliteDb.exec(`
+const BANKS_SCHEMA = `
     CREATE TABLE IF NOT EXISTS banks (
       code TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -75,8 +68,9 @@ try {
       value TEXT NOT NULL,
       updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
     );
-  `);
-  // Migration: add new columns if they don't exist yet
+  `;
+
+function runBanksMigrations(db) {
   const newCols = [
     "ALTER TABLE spreads ADD COLUMN jovemSameSpread INTEGER DEFAULT 0",
     "ALTER TABLE spreads ADD COLUMN jovemIsentaAval INTEGER DEFAULT 0",
@@ -88,12 +82,26 @@ try {
     "ALTER TABLE spreads ADD COLUMN vAge INTEGER DEFAULT 30",
     "ALTER TABLE spreads ADD COLUMN pRef REAL DEFAULT 200000",
   ];
-  for (const sql of newCols) { try { sqliteDb.exec(sql); } catch (_) {} }
-  try { sqliteDb.exec("ALTER TABLE banks ADD COLUMN ltvBrackets TEXT DEFAULT NULL"); } catch (_) {}
-  try { sqliteDb.exec("ALTER TABLE banks ADD COLUMN preferSource TEXT DEFAULT 'api'"); } catch (_) {}
-} catch (e) {
-  console.error("banks.js: SQLite init error:", e.message);
+  for (const sql of newCols) {
+    try {
+      db.exec(sql);
+    } catch (_) {
+      /* coluna já existe */
+    }
+  }
+  try {
+    db.exec("ALTER TABLE banks ADD COLUMN ltvBrackets TEXT DEFAULT NULL");
+  } catch (_) {}
+  try {
+    db.exec("ALTER TABLE banks ADD COLUMN preferSource TEXT DEFAULT 'api'");
+  } catch (_) {}
 }
+
+const { db: sqliteDb } = openSqliteDb(dbPath, {
+  label: "banks.js",
+  schema: BANKS_SCHEMA,
+  onOpen: runBanksMigrations,
+});
 
 // ── Euribor cache helpers ──────────────────────────────────────────────────
 /** Intervalo mínimo entre pedidos HTTP ao BCE em GET /api/banks (evita sobrecarga). */
@@ -126,7 +134,9 @@ function setEuribor(eur, eurLabel) {
       INSERT INTO kv_store(key, value, updated_at) VALUES (?, ?, ?)
       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
     `).run("euribor", JSON.stringify({ eur, eurLabel, fetchedAt: Date.now() }), Date.now());
-  } catch (_) {}
+  } catch (e) {
+    console.error("banks.js: setEuribor persist failed:", e.message);
+  }
 }
 
 function getEuribor() {
@@ -157,8 +167,8 @@ async function refreshEuriborFromBceForGet() {
   lastEuriborNetAttemptMs = now;
   try {
     await fetchAndCacheEuribor();
-  } catch (_) {
-    /* mantém cache anterior */
+  } catch (e) {
+    console.error("banks.js: fetchAndCacheEuribor failed:", e.message);
   }
   return getEuribor();
 }

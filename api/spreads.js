@@ -1,30 +1,33 @@
-const fs = require("fs");
 const path = require("path");
+const { openSqliteDb } = require(path.join(__dirname, "..", "lib", "open-sqlite.js"));
 const { fetchEuribor } = require("./euribor.js");
 
-let banksModule = null;
-try {
-  banksModule = require(path.join(__dirname, "banks.js"));
-} catch (_) {}
+const banksModuleCache = { mod: undefined, tried: false };
+function getBanksModule() {
+  if (!banksModuleCache.tried) {
+    banksModuleCache.tried = true;
+    try {
+      banksModuleCache.mod = require(path.join(__dirname, "banks.js"));
+    } catch (e) {
+      console.error("spreads.js: require banks.js failed:", e.message);
+      banksModuleCache.mod = null;
+    }
+  }
+  return banksModuleCache.mod;
+}
 
 // ── SQLite cache ──────────────────────────────────────────────────────────
-let sqliteDb = null;
-try {
-  const Database = require("better-sqlite3");
-  const dbDir = path.join(__dirname, "..", "data");
-  const dbPath = path.join(dbDir, "spreads.sqlite");
-  fs.mkdirSync(dbDir, { recursive: true });
-  sqliteDb = new Database(dbPath);
-  sqliteDb.pragma("journal_mode = WAL");
-  sqliteDb.exec(`
+const dbDir = path.join(__dirname, "..", "data");
+const dbPath = path.join(dbDir, "spreads.sqlite");
+const SPREADS_KV_SCHEMA = `
     CREATE TABLE IF NOT EXISTS kv_store (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL,
       expiresAt INTEGER
     );
     CREATE INDEX IF NOT EXISTS idx_kv_store_expires ON kv_store(expiresAt);
-  `);
-} catch (_) {}
+  `;
+const { db: sqliteDb } = openSqliteDb(dbPath, { label: "spreads.js", schema: SPREADS_KV_SCHEMA });
 
 const KV_CACHE_KEY   = "spreads:cache:v1";
 const KV_CALLS_PFX   = "spreads:calls:";   // + "YYYY-MM-DD"
@@ -259,8 +262,8 @@ module.exports = async function handler(req, res) {
     const eurLabel = eurResult.status === "fulfilled" ? eurResult.value.eurLabel : "";
 
     // Persistir Euribor em banks.sqlite para ser servido via GET /api/banks
-    if (eur && banksModule && banksModule.setEuribor) {
-      try { banksModule.setEuribor(eur, eurLabel); } catch (_) {}
+    if (eur && getBanksModule() && getBanksModule().setEuribor) {
+      try { getBanksModule().setEuribor(eur, eurLabel); } catch (e) { console.error("spreads.js: setEuribor failed:", e.message); }
     }
 
     const staleData = kvCached?.data || MEM.data || null;
@@ -285,8 +288,8 @@ module.exports = async function handler(req, res) {
     MEM.callsToday = kvSlot !== null ? Number(kvSlot) : MEM.callsToday + 1;
 
     // Opcional: persistir na SQLite do simulador (desactivado por defeito — evita sobrescrever dados auditados)
-    if (PERSIST_ANTHROPIC_SPREADS_TO_SQLITE && banksModule && banksModule.bulkInsertSpreads && spreadsResult.value) {
-      try { banksModule.bulkInsertSpreads(spreadsResult.value, "anthropic"); } catch (_) {}
+    if (PERSIST_ANTHROPIC_SPREADS_TO_SQLITE && getBanksModule() && getBanksModule().bulkInsertSpreads && spreadsResult.value) {
+      try { getBanksModule().bulkInsertSpreads(spreadsResult.value, "anthropic"); } catch (e) { console.error("spreads.js: bulkInsertSpreads failed:", e.message); }
     }
 
     // Actualizar L2 (KV) — fire-and-forget, não bloqueia a resposta

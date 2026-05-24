@@ -11,17 +11,18 @@
     Au = "#2563eb",
     N = "#e5e7eb",
     Sky = "#0284c7";
-  var EUR_COLORS = {
+  var shared = window._SIM_SHARED || {};
+  var EUR_COLORS = shared.EUR_COLORS || {
     "3m": ["#f97316", "rgba(249,115,22,0.18)"],
     "6m": [Sky, "rgba(2,132,199,0.18)"],
     "12m": [Au, "rgba(37,99,235,0.18)"],
   };
-  var FALLBACK_EUR = {
+  var FALLBACK_EUR = shared.FALLBACK_EUR || {
     "3m": { valor: 2.209, data: "maio 2026" },
     "6m": { valor: 2.541, data: "maio 2026" },
     "12m": { valor: 2.86, data: "maio 2026" },
   };
-  var CONTRATO_FACTOR = {
+  var CONTRATO_FACTOR = shared.CONTRATO_FACTOR || {
     efetivo: 1.0,
     termo: 0.9,
     parcial: 0.8,

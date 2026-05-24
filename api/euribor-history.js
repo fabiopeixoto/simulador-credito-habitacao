@@ -1,5 +1,5 @@
-const fs = require("fs");
 const path = require("path");
+const { openSqliteDb } = require(path.join(__dirname, "..", "lib", "open-sqlite.js"));
 
 const BCE_BASE = "https://data-api.ecb.europa.eu/service/data/FM/";
 const BCE_SERIES = {
@@ -26,25 +26,16 @@ function parseAllRows(csv) {
 }
 
 // ── SQLite persistence (banks.sqlite / kv_store) ───────────────────────────
-let sqliteDb = null;
 const dbDir = path.join(__dirname, "..", "data");
 const dbPath = path.join(dbDir, "banks.sqlite");
-
-try {
-  const Database = require("better-sqlite3");
-  fs.mkdirSync(dbDir, { recursive: true });
-  sqliteDb = new Database(dbPath);
-  sqliteDb.pragma("journal_mode = WAL");
-  sqliteDb.exec(`
+const EUR_HIST_SCHEMA = `
     CREATE TABLE IF NOT EXISTS kv_store (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL,
       updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
     );
-  `);
-} catch (e) {
-  console.error("euribor-history.js: SQLite init:", e.message);
-}
+  `;
+const { db: sqliteDb } = openSqliteDb(dbPath, { label: "euribor-history.js", schema: EUR_HIST_SCHEMA });
 
 const CACHE_TTL = 6 * 3600 * 1000;
 const KV_KEY = "euribor_history";
@@ -55,7 +46,8 @@ function readFromDb() {
     const row = sqliteDb.prepare("SELECT value, updated_at FROM kv_store WHERE key = ?").get(KV_KEY);
     if (!row || Date.now() - row.updated_at > CACHE_TTL) return null;
     return { data: JSON.parse(row.value), cachedAt: row.updated_at };
-  } catch (_) {
+  } catch (e) {
+    console.error("euribor-history.js: readFromDb failed:", e.message);
     return null;
   }
 }
@@ -67,7 +59,9 @@ function writeToDb(data) {
       INSERT INTO kv_store (key, value, updated_at) VALUES (?, ?, ?)
       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
     `).run(KV_KEY, JSON.stringify(data), Date.now());
-  } catch (_) {}
+  } catch (e) {
+    console.error("euribor-history.js: writeToDb failed:", e.message);
+  }
 }
 
 let _cache   = null;

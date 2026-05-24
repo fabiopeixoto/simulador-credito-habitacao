@@ -182,6 +182,7 @@ Requer **`x-admin-token`**. Devolve:
 
 ```bash
 npm install
+npm run lint   # opcional: validação de sintaxe (servidor, APIs, frontend, SW)
 npm start
 # http://localhost:3000/
 ```
