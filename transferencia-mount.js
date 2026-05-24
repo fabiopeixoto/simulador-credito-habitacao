@@ -47,6 +47,9 @@
           if(!alive||!raw)return;
           try{setEUR(mergeEurFromApi(raw));}catch(_){}
           if(raw.banks&&raw.banks.length){
+            raw.banks.forEach(function(b){
+              if(b.ltvBrackets&&Array.isArray(b.ltvBrackets))window._SIM.LTV_BRACKETS[b.code]=b.ltvBrackets;
+            });
             var mapped=raw.banks.map(function(b){
               return {
                 code:b.code,
