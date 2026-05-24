@@ -1,6 +1,8 @@
 # Adicionar um Novo Banco ao Simulador
 
-Checklist completo baseado na adição do Banco Best (PR #254–257). Segue a ordem indicada para evitar falhas de FK na base de dados.
+Checklist actualizado para o estado actual do código (pós PRs #278–282).
+
+> **Nota de arquitectura:** Os dados de cálculo (spreads, comissões, seguros, LTV) vivem na DB SQLite como única fonte de verdade. Os metadados de UI (nome, cor, refs, tipos) ainda estão duplicados em `BANKS_STATIC` no `app.js` por razões de renderização do frontend — ambos têm de ser actualizados.
 
 ---
 
@@ -22,6 +24,10 @@ Antes de tocar no código, reúne:
 | `mCom` / `mSem` | TAN misto com/sem produtos (%) |
 | `fCom` / `fSem` | TAN fixo com/sem produtos (%) |
 | `jsCom` / `jsSem` | Spread CH Jovem com/sem produtos (%) |
+| `jmCom` / `jmSem` | TAN Jovem Mista com/sem (% ou `null` → usa `mCom`/`mSem`) |
+| `jfCom` / `jfSem` | TAN Jovem Fixa com/sem (% ou `null` → usa `fCom`/`fSem`) |
+| `jovemSameSpread` | CH Jovem usa o mesmo spread que o normal? (`false` tipicamente) |
+| `jovemIsentaAval` | CH Jovem isenta comissão de avaliação? |
 | `promoPeriodo` | Meses do período promocional (0 se não existir) |
 | `promoSpread` | Spread durante promoção (%) ou `null` |
 | `dossier` | Comissão de abertura/dossier (€) |
@@ -32,6 +38,9 @@ Antes de tocar no código, reúne:
 | `capMin` / `capMax` | Capital mínimo e máximo (€) |
 | `vRef` | Prémio mensal seguro vida: titular 30 anos, 150k€ capital (€/mês) |
 | `mAno` | Prémio anual seguro multirriscos: imóvel 200k€ (€/ano) |
+| `vCap` | Capital de referência para `vRef` (€, tipicamente `150000`) |
+| `vAge` | Idade de referência para `vRef` (anos, tipicamente `30`) |
+| `pRef` | Valor de imóvel de referência para `mAno` (€, tipicamente `200000`) |
 | `insV` / `insM` | Nome seguradora vida / multirriscos |
 | `jovemIsenta` | Banco isenta comissões dossier+avaliação no CH Jovem? |
 | `promos` | Array de strings com destaques comerciais |
@@ -41,6 +50,8 @@ Antes de tocar no código, reúne:
 ---
 
 ## 2. `api/banks.js` — Seed data (FAZER PRIMEIRO)
+
+A ordem dentro deste ficheiro é crítica: `reconcileSeedBankMetadataToDb` corre antes de `reconcileSeedSpreadsToDb` no arranque. O banco tem de existir na tabela `banks` antes de inserir os seus spreads (FK constraint).
 
 ### 2a. Adicionar a `SEED_BANKS`
 
@@ -60,76 +71,38 @@ Antes de tocar no código, reúne:
 // No objecto SEED_SPREADS, adicionar ANTES do `};`
 XXXX: { sCom: 0.80, sSem: 1.60, mCom: 3.50, mSem: 4.30,
         fCom: 4.20, fSem: 5.00, jsCom: 0.70, jsSem: 1.50,
+        jmCom: null, jmSem: null, jfCom: null, jfSem: null,
+        jovemSameSpread: false, jovemIsentaAval: false,
         promoPeriodo: 0, promoSpread: null,
         dossier: 300, avaliacao: 250, minutas: 0,
-        contaMes: 5.00, contaNota: "Estimativa",
+        contaMes: 5.00, contaNota: "Estimativa mai.AAAA",
         capMin: 25000, capMax: 2000000,
-        vRef: 18.00, mAno: 150,
+        vRef: 18.00, mAno: 150, vCap: 150000, vAge: 30, pRef: 200000,
         insV: "Seguradora Vida", insM: "Seguradora Multi",
         jovemIsenta: false },
 ```
 
-> **Nota:** A função `reconcileSeedBankMetadataToDb` corre **antes** de `reconcileSeedSpreadsToDb` no arranque. Esta ordem é crítica: o banco tem de existir na tabela `banks` antes de inserir os seus spreads (FK constraint).
+> `jmCom`/`jmSem`/`jfCom`/`jfSem`: `null` significa que o frontend calcula automaticamente um desconto de ~0,12pp sobre `mCom`/`fCom` para o modo Jovem. Preenche se o banco publicar valores distintos na FINE.
 
----
-
-## 3. `app.js` — 7 estruturas estáticas
-
-Todas devem estar presentes para o banco funcionar no frontend. A ausência de qualquer uma causa falhas silenciosas (banco ignorado nos cálculos).
-
-### 3a. `FALLBACK_BANK_DATA`
-Dados de spread usados offline ou na primeira pintura. Espelhar os valores de `SEED_SPREADS`.
+### 2c. Adicionar a `SEED_LTV_BRACKETS`
 
 ```js
-XXXX: { sCom:0.80, sSem:1.60, mCom:3.50, mSem:4.30,
-        fCom:4.20, fSem:5.00, jsCom:0.70, jsSem:1.50,
-        promoPeriodo:0, promoSpread:null,
-        dossier:300, avaliacao:250, contaMes:5.00,
-        capMin:25000, capMax:2000000,
-        vRef:18.00, mAno:150, minutas:0, jovemIsenta:false },
-```
-
-### 3b. `SEG`
-Referência de seguros para cálculo de prémios na UI.
-
-```js
-XXXX: { vRef:18.00, vCap:150000, vAge:30,
-        insV:"Seguradora Vida", mAno:150,
-        pRef:200000, insM:"Seguradora Multi" },
-```
-
-### 3c. `COM`
-Comissões iniciais usadas na secção "Custos Iniciais".
-
-```js
-XXXX: { dossier:300, avaliacao:250, minutas:0,
-        total2hab:550, jovemIsenta:false },
-// total2hab = dossier + avaliacao + minutas
-```
-
-### 3d. `LTV_BRACKETS`
-Spread adicional por escalão de LTV. Padrão de mercado se não houver info específica:
-
-```js
+// No objecto SEED_LTV_BRACKETS, adicionar ANTES do `};`
 XXXX: [{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
 ```
 
-### 3e. `CAPITAL_LIMITS`
+> Estes valores são inseridos na DB apenas se `ltvBrackets IS NULL` para o banco (não sobrescreve edições do admin). O padrão de mercado se não houver info específica é `[{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}]`.
+
+---
+
+## 3. `app.js` — BANKS_STATIC
+
+O array `BANKS_STATIC` é a lista-mestra de bancos no frontend. Um banco ausente aqui não aparece na UI, mesmo que esteja na DB.
+
+> **Nota:** `refs`, `jOk`, `tipos`, `promos`, `prod`, `jProd` estão duplicados entre `BANKS_STATIC` e `SEED_BANKS`. Ambos têm de ser mantidos em sincronia — o frontend usa `BANKS_STATIC` para filtragem e renderização; a DB é usada pelos outros cálculos e pelo admin.
 
 ```js
-XXXX: { min:25000, max:2000000 },
-```
-
-### 3f. `CONTA_MES`
-
-```js
-XXXX: { val:5.00, nota:"Fonte ou estimativa (mai.2026)" },
-```
-
-### 3g. `BANKS_STATIC`
-Metadados para renderização da UI. Adicionar ao array antes do `];`:
-
-```js
+// No array BANKS_STATIC, adicionar ANTES do `];`
 { name:"Nome Banco", s:"XXXX", color:"#rrggbb",
   refs:["6m","12m"], jOk:true, carenciaMax:0,
   tipos:["variável","mista","fixa"],
@@ -138,52 +111,53 @@ Metadados para renderização da UI. Adicionar ao array antes do `];`:
   jProd:"Condições jovem" },
 ```
 
-### 3h. `BANK_DOMAINS`
-Domínio para carregar o favicon via Google S2:
-
-```js
-const BANK_DOMAINS = { ..., XXXX: 'banco.pt' };
-```
-
 ---
 
-## 4. `transferencia-page.js` — Página de transferência
+## 4. `inversa-bootstrap.js` — Constantes partilhadas
 
-Este ficheiro tem as suas próprias cópias independentes de `LTV_BRACKETS` e `BANK_DOMAINS`. **A ausência do banco aqui faz o logo aparecer errado e os cálculos de LTV incorrectos na página de transferência.**
+Este ficheiro define `window._SIM.LTV_BRACKETS` e `window._SIM.BANK_DOMAINS`, partilhados por **todas as páginas** (app.js, transferencia, quanto-posso-pedir, historico).
 
 ### 4a. `LTV_BRACKETS`
 
 ```js
+// No objecto LTV_BRACKETS, adicionar ANTES do `};`
 XXXX: [{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
 ```
+
+> Deve espelhar `SEED_LTV_BRACKETS` em `api/banks.js`. Este valor é o fallback offline/antes do carregamento da API; a API actualiza o objecto em-lugar com os valores da DB.
 
 ### 4b. `BANK_DOMAINS`
 
 ```js
-BEST:"bancobest.pt"
+// No objecto BANK_DOMAINS, adicionar:
+XXXX: "banco.pt",
 ```
 
-Após editar, bumpar `transferencia-page.js?vXX` em `transferencia.html` e no precache do `sw.js`.
+> Cobre todas as páginas de utilizador. O `admin.html` tem a sua própria cópia separada (ver secção 6).
 
 ---
 
-## 6. `api/spreads.js` — Prompt da IA
+## 5. `api/spreads.js` — Prompt da IA
 
 A IA usa este prompt para actualizar spreads automaticamente via painel de administração. **Dois sítios** a editar na constante `PROMPT`:
 
 1. Adicionar `XXXX` à lista de códigos no início do prompt:
    ```
-   (CA, CTT, ..., BNI, XXXX)
+   (CA, CTT, ..., BNI, BEST, XXXX)
    ```
 
 2. Adicionar entrada de exemplo no JSON no final do prompt:
    ```json
-   "XXXX":{"sCom":0.80,"sSem":1.60,...,"jovemIsenta":false}
+   "XXXX":{"sCom":0.80,"sSem":1.60,"mCom":3.50,"mSem":4.30,"fCom":4.20,"fSem":5.00,
+           "jsCom":0.70,"jsSem":1.50,"promoPeriodo":0,"promoSpread":null,
+           "dossier":300,"avaliacao":250,"contaMes":5.00,"capMin":25000,"capMax":2000000,
+           "vRef":18.00,"mAno":150,"insV":"Seg. Vida","insM":"Seg. Multi",
+           "contaNota":"Estimativa","minutas":0,"jovemIsenta":false}
    ```
 
 ---
 
-## 7. `admin.html` — BANK_DOMAINS
+## 6. `admin.html` — BANK_DOMAINS
 
 O painel de administração tem a sua própria cópia do `BANK_DOMAINS` para favicons:
 
@@ -193,13 +167,14 @@ const BANK_DOMAINS = { ..., XXXX: 'banco.pt' };
 
 ---
 
-## 8. Cache busting — OBRIGATÓRIO após qualquer alteração de JS
+## 7. Cache busting — OBRIGATÓRIO após qualquer alteração de JS
 
 Sempre que um ficheiro `.js` é alterado, **todos** os seguintes têm de ser actualizados:
 
 | Ficheiro alterado | Bumpar versão em |
 |---|---|
 | `app.js` | `index.html` (`app.js?v=XX`) + `sw.js` precache |
+| `inversa-bootstrap.js` | `index.html`, `transferencia.html`, `historico.html`, `quanto-posso-pedir.html` + `sw.js` precache |
 | `page-header.js` | `index.html`, `transferencia.html`, `historico.html`, `quanto-posso-pedir.html` + `sw.js` precache |
 | `reverse-calc-page.js` | `quanto-posso-pedir.html` + `sw.js` precache |
 | `transferencia-page.js` | `transferencia.html` + `sw.js` precache |
@@ -207,12 +182,12 @@ Sempre que um ficheiro `.js` é alterado, **todos** os seguintes têm de ser act
 Além disso, sempre que o `sw.js` é alterado:
 - Bumpar o nome do cache: `const CACHE = "simulador-vXX"`
 
-E quando a resposta da API `/api/banks` muda estruturalmente:
+E quando a resposta da API `/api/banks` muda estruturalmente (novos campos):
 - Bumpar `CACHE_KEY` em `app.js`: `"credito_cache_vXX"`
 
 ---
 
-## 9. Contadores de texto — "N bancos"
+## 8. Contadores de texto — "N bancos"
 
 Pesquisar o número concreto (ex: `"14 bancos"`) em todo o repositório e actualizar:
 
@@ -229,27 +204,44 @@ Ficheiros típicos a actualizar:
 
 ---
 
+## 9. Verificar flag `preferSource` no admin
+
+Após o primeiro deploy, o novo banco terá `preferSource = 'api'` por defeito — os spreads da API/FINE têm prioridade sobre entradas manuais. Não é necessária nenhuma acção, mas se quiseres forçar valores manuais, usa o botão **"Mudar p/ Manual"** no card do banco na página admin.
+
+---
+
 ## Checklist resumida
 
 ```
-[ ] 1.  Recolher todos os dados do banco (spreads, comissões, seguros)
+[ ] 1.  Recolher todos os dados do banco (spreads, comissões, seguros, LTV)
 [ ] 2.  api/banks.js → SEED_BANKS
-[ ] 3.  api/banks.js → SEED_SPREADS
-[ ] 4.  app.js → FALLBACK_BANK_DATA
-[ ] 5.  app.js → SEG
-[ ] 6.  app.js → COM
-[ ] 7.  app.js → LTV_BRACKETS
-[ ] 8.  app.js → CAPITAL_LIMITS
-[ ] 9.  app.js → CONTA_MES
-[ ] 10. app.js → BANKS_STATIC
-[ ] 11. app.js → BANK_DOMAINS
-[ ] 12. transferencia-page.js → LTV_BRACKETS
-[ ] 13. transferencia-page.js → BANK_DOMAINS
-[ ] 14. api/spreads.js → PROMPT (lista de códigos + exemplo JSON)
-[ ] 15. admin.html → BANK_DOMAINS
-[ ] 16. Cache bust: app.js?vXX em index.html + sw.js precache
-[ ] 17. Cache bust: transferencia-page.js?vXX em transferencia.html + sw.js precache
-[ ] 18. Cache bust: sw.js → simulador-vXX
-[ ] 19. Actualizar contadores "N bancos" em todos os ficheiros
-[ ] 20. Verificar: grep -rn "[0-9]\+ bancos" . --include="*.js" --include="*.html"
+[ ] 3.  api/banks.js → SEED_SPREADS  (incluir jmCom/jmSem/jfCom/jfSem, jovemSameSpread, jovemIsentaAval, vCap/vAge/pRef)
+[ ] 4.  api/banks.js → SEED_LTV_BRACKETS
+[ ] 5.  app.js → BANKS_STATIC
+[ ] 6.  inversa-bootstrap.js → LTV_BRACKETS
+[ ] 7.  inversa-bootstrap.js → BANK_DOMAINS
+[ ] 8.  api/spreads.js → PROMPT (lista de códigos + exemplo JSON)
+[ ] 9.  admin.html → BANK_DOMAINS
+[ ] 10. Cache bust: app.js?vXX em index.html + sw.js precache
+[ ] 11. Cache bust: inversa-bootstrap.js?vXX em index.html, transferencia.html, historico.html, quanto-posso-pedir.html + sw.js
+[ ] 12. Cache bust: sw.js → simulador-vXX
+[ ] 13. Actualizar contadores "N bancos" em todos os ficheiros
+[ ] 14. Verificar: grep -rn "[0-9]\+ bancos" . --include="*.js" --include="*.html"
+[ ] 15. (Opcional) Admin → confirmar preferSource='api' no novo banco
 ```
+
+---
+
+## O que já NÃO é necessário (removido nos PRs #278–282)
+
+Os seguintes objectos foram eliminados de `app.js` — **não adicionar**:
+
+- ~~`FALLBACK_BANK_DATA`~~ — removido (PR #278); spreads vêm exclusivamente da DB
+- ~~`SEG`~~ — removido (PR #278); dados de seguro vêm da DB via `bankData[code]`
+- ~~`COM`~~ — removido (PR #278); comissões vêm da DB via `bankData[code]`
+- ~~`CAPITAL_LIMITS`~~ — removido (PR #278); limites vêm da DB via `bankData[code]`
+- ~~`CONTA_MES`~~ — removido (PR #278); comissão de conta vem da DB
+- ~~`LTV_BRACKETS` em `app.js`~~ — migrado para DB (PR #280); seed em `SEED_LTV_BRACKETS`, fallback em `inversa-bootstrap.js`
+- ~~`BANK_DOMAINS` em `app.js`~~ — centralizado em `inversa-bootstrap.js`
+- ~~`LTV_BRACKETS` em `transferencia-page.js`~~ — usa `window._SIM.LTV_BRACKETS`
+- ~~`BANK_DOMAINS` em `transferencia-page.js`~~ — usa `window._SIM.BANK_DOMAINS`
