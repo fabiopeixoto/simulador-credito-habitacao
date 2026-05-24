@@ -89,6 +89,7 @@ try {
     "ALTER TABLE spreads ADD COLUMN pRef REAL DEFAULT 200000",
   ];
   for (const sql of newCols) { try { sqliteDb.exec(sql); } catch (_) {} }
+  try { sqliteDb.exec("ALTER TABLE banks ADD COLUMN ltvBrackets TEXT DEFAULT NULL"); } catch (_) {}
 } catch (e) {
   console.error("banks.js: SQLite init error:", e.message);
 }
@@ -162,6 +163,24 @@ async function refreshEuriborFromBceForGet() {
 }
 
 // ── Seed data ─────────────────────────────────────────────────────────────
+/** Escalões de spread adicional por LTV, por banco. Fonte canónica — espelha inversa-bootstrap.js. */
+const SEED_LTV_BRACKETS = {
+  CA:    [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
+  CTT:   [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
+  BNKTR: [{max:75,add:0},{max:80,add:0.05},{max:90,add:0.10},{max:100,add:0.15}],
+  ABANCA:[{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
+  BCP:   [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
+  ACTVO: [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
+  BPI:   [{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
+  MNTPO: [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
+  SANTR: [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
+  NB:    [{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
+  CGD:   [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
+  UCI:   [{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
+  BNI:   [{max:80,add:0},{max:90,add:0.10}],
+  BEST:  [{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
+};
+
 const SEED_BANKS = [
   { code: "CA", name: "Crédito Agrícola", color: "#2d6a2d", refs: ["3m", "6m", "12m"], jOk: true, carenciaMax: 0, tipos: ["variável", "mista", "fixa"], promos: ["CH CA Dedicado: spread 0,70–1,83% (PRE-FT: Euribor 1/3/6/12m; simulador 3/6/12m)", "Spread promocional 0,45% primeiros 24m (campanha)", "Taxa fixa ilustr. 4,70–5,83% (5/10/15a)"], prod: "Dom. ordenado + Seg. Vida CA + Multirriscos CA", jProd: "18–30a: isenção comissão abertura + manutenção DO nos exemplos TAEG (Nota 1e/1f)" },
   { code: "CTT", name: "Banco CTT", color: "#e30613", refs: ["3m", "6m", "12m"], jOk: true, carenciaMax: 0, tipos: ["variável", "mista", "fixa"], promos: ["Spread CH Normal: 0,85% c/ prod. / 1,45% s/ prod. (Euribor 3/6/12m)", "Mista 2a: TAN 3,05% c/ prod. / 3,65% s/ prod.", "Taxa fixa 30a: TAN 4,10% c/ prod. / 4,70% s/ prod.", "CH Jovem DL44: var. 0,75%/1,35%; mista 2,75%/3,35%; fixa 3,95%/4,55%"], prod: "Seg. Vida + Multirriscos + Dom. CTT (Generali Seguros, S.A.)", jProd: "CH Jovem: var. 0,75% c/ prod.; mista 2,75%; fixa 3,95% (Garantia Estado DL44/2024)" },
@@ -298,6 +317,22 @@ function reconcileSeedSpreadsToDb() {
 }
 reconcileSeedSpreadsToDb();
 
+function reconcileLtvBracketsToDb() {
+  if (!sqliteDb) return;
+  try {
+    const stmt = sqliteDb.prepare(
+      "UPDATE banks SET ltvBrackets = ?, updated_at = ? WHERE code = ? AND (ltvBrackets IS NULL OR ltvBrackets != ?)"
+    );
+    for (const [code, brackets] of Object.entries(SEED_LTV_BRACKETS)) {
+      const json = JSON.stringify(brackets);
+      stmt.run(json, Date.now(), code, json);
+    }
+  } catch (e) {
+    console.error("banks.js: reconcileLtvBracketsToDb:", e.message);
+  }
+}
+reconcileLtvBracketsToDb();
+
 /** Em cada arranque: alinha metadados canónicos na tabela `banks` a `SEED_BANKS` quando divergem (deploy sem POST manual). Corrige instalações antigas em que `INSERT OR IGNORE` deixou `refs`, `tipos`, etc. desactualizados (ex. CA só «12m», CTT/Montepio sem 3m/6m). Não altera `sort_order` nem `active`. Insere bancos novos do seed que ainda não existam na BD. */
 function reconcileSeedBankMetadataToDb() {
   if (!sqliteDb) return;
@@ -429,13 +464,14 @@ function spreadComparableEqual(stored, incomingNorm) {
 function getAllBanks() {
   if (!sqliteDb) return [];
   return sqliteDb.prepare(`
-    SELECT code, name, color, refs, jOk, carenciaMax, tipos, promos, prod, jProd, active, sort_order, updated_at
+    SELECT code, name, color, refs, jOk, carenciaMax, tipos, promos, prod, jProd, active, sort_order, updated_at, ltvBrackets
     FROM banks WHERE active = 1 ORDER BY sort_order
   `).all().filter(row => !DROPPED_BANK_CODES.has(row.code)).map(row => ({
     ...row,
     refs: JSON.parse(row.refs),
     tipos: JSON.parse(row.tipos),
     promos: JSON.parse(row.promos),
+    ltvBrackets: row.ltvBrackets ? JSON.parse(row.ltvBrackets) : (SEED_LTV_BRACKETS[row.code] || null),
     jOk: !!row.jOk,
     active: !!row.active,
   }));
@@ -503,13 +539,15 @@ function getSpreadsHistory(bankCode, limit = 10) {
 function upsertBank(bankData) {
   if (!sqliteDb) return false;
   const stmt = sqliteDb.prepare(`
-    INSERT INTO banks (code, name, color, refs, jOk, carenciaMax, tipos, promos, prod, jProd, active, sort_order, updated_at)
-    VALUES (@code, @name, @color, @refs, @jOk, @carenciaMax, @tipos, @promos, @prod, @jProd, @active, @sort_order, @updated_at)
+    INSERT INTO banks (code, name, color, refs, jOk, carenciaMax, tipos, promos, prod, jProd, active, sort_order, ltvBrackets, updated_at)
+    VALUES (@code, @name, @color, @refs, @jOk, @carenciaMax, @tipos, @promos, @prod, @jProd, @active, @sort_order, @ltvBrackets, @updated_at)
     ON CONFLICT(code) DO UPDATE SET
       name = excluded.name, color = excluded.color, refs = excluded.refs,
       jOk = excluded.jOk, carenciaMax = excluded.carenciaMax, tipos = excluded.tipos,
       promos = excluded.promos, prod = excluded.prod, jProd = excluded.jProd,
-      active = excluded.active, sort_order = excluded.sort_order, updated_at = excluded.updated_at
+      active = excluded.active, sort_order = excluded.sort_order,
+      ltvBrackets = COALESCE(excluded.ltvBrackets, ltvBrackets),
+      updated_at = excluded.updated_at
   `);
   stmt.run({
     code: bankData.code,
@@ -524,6 +562,7 @@ function upsertBank(bankData) {
     jProd: bankData.jProd || "",
     active: bankData.active !== false ? 1 : 0,
     sort_order: bankData.sort_order || 0,
+    ltvBrackets: bankData.ltvBrackets ? JSON.stringify(bankData.ltvBrackets) : null,
     updated_at: Date.now(),
   });
   return true;

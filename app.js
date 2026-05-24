@@ -393,6 +393,8 @@ function App(){
       const cn=fs(rv.contaNota);if(cn!==null)upd.contaNota=cn;
       newBD[b.code]=normalizeCampaignSpreadRow({...upd,updated:sc!==null});
     });
+    // Actualizar LTV_BRACKETS em-lugar com dados da API (fallback permanece em window._SIM.LTV_BRACKETS)
+    (raw.banks||[]).forEach(b=>{if(b.ltvBrackets&&Array.isArray(b.ltvBrackets))window._SIM.LTV_BRACKETS[b.code]=b.ltvBrackets;});
     setBankData(newBD);
     if(Object.keys(spreadsMap).length>0) statusMsg+=" · "+nSpr+"/"+Object.keys(newBD).length+" actualizado ✓";
     try{localStorage.setItem(CACHE_KEY,JSON.stringify({eur:newEUR,bd:newBD,ts:Date.now()}));}catch(_){}
