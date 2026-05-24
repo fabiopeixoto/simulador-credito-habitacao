@@ -36,7 +36,7 @@ Aplicação web para **simular e comparar** crédito habitação em Portugal: pr
 ## Estrutura do repositório
 
 ```text
-├── index.html               # Página inicial — carrega react-runtime + app + index-mount
+├── index.html               # Página inicial — carrega react-runtime + sim-shared + app + index-mount
 ├── quanto-posso-pedir.html  # Calculadora inversa (capital máximo por rendimento)
 ├── historico.html           # Histórico Euribor BCE + spreads por banco
 ├── admin.html               # Painel admin (bancos, spreads, comentários, estatísticas)
@@ -182,7 +182,6 @@ Requer **`x-admin-token`**. Devolve:
 
 ```bash
 npm install
-npm run lint   # opcional: validação de sintaxe (servidor, APIs, frontend, SW)
 npm start
 # http://localhost:3000/
 ```
