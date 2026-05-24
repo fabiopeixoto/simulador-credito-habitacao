@@ -1,3 +1,4 @@
+const fs = require("fs");
 const path = require("path");
 const { openSqliteDb } = require(path.join(__dirname, "..", "lib", "open-sqlite.js"));
 
@@ -53,8 +54,9 @@ async function recordVisitorLocation(ip) {
   }
   _pending.set(ip, 1);
   try {
+    // Plano gratuito ip-api: apenas HTTP (HTTPS falha sem API paga).
     const r = await fetch(
-      `https://ip-api.com/json/${encodeURIComponent(ip)}?fields=status,city,regionName,country,countryCode`,
+      `http://ip-api.com/json/${encodeURIComponent(ip)}?fields=status,city,regionName,country,countryCode`,
       { signal: AbortSignal.timeout(5000) }
     );
     const d = await r.json();
