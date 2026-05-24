@@ -321,11 +321,10 @@ function reconcileLtvBracketsToDb() {
   if (!sqliteDb) return;
   try {
     const stmt = sqliteDb.prepare(
-      "UPDATE banks SET ltvBrackets = ?, updated_at = ? WHERE code = ? AND (ltvBrackets IS NULL OR ltvBrackets != ?)"
+      "UPDATE banks SET ltvBrackets = ?, updated_at = ? WHERE code = ? AND ltvBrackets IS NULL"
     );
     for (const [code, brackets] of Object.entries(SEED_LTV_BRACKETS)) {
-      const json = JSON.stringify(brackets);
-      stmt.run(json, Date.now(), code, json);
+      stmt.run(JSON.stringify(brackets), Date.now(), code);
     }
   } catch (e) {
     console.error("banks.js: reconcileLtvBracketsToDb:", e.message);
