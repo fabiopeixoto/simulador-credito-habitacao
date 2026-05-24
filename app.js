@@ -9,7 +9,7 @@ const FALLBACK_EUR = {
   "6m":  { valor: 2.541, data: "maio 2026" },
   "12m": { valor: 2.860, data: "maio 2026" },
 };
-const CACHE_KEY   = "credito_cache_v13";
+const CACHE_KEY   = "credito_cache_v14";
 const CACHE_H     = 8;
 const HIST_KEY    = 'simulador-hist-v1';
 const HIST_MAX  = 5;
@@ -47,23 +47,7 @@ const CONTRATO_FACTOR = {
   pensao:   1.00,  // Pensão/reforma — 100%
 };
 
-// ── Bancos estáticos ──────────────────────────────────────────────────────
-const BANKS_STATIC = [
-  {name:"Crédito Agrícola", s:"CA",    color:"#2d6a2d", refs:["3m","6m","12m"], jOk:true,  carenciaMax:0,  tipos:["variável","mista","fixa"], promos:["CH CA Dedicado: spread 0,70–1,83% (PRE-FT: Euribor 1/3/6/12m; simulador 3/6/12m)", "Spread promocional 0,45% primeiros 24m","Taxa fixa ilustr. 4,70–5,83% (5/10/15a)"], prod:"Dom. ordenado + Seg. Vida CA + Multirriscos CA",                          jProd:"18–30a: isenção comissão abertura + manutenção DO nos exemplos TAEG"},
-  {name:"Banco CTT",        s:"CTT",   color:"#e30613", refs:["3m","6m","12m"], jOk:true,  carenciaMax:0,  tipos:["variável","mista","fixa"],  promos:["Spread CH Normal: 0,85% c/ prod. / 1,45% s/ prod. (Euribor 3/6/12m)","Mista 2a: TAN 3,05% c/ prod. / 3,65% s/ prod.","Taxa fixa 30a: TAN 4,10% c/ prod. / 4,70% s/ prod.","CH Jovem DL44: var. 0,75%/1,35%; mista 2,75%/3,35%; fixa 3,95%/4,55%"], prod:"Seg. Vida + Multirriscos + Dom. CTT (Generali Seguros, S.A.)",              jProd:"CH Jovem: var. 0,75% c/ prod.; mista 2,75%; fixa 3,95% (Garantia Estado DL44/2024)"},
-  {name:"Bankinter",        s:"BNKTR", color:"#f7941d", refs:["3m","6m","12m"], jOk:true,  carenciaMax:12, tipos:["variável","mista","fixa"], promos:["Crédito normal: spr.mín. 0,70% c/ pack (−0,35pp vs sem)","CH Jovem ≤35: mesmo spread — benefício=isenção Avaliação+Estudo","Euribor 3m · 6m · 12m","Aceita seguros externos"],                                                  prod:"Seg. Vida + Multirriscos + Dom. ordenado",                               jProd:"TAN fixa 2,25% 2 anos; 100% garantia Estado"},
-  {name:"Abanca",           s:"ABANCA",color:"#00529b", refs:["3m","6m","12m"],  jOk:true,  carenciaMax:0,  tipos:["variável","mista"],         promos:["Indexante Euribor 3m, 6m ou 12m","Taxa fixa 2,70% 1.º/2.º ano"],                                                                                   prod:"Dom. ≥1.000€ + Seg. Vida + Multi + Cartão",                              jProd:"TAN fixa 2,70% 1.º ano → spread 0,70%"},
-  {name:"Millennium BCP",   s:"BCP",   color:"#c8102e", refs:["3m","6m","12m"], jOk:true,  carenciaMax:0,  tipos:["variável","mista","fixa"], promos:["CH: spread 0,70–1,50% (SECCAO_18 mai.2026)","CH Jovem: 0,85%/1,50% (verif. simulador)","Spread 0% primeiros 2 anos","Isenção comissões ≤35a","3 indexantes"],                                              prod:"Cartão créd.≥100€ + Créd.pessoal + Dom. + Seg. Ocidental + Ageas",      jProd:"Promo 24m + packs; isenção comissões ≤35a"},
-  {name:"ActivoBank",       s:"ACTVO", color:"#6d1e8a", refs:["3m","6m","12m"], jOk:true,  carenciaMax:0,  tipos:["variável","mista","fixa"],  promos:["Spread 0% primeiros 2 anos (mista 24m)","3 indexantes (E3/E6/E12)","Taxa fixa: TAN 4,00% c/ prod. / 4,75% s/ prod."],   prod:"Cartão créd.≥100€ + Créd.pessoal + Dom. + Seg. Ocidental + Ageas",      jProd:"Spread 0% 2 anos; taxa fixa disponível; 100% garantia Estado"},
-  {name:"Banco BPI",        s:"BPI",   color:"#005ca9", refs:["3m","6m","12m"], jOk:true,  carenciaMax:0,  tipos:["variável","mista","fixa"], promos:["Spread CH 0,75–1,50% (FINE; redução máx. 75 p.b. vendas associadas)","CH Jovem DL44: mesmos spreads na var.; TAN fixa ilustr. mais baixa","Aceita seguradora externa"], prod:"Seg. Vida BPI + Multirriscos BPI (ou externa sem bonif.)",                jProd:"Garantia Estado até 100% (≤35a); isenções comissões iniciais em campanha"},
-  {name:"Banco Montepio",   s:"MNTPO", color:"#7a0f2e", refs:["3m","6m","12m"], jOk:true,  carenciaMax:24, tipos:["variável","mista","fixa"],  promos:["CH variável: Euribor 6/12m + spread 0,70% c/ prod. / 1,50% s/ prod.","Mista 2a: TAN 3,05% c/ prod.","Taxa fixa: TAN ~4,50% c/ prod. / ~5,90% s/ prod.","Cashback 1,5%"],           prod:"Conta Ordenado + Cartão ≥500€/sem + Seg. Vida + Multirriscos Lusitania", jProd:"100% garantia Estado; mesmo spread CHjovem; cashback 1,5%"},
-  {name:"Santander",        s:"SANTR", color:"#ec0000", refs:["3m","6m","12m"], jOk:true,  carenciaMax:12, tipos:["variável","mista","fixa"], promos:["Spread 0,5% 3 anos (c/prod.) → 0,80% (simulador mai.2026)","Spread base 1,90% s/ pack","Garantia Estado ≤35a (DL44) + benefícios fiscais jovem"],                                                                             prod:"Cartão créd.≥300€ + Seg. Vida + Multirriscos Santander",                 jProd:"Garantia Estado até 100%; isenções IMT/selo/emol. (Lei 30-A/2024, DL48-D) — ver FINE"},
-  {name:"Novo Banco",       s:"NB",    color:"#00a651", refs:["3m","6m","12m"], jOk:true,  carenciaMax:24, tipos:["variável","mista","fixa"], promos:["Euribor 3m · 6m · 12m","Cashback 1%","Mudum — multirriscos mais barato"],                                                                   prod:"Pack 1.º Banco (dom.) + GamaLife + Mudum",                               jProd:"100% financiamento; cashback 1%"},
-  {name:"CGD",              s:"CGD",   color:"#006633", refs:["3m","6m","12m"], jOk:true,  carenciaMax:0,  tipos:["variável","mista","fixa"], promos:["Banco público","CH Reg. Geral: E6 + spread 0,70%–2,90% (folh. 18)","Medida Jovem: spreads no simulador CGD","Cert. A/B: -0,15%"],                       prod:"Pack Vinculação + Pack Ligação (Fidelidade Vida + Multi)",                jProd:"Reg. Geral E6+0,70–2,90% (mai.2026); Medida Jovem 0,65% no simulador oficial"},
-  {name:"UCI",              s:"UCI",   color:"#1a3a6b", refs:["3m","6m","12m"], jOk:true,  carenciaMax:0,  tipos:["variável","mista"],         promos:["CH variável: E6 + spread 1,43–2,30% (§18.1 mai.2026)","Mista: TAN 4,09% (5a) / 4,29% (10a fixo + E6)","Fixa até 10a (prazo máx): TAN 4,39% — não simulada (prazo curto)","Montante 12,5k–1M€","Sem conta obrigatória"], prod:"Seg. Vida + Multirriscos",  jProd:"100% c/ garantia Estado (condições UCI)"},
-  {name:"BNI Europa",       s:"BNI",   color:"#4a235a", refs:["3m","6m","12m"], jOk:false, carenciaMax:0,  tipos:["variável","mista","fixa"], promos:["CH: spread 2,0–3,1% (Euribor 3/6/12m; §18.1 mai.2026)","Mista ilustr. 24m + variável (notas TAEG)","Estudo 0,5% (mín. 750€) + avaliação 200€"], prod:"Domiciliação + Seguros",                                                 jProd:"Sem CH Jovem no §18.1 analisado"},
-  {name:"Banco Best",        s:"BEST",  color:"#e85520", refs:["3m","6m","12m"], jOk:false, carenciaMax:24, tipos:["variável","mista","fixa"], promos:["Intermediário Novo Banco (entidade mutuante NB)","CH variável: E3/E6/E12m + spread 0,90–1,90% (mai.2026)","GamaLife + Mudum (mesmos seguros que NB)"],                                                         prod:"Conta 360° + Dom. ordenado + Seg. Vida GamaLife + Multirriscos Mudum",  jProd:"Sem linha de CH Jovem dedicada"},
-];
+// BANKS_STATIC removido — metadados dos bancos vêm da DB via /api/banks
 
 // ── Helpers matemáticos ───────────────────────────────────────────────────
 const fE  = v => isFinite(v) ? Math.round(v).toLocaleString("pt-PT",{style:"currency",currency:"EUR",maximumFractionDigits:0}) : "—";
@@ -391,7 +375,15 @@ function App(){
       const iv=fs(rv.insV);if(iv!==null)upd.insV=iv;
       const im=fs(rv.insM);if(im!==null)upd.insM=im;
       const cn=fs(rv.contaNota);if(cn!==null)upd.contaNota=cn;
-      newBD[b.code]=normalizeCampaignSpreadRow({...upd,updated:sc!==null});
+      newBD[b.code]=normalizeCampaignSpreadRow({...upd,
+        name:b.name||b.code,s:b.code,color:b.color||'#666666',
+        refs:Array.isArray(b.refs)?b.refs:['12m'],
+        jOk:!!b.jOk,carenciaMax:b.carenciaMax||0,
+        tipos:Array.isArray(b.tipos)?b.tipos:['variável'],
+        promos:Array.isArray(b.promos)?b.promos:[],
+        prod:b.prod||'',jProd:b.jProd||'',
+        sortOrder:b.sort_order??999,
+        updated:sc!==null});
     });
     // Actualizar LTV_BRACKETS em-lugar com dados da API (fallback permanece em window._SIM.LTV_BRACKETS)
     (raw.banks||[]).forEach(b=>{if(b.ltvBrackets&&Array.isArray(b.ltvBrackets))window._SIM.LTV_BRACKETS[b.code]=b.ltvBrackets;});
@@ -455,31 +447,30 @@ function App(){
   // ── Banks com spread dinâmico + LTV + finalidade ─────────────────────────
   const BANKS=useMemo(()=>{
     if(!bankData) return [];
-    return BANKS_STATIC.map(b=>{
-      const bd=bankData[b.s]||{};
-      const basesCom=bd.sCom??1;
-      const basesSem=bd.sSem??1.5;
+    return Object.values(bankData).filter(b=>b.s).sort((a,x)=>a.sortOrder-x.sortOrder).map(b=>{
+      const basesCom=b.sCom??1;
+      const basesSem=b.sSem??1.5;
       const ltvAddonRaw=getLTVAddon(b.s,ltv);
       const ltvAddon=(b.s==="CGD"&&modoJovem&&finalidade==="hpp")?0:ltvAddonRaw;
       const finalAddon=FINALIDADE_ADDON[finalidade]||0;
-      let jsc=bd.jsCom??b.jsCom;
-      let jss=bd.jsSem??basesSem;
+      let jsc=b.jsCom??basesCom;
+      let jss=b.jsSem??basesSem;
       // CGD Medida Jovem (simulador oficial): spreads por patamar de LTV sobre valor de referência
       if(b.s==="CGD"&&modoJovem&&finalidade==="hpp"&&valorRef>0){
         const acima90=capital/valorRef>0.9;
         jsc=acima90?1.65:0.65;
         jss=acima90?2.35:1.35;
-      } else if(modoJovem&&b.jOk&&!bd.jovemSameSpread){
+      } else if(modoJovem&&b.jOk&&!b.jovemSameSpread){
         if(Math.abs(jsc-basesCom)<1e-6) jsc=Math.max(0.12,Math.round((basesCom-0.10)*100)/100);
         if(Math.abs(jss-basesSem)<1e-6) jss=Math.max(0.12,Math.round((basesSem-0.10)*100)/100);
       }
       const jovMF=(x)=>!x||x<=0?x:Math.max(0.15,Math.round((x-0.12)*100)/100);
-      let mC=bd.mCom??b.mCom??0,mS=bd.mSem??b.mSem??0,fC=bd.fCom??b.fCom??0,fS=bd.fSem??b.fSem??0;
+      let mC=b.mCom??0,mS=b.mSem??0,fC=b.fCom??0,fS=b.fSem??0;
       if(modoJovem&&b.jOk){
-        mC=bd.jmCom!=null?bd.jmCom:jovMF(mC);
-        mS=bd.jmSem!=null?bd.jmSem:jovMF(mS);
-        fC=bd.jfCom!=null?bd.jfCom:jovMF(fC);
-        fS=bd.jfSem!=null?bd.jfSem:jovMF(fS);
+        mC=b.jmCom!=null?b.jmCom:jovMF(mC);
+        mS=b.jmSem!=null?b.jmSem:jovMF(mS);
+        fC=b.jfCom!=null?b.jfCom:jovMF(fC);
+        fS=b.jfSem!=null?b.jfSem:jovMF(fS);
       }
       return{
         ...b,
@@ -487,21 +478,21 @@ function App(){
         sComBase:modoJovem?jsc:basesCom,
         sSem:(modoJovem?jss:basesSem)+ltvAddon+finalAddon,
         ltvAddon,finalAddon,
-        spreadUpdated:bd.updated??false,
-        capitalOk:capital>=(bd.capMin??0)&&capital<=(bd.capMax??9999999),
-        capitalMin:bd.capMin??0,
-        capitalMax:bd.capMax??9999999,
-        promoPeriodo:bd.promoPeriodo??0,
-        promoSpread:bd.promoSpread??null,
+        spreadUpdated:b.updated??false,
+        capitalOk:capital>=(b.capMin??0)&&capital<=(b.capMax??9999999),
+        capitalMin:b.capMin??0,
+        capitalMax:b.capMax??9999999,
+        promoPeriodo:b.promoPeriodo??0,
+        promoSpread:b.promoSpread??null,
         mCom:mC,
         mSem:mS,
         fCom:fC,
         fSem:fS,
         jsCom:jsc,
         jsSem:jss,
-        insV:bd.insV,
-        insM:bd.insM,
-        contaNota:bd.contaNota,
+        insV:b.insV,
+        insM:b.insM,
+        contaNota:b.contaNota,
       };
     });
   },[bankData,certB,ltv,finalidade,modoJovem,capital,valorRef]);
@@ -615,7 +606,7 @@ function App(){
   const dpa=200;
   const notario=750;
   const totalCustos=imt+isEsc+isCred+comDossier+comAval+comMinutas+dpa+registoHipoteca;
-  const bancoNomeCustos=BANKS_STATIC.find(b=>b.s===bancoSCustos)?.name||"—";
+  const bancoNomeCustos=bankData?.[bancoSCustos]?.name||"—";
 
   // Cenários Euribor
   const cenarios=useMemo(()=>{
@@ -824,7 +815,7 @@ React.createElement("button", {onClick:handleSave,"aria-label":"Guardar simulaç
         ))
         ), nav==="seg"&&(
           React.createElement("div", null, React.createElement("div", {style: {background:"rgba(255,255,255,1)",border:"1px solid rgba(74,222,128,0.2)",borderRadius:11,padding:16,marginBottom:14}}, React.createElement("div", {style: {fontSize:12,letterSpacing:2,color:G,fontFamily:"monospace",marginBottom:10}}, "SEGUROS POR BANCO — "+titulares+" TITULAR"+(is2?"ES":"")+" · T1:"+idade1+"a"+(is2?" · T2:"+idade2+"a":"")+" · Capital: "+fE(capital)), React.createElement("div", {style: {overflowX:"auto"}}, React.createElement("table", {style: {width:"100%",borderCollapse:"separate",borderSpacing:"0 6px",fontFamily:"sans-serif",fontSize:13}}, React.createElement("thead", null, React.createElement("tr", null, ["Banco","Vida T1","Vida T2","Total Vida","Multirriscos","IS Juros/mês","Seg. Prot.","TOTAL/mês","Seguradoras"].map(h=>React.createElement("th", {key: h, style: {...thS,textAlign:"center"}}, h.toUpperCase())))), React.createElement("tbody", null, segChart.map((b,i)=>{
-                      const bk=BANKS_STATIC.find(x=>x.s===b.name)||{};
+                      const bk=bankData[b.name]||{};
                       const r2=resultados.find(x=>x.s===b.name);
                       const sg=r2?.seg||{v1:0,v2:0,vTot:0,m:0,tot:0};
                       const isM=r2?.isM||0;
@@ -848,7 +839,7 @@ React.createElement("button", {onClick:handleSave,"aria-label":"Guardar simulaç
         return React.createElement("div",{key:b.name,style:{display:"flex",alignItems:"center",gap:8}},
           React.createElement("div",{style:{width:130,display:"flex",alignItems:"center",justifyContent:"flex-end",gap:5,flexShrink:0}},
             React.createElement("span",{style:{fontSize:11,color:"#374151",fontFamily:"sans-serif",fontWeight:600,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},
-              (BANKS_STATIC.find(function(bk){return bk.s===b.name;})||{name:b.name}).name
+              (bankData[b.name]?.name||b.name)
             ),
             React.createElement("div",{style:{width:18,height:18,borderRadius:3,background:"rgba(0,0,0,0.05)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,overflow:"hidden"}},
               React.createElement("img",{src:"https://www.google.com/s2/favicons?domain="+(BANK_DOMAINS[b.name]||"bank.pt")+"&sz=32",width:16,height:16,style:{objectFit:"contain",display:"block"},alt:b.name,onError:function(e){var d=e.currentTarget.parentElement;d.innerHTML='<span style="font-size:7px;font-weight:700;font-family:monospace;color:#666">'+b.name+'</span>';e.currentTarget.onError=null;}})
@@ -875,7 +866,7 @@ React.createElement("button", {onClick:handleSave,"aria-label":"Guardar simulaç
   );
 })()))
         ), nav==="cust"&&(
-          React.createElement("div", {style: {display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:14}}, React.createElement("div", {style: {background:"rgba(255,255,255,1)",border:"1px solid rgba(37,99,235,0.18)",borderRadius:11,padding:16}}, React.createElement("div", {style: {marginBottom:12}}, React.createElement("div", {style: {fontSize:12,letterSpacing:2,color:Au,fontFamily:"monospace",marginBottom:8}}, "CUSTOS INICIAIS — "+(finalidade==="hpp"?"HPP":finalidade==="hab2"?"2.ª Habitação":"Arrendamento")), React.createElement("div", {style: {display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}, React.createElement("span", {style: {fontSize:11,color:"#4b5563",fontFamily:"sans-serif",flexShrink:0}}, "Banco:"), React.createElement("select", {value: bancoSCustos, onChange: e=>{setBancoCustos(e.target.value);}, style: {flex:1,minWidth:140,background:"#ffffff",border:"1px solid rgba(37,99,235,0.35)",color:"#111827",borderRadius:7,padding:"5px 9px",fontSize:13,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600}}, BANKS_STATIC.filter(b=>modoJovem?b.jOk:true).map(b=>(
+          React.createElement("div", {style: {display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:14}}, React.createElement("div", {style: {background:"rgba(255,255,255,1)",border:"1px solid rgba(37,99,235,0.18)",borderRadius:11,padding:16}}, React.createElement("div", {style: {marginBottom:12}}, React.createElement("div", {style: {fontSize:12,letterSpacing:2,color:Au,fontFamily:"monospace",marginBottom:8}}, "CUSTOS INICIAIS — "+(finalidade==="hpp"?"HPP":finalidade==="hab2"?"2.ª Habitação":"Arrendamento")), React.createElement("div", {style: {display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}, React.createElement("span", {style: {fontSize:11,color:"#4b5563",fontFamily:"sans-serif",flexShrink:0}}, "Banco:"), React.createElement("select", {value: bancoSCustos, onChange: e=>{setBancoCustos(e.target.value);}, style: {flex:1,minWidth:140,background:"#ffffff",border:"1px solid rgba(37,99,235,0.35)",color:"#111827",borderRadius:7,padding:"5px 9px",fontSize:13,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600}}, BANKS.filter(b=>modoJovem?b.jOk:true).map(b=>(
                       React.createElement("option", {key: b.s, value: b.s}, b.name+(melhor&&melhor.s===b.s?" ⭐ (melhor)":""))
                     ))), melhor&&bancoSCustos!==melhor.s&&(
                     React.createElement("button", {onClick: ()=>setBancoCustos(melhor.s), style: {padding:"4px 10px",background:"rgba(37,99,235,0.12)",border:"1px solid rgba(37,99,235,0.35)",borderRadius:6,color:Au,fontSize:11,fontFamily:"sans-serif",cursor:"pointer"}}, "⭐ "+melhor.name)
@@ -909,7 +900,7 @@ React.createElement("button", {onClick:handleSave,"aria-label":"Guardar simulaç
                 );
               })), React.createElement("div", {style: {background:"rgba(255,255,255,1)",border:"1px solid rgba(74,222,128,0.2)",borderRadius:11,padding:16}}, React.createElement("div", {style: {fontSize:12,letterSpacing:2,color:G,fontFamily:"monospace",marginBottom:10}}, "COMISSÕES POR BANCO"+(bancoSCustos?" — "+bancoNomeCustos+" em destaque":"")), React.createElement("div", {style: {overflowX:"auto"}}, React.createElement("table", {style: {width:"100%",borderCollapse:"separate",borderSpacing:"0 4px",fontFamily:"sans-serif",fontSize:12}}, React.createElement("thead", null, React.createElement("tr", null, ["Banco","Capital Mín.","Capital Máx.","Dossier","Avaliação","Jovem?"].map(h=>(
                       React.createElement("th", {key: h, style: {...thS,textAlign:"center"}}, h.toUpperCase())
-                    )))), React.createElement("tbody", null, BANKS_STATIC.filter(b=>modoJovem?b.jOk:true).map((b,i)=>{
+                    )))), React.createElement("tbody", null, BANKS.filter(b=>modoJovem?b.jOk:true).map((b,i)=>{
                       const lim={min:bankData[b.s]?.capMin??0,max:bankData[b.s]?.capMax??9999999};
                       const com2={dossier:bankData[b.s]?.dossier??300,avaliacao:bankData[b.s]?.avaliacao??230};
                       const capOk=capital>=(lim.min||0)&&capital<=(lim.max||9999999);
