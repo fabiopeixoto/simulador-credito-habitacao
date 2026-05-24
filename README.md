@@ -29,7 +29,7 @@ Aplicação web para **simular e comparar** crédito habitação em Portugal: pr
 | Servidor | `server.js` — `http.createServer`, ficheiros estáticos, **Brotli/Gzip** quando o cliente aceita |
 | Base de dados | SQLite em `data/` (vários ficheiros; ver abaixo) |
 | Frontend | React servido em ficheiros separados e cacheados (`react-runtime.js`, `app.js`, etc.) — sem build step |
-| Container | `Dockerfile` — `node:20-slim`, `npm install --production`, `CMD node server.js` |
+| Container | `Dockerfile` — `node:20-slim`, `python3`/`make`/`g++` para fallback nativo do `better-sqlite3`, `npm install --production`, `CMD node server.js` |
 
 ---
 
@@ -70,9 +70,7 @@ Aplicação web para **simular e comparar** crédito habitação em Portugal: pr
 ├── reference/precarios-pdf/           # Metadados JSON + PDFs locais (opcional / manual)
 ├── Jenkinsfile              # CI/CD Docker + deploy + Discord
 ├── Dockerfile
-├── docs/
-│   ├── auditoria.md         # Método + evidências: validar vs simuladores oficiais
-│   └── adicionar-banco.md   # Checklist para acrescentar um banco ao simulador
+├── AUDITORIA.md             # Template para validar resultados vs simuladores oficiais
 └── README.md
 ```
 
@@ -245,7 +243,7 @@ O ambiente de exemplo publica com **`-p 3999:3000`** (host 3999 → app 3000). A
 
 ## Auditoria de resultados
 
-Ver **`docs/auditoria.md`**: comparar inputs e outputs com simuladores oficiais dos bancos e registar desvios dentro das tolerâncias definidas.
+Ver **`AUDITORIA.md`**: comparar inputs e outputs com simuladores oficiais dos bancos e registar desvios dentro das tolerâncias definidas.
 
 ---
 

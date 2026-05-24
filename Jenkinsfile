@@ -21,7 +21,8 @@ pipeline {
       // Runs inside a clean Node.js container — no Docker socket needed.
       agent { docker { image 'node:20-slim' } }
       steps {
-        sh 'npm run lint'
+        // Validação sem `npm run`: só precisa de `node` + script (evita falhas de PATH/npm no Docker agent).
+        sh 'sh scripts/lint.sh'
       }
     }
 
