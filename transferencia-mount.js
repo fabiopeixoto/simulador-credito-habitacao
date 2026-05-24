@@ -24,12 +24,19 @@
     };
   }
 
-  function TransferenciaRoot(){
+  function mapBanks(raw){
+    return (raw.banks||[]).map(function(b){
+      if(b.ltvBrackets&&Array.isArray(b.ltvBrackets))window._SIM.LTV_BRACKETS[b.code]=b.ltvBrackets;
+      return {code:b.code,name:b.name,color:b.color,refs:b.refs||[],tipos:b.tipos||[],spreads:b.spreads||{}};
+    });
+  }
+
+  function TransferenciaRoot(props){
     var fe=window._SIM.FALLBACK_EUR;
-    var _u=useState({"3m":{valor:fe["3m"].valor,data:fe["3m"].data},"6m":{valor:fe["6m"].valor,data:fe["6m"].data},"12m":{valor:fe["12m"].valor,data:fe["12m"].data}});
-    var EUR=_u[0]; var setEUR=_u[1];
-    var _b=useState([]);
-    var banks=_b[0]; var setBanks=_b[1];
+    var _u=useState(props.initialEUR||{"3m":{valor:fe["3m"].valor,data:fe["3m"].data},"6m":{valor:fe["6m"].valor,data:fe["6m"].data},"12m":{valor:fe["12m"].valor,data:fe["12m"].data}});
+    var EUR=_u[0];
+    var _b=useState(props.initialBanks||[]);
+    var banks=_b[0];
     var _sc=useState(false);
     var showComments=_sc[0]; var setShowComments=_sc[1];
     var _sg=useState(false);
@@ -38,34 +45,6 @@
     var comments=_scom[0]; var setComments=_scom[1];
 
     var commentTotal=comments.reduce(function(t,c){return t+1+((c.replies||[]).length);},0);
-
-    useEffect(function(){
-      var alive=true;
-      fetch("/api/banks")
-        .then(function(r){return r.ok?r.json():null;})
-        .then(function(raw){
-          if(!alive||!raw)return;
-          try{setEUR(mergeEurFromApi(raw));}catch(_){}
-          if(raw.banks&&raw.banks.length){
-            raw.banks.forEach(function(b){
-              if(b.ltvBrackets&&Array.isArray(b.ltvBrackets))window._SIM.LTV_BRACKETS[b.code]=b.ltvBrackets;
-            });
-            var mapped=raw.banks.map(function(b){
-              return {
-                code:b.code,
-                name:b.name,
-                color:b.color,
-                refs:b.refs||[],
-                tipos:b.tipos||[],
-                spreads:b.spreads||{}
-              };
-            });
-            setBanks(mapped);
-          }
-        })
-        .catch(function(){});
-      return function(){alive=false;};
-    },[]);
 
     useEffect(function(){
       var alive=true;
@@ -97,6 +76,15 @@
 
   var el=document.getElementById("root");
   if(!el)return;
-  var root=ReactDOM.createRoot(el);
-  root.render(h(TransferenciaRoot,null));
+
+  fetch("/api/banks")
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(raw){
+      var initialBanks=raw?mapBanks(raw):[];
+      var initialEUR=raw?mergeEurFromApi(raw):null;
+      ReactDOM.createRoot(el).render(h(TransferenciaRoot,{initialBanks:initialBanks,initialEUR:initialEUR}));
+    })
+    .catch(function(){
+      ReactDOM.createRoot(el).render(h(TransferenciaRoot,{initialBanks:[],initialEUR:null}));
+    });
 })();
