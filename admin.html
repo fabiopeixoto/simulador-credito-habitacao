@@ -81,6 +81,10 @@
   .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; }
   .badge-active { background: rgba(16,185,129,0.2); color: var(--accent2); }
   .badge-inactive { background: rgba(239,68,68,0.2); color: var(--danger); }
+  .badge-api { background: rgba(59,130,246,0.2); color: #60a5fa; }
+  .badge-manual { background: rgba(251,191,36,0.2); color: #fbbf24; }
+  .btn-prefer { background: rgba(255,255,255,0.08); color: var(--muted); border: 1px solid var(--border); }
+  .btn-prefer.prefer-manual { background: rgba(251,191,36,0.12); border-color: rgba(251,191,36,0.4); color: #fbbf24; }
   .ai-box { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; margin-bottom: 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
   .ai-box-info { flex: 1; min-width: 200px; }
   .ai-box-info h2 { font-size: 0.95rem; color: var(--accent); margin: 0 0 4px; }
@@ -259,6 +263,15 @@
     <div class="form-group">
       <label>Escalões LTV (ltvBrackets — JSON, ex: [{"max":80,"add":0},{"max":90,"add":0.05},{"max":100,"add":0.10}])</label>
       <textarea id="f_ltvBrackets" style="font-family:monospace;font-size:12px;" placeholder='[{"max":80,"add":0},{"max":90,"add":0.05},{"max":100,"add":0.10}]'></textarea>
+    </div>
+
+    <div class="form-group" style="padding:12px;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.2);border-radius:8px;">
+      <label>Fonte preferida de spreads</label>
+      <select id="f_preferSource">
+        <option value="api">API / FINE (recomendado — valores mais recentes da API Anthropic/comparação FINEs)</option>
+        <option value="manual">Manual (admin — usa os valores introduzidos manualmente)</option>
+      </select>
+      <p style="font-size:11px;color:var(--muted);margin-top:6px;">Por defeito, os spreads da API/FINE têm prioridade. Muda para Manual se quiserres usar valores próprios para este banco.</p>
     </div>
 
     <div class="modal-actions">
@@ -628,6 +641,12 @@ function renderBanks() {
     const t2 = eur != null && Number.isFinite(Number(eur)) && s.sSem != null ? Number(eur) + Number(s.sSem) : null;
     const tanRow = '<tr><td>TAN var. ilustr. (Eur.' + ref + ')</td><td>' + fmtPct(t1) + ' / ' + fmtPct(t2) + '</td></tr>';
     const warnRow = refOk ? '' : '<tr><td colspan="2" style="color:#fbbf24;font-size:11px;line-height:1.35;">Refs (' + escapeHtml(refsArr.length ? refsArr.join(', ') : 'vazio') + ') não incluem <strong>' + escapeHtml(ref) + '</strong> — ajuste no editor ou troque o indexante acima.</td></tr>';
+    const prefSrc = b.preferSource || 'api';
+    const prefBadge = prefSrc === 'manual'
+      ? '<span class="badge badge-manual" title="Spreads manuais (admin) activos">Manual</span>'
+      : '<span class="badge badge-api" title="Spreads da API/FINE activos">API</span>';
+    const prefBtnClass = prefSrc === 'manual' ? 'btn-prefer prefer-manual' : 'btn-prefer';
+    const prefBtnLabel = prefSrc === 'manual' ? 'Mudar p/ API' : 'Mudar p/ Manual';
     return `
       <div class="card ${b.active ? '' : 'inactive'}">
         <div class="card-header">
@@ -639,6 +658,7 @@ function renderBanks() {
           <span class="card-title">${b.name}</span>
           <span class="card-code">${b.code}</span>
           <span class="badge ${b.active ? 'badge-active' : 'badge-inactive'}">${b.active ? 'activo' : 'inactivo'}</span>
+          ${prefBadge}
         </div>
         <div class="card-body">
           <table>
@@ -651,7 +671,7 @@ function renderBanks() {
             <tr><td>Dossier</td><td>${s.dossier != null ? s.dossier + '€' : '—'}</td></tr>
             <tr><td>Avaliação</td><td>${s.avaliacao != null ? s.avaliacao + '€' : '—'}</td></tr>
             <tr><td>Capital</td><td>${s.capMin ? s.capMin.toLocaleString() + '€' : '—'} — ${s.capMax ? s.capMax.toLocaleString() + '€' : '—'}</td></tr>
-            <tr><td>Fonte</td><td>${s.source || '—'}</td></tr>
+            <tr><td>Fonte activa</td><td>${s.source || '—'} (prefer: ${prefSrc})</td></tr>
             <tr><td>Actualizado</td><td>${s.fetchedAt ? new Date(s.fetchedAt).toLocaleString('pt-PT') : '—'}</td></tr>
             ${warnRow}
           </table>
@@ -659,6 +679,7 @@ function renderBanks() {
         <div class="card-actions">
           <button class="btn-sm btn-edit" onclick="openEditModal('${b.code}')">Editar</button>
           <button class="btn-sm btn-history" onclick="openHistory('${b.code}')">Histórico</button>
+          <button class="btn-sm ${prefBtnClass}" onclick="togglePreferSource('${b.code}')">${prefBtnLabel}</button>
           <button class="btn-sm btn-delete" onclick="deleteBank('${b.code}')">Desactivar</button>
         </div>
       </div>
@@ -727,6 +748,7 @@ function openEditModal(code) {
   document.getElementById('f_vAge').value = s.vAge ?? '';
   document.getElementById('f_pRef').value = s.pRef ?? '';
   document.getElementById('f_ltvBrackets').value = b.ltvBrackets ? JSON.stringify(b.ltvBrackets) : '';
+  document.getElementById('f_preferSource').value = b.preferSource || 'api';
 
   updateAdminModalEuriborHint(b);
   document.getElementById('editModal').classList.add('active');
@@ -749,6 +771,7 @@ function clearForm() {
   document.getElementById('f_jovemIsenta').value = '1';
   document.getElementById('f_jovemSameSpread').value = '0';
   document.getElementById('f_jovemIsentaAval').value = '0';
+  document.getElementById('f_preferSource').value = 'api';
 }
 
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
@@ -778,6 +801,7 @@ async function saveBank() {
       if (!raw) return null;
       try { return JSON.parse(raw); } catch (_) { return null; }
     })(),
+    preferSource: document.getElementById('f_preferSource').value || 'api',
   };
 
   const spreads = {
@@ -824,6 +848,23 @@ async function saveBank() {
     if (!r.ok) { const e = await r.json(); throw new Error(e.error || 'HTTP ' + r.status); }
     setStatus('Guardado ✓', 'ok');
     closeModal('editModal');
+    loadBanks();
+  } catch (e) { setStatus('Erro: ' + e.message, 'error'); }
+}
+
+async function togglePreferSource(code) {
+  if (!adminUnlocked) return;
+  const b = banks.find(x => x.code === code);
+  if (!b) return;
+  const newPref = (b.preferSource || 'api') === 'api' ? 'manual' : 'api';
+  try {
+    const r = await fetch('/api/banks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-token': getToken() },
+      body: JSON.stringify({ bank: { ...b, preferSource: newPref } }),
+    });
+    if (!r.ok) { const e = await r.json(); throw new Error(e.error || 'HTTP ' + r.status); }
+    setStatus('Fonte alterada para "' + newPref + '" ✓', 'ok');
     loadBanks();
   } catch (e) { setStatus('Erro: ' + e.message, 'error'); }
 }
