@@ -450,10 +450,9 @@ function App(){
   // Seguro de protecção ao crédito (opcional): ~€12/mês p/ €100k
   const segProtMensal=segProtecao?Math.round(capital*0.00012):0;
 
-  if(!bankData) return React.createElement("main",{style:{maxWidth:560,margin:"0 auto",padding:"28px 20px",fontFamily:"sans-serif",color:"#111827",textAlign:"center"}},React.createElement("p",{style:{fontSize:13,color:"#6b7280"}},"A carregar dados dos bancos…"));
-
   // ── Banks com spread dinâmico + LTV + finalidade ─────────────────────────
   const BANKS=useMemo(()=>{
+    if(!bankData) return [];
     return BANKS_STATIC.map(b=>{
       const bd=bankData[b.s]||{};
       const basesCom=bd.sCom??1;
@@ -741,7 +740,9 @@ function App(){
   // Status
   const stIcon=status==="loading"?"⏳":status==="ok"?"✅":status==="cached"?"🔄":"⚠️";
   const stColor=status==="ok"?G:status==="cached"?Sky:status==="error"?R:Au;
-  const updatedCount=Object.values(bankData).filter(x=>x.updated).length;
+  const updatedCount=bankData?Object.values(bankData).filter(x=>x.updated).length:0;
+
+  if(!bankData) return React.createElement("main",{style:{maxWidth:560,margin:"0 auto",padding:"28px 20px",fontFamily:"sans-serif",color:"#111827",textAlign:"center"}},React.createElement("p",{style:{fontSize:13,color:"#6b7280"}},"A carregar dados dos bancos…"));
 
   return React.createElement(React.Fragment,null,
     React.createElement("div", {style: {fontFamily:"'Inter',system-ui,sans-serif",background:N,minHeight:"100vh",color:"#111827"}}, React.createElement("div", {style: {background:"linear-gradient(135deg,#ffffff 0%,#eff6ff 55%,#ffffff 100%)",borderBottom:"1px solid "+Au,padding:"10px 16px 0"}}, React.createElement("div", {style: {maxWidth:1440,margin:"0 auto"}}, React.createElement("div", {style: {display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8,paddingBottom:10}}, React.createElement("div", null, React.createElement("a",{href:"/",style:{display:"flex",alignItems:"center",gap:8,textDecoration:"none",color:"inherit"}},React.createElement("img",{src:"/images/logo.png",alt:"Simulador Crédito Habitação",style:{height:40,width:"auto",flexShrink:0}}),React.createElement("h1",{style:{margin:0,fontSize:21,fontWeight:700,color:"#111827",letterSpacing:-0.3,fontFamily:"'Inter',system-ui,sans-serif"}},"Simulador Crédito Habitação")), React.createElement("div", {style: {fontSize:11,color:"#4b5563",fontFamily:"sans-serif",marginTop:2}}, "Portugal · 14 bancos · Euribor em tempo real"), React.createElement("div", {style:{display:"flex",gap:5,marginTop:7,flexWrap:"wrap"}}, ["3m","6m","12m"].map(k=>{const v=EUR[k]||FALLBACK_EUR[k];const[c,bg]=EUR_COLORS[k];return React.createElement("div",{key:k,style:{display:"flex",alignItems:"center",gap:5,padding:"3px 9px",background:bg,borderRight:"1px solid rgba(0,0,0,0.04)",borderRadius:4}},React.createElement("span",{style:{color:c,fontWeight:700,fontSize:10,fontFamily:"monospace",letterSpacing:1}},"EUR "+k.toUpperCase()),React.createElement("span",{style:{color:"#111827",fontSize:13,fontWeight:700,fontFamily:"monospace"}},v.valor.toFixed(3).replace(".",",")+"%"),v.data&&React.createElement("span",{style:{color:"#4b5563",fontSize:10,fontFamily:"sans-serif",marginLeft:2}},v.data));}),React.createElement("div",{style:{display:"flex",alignItems:"center",gap:4,marginLeft:6,paddingLeft:8,borderLeft:"1px solid rgba(0,0,0,0.08)",fontSize:11,color:stColor,fontFamily:"sans-serif"}},stIcon+" "+msg,ts&&status!=="loading"&&React.createElement("span",{style:{color:"#4b5563",marginLeft:3}},ts.toLocaleTimeString("pt-PT",{hour:"2-digit",minute:"2-digit"}))))), React.createElement("div", {style:{display:"flex",flexDirection:"column",gap:4,alignItems:"flex-end"}}, React.createElement("div", {style:{display:"flex",gap:5,alignItems:"center",flexWrap:"wrap"}},
