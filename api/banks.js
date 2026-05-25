@@ -331,11 +331,16 @@ reconcileSeedSpreadsToDb();
 function reconcileLtvBracketsToDb() {
   if (!sqliteDb) return;
   try {
-    const stmt = sqliteDb.prepare(
-      "UPDATE banks SET ltvBrackets = ?, updated_at = ? WHERE code = ? AND ltvBrackets IS NULL"
+    const sel = sqliteDb.prepare("SELECT ltvBrackets FROM banks WHERE code = ?");
+    const upd = sqliteDb.prepare(
+      "UPDATE banks SET ltvBrackets = ?, updated_at = ? WHERE code = ?"
     );
     for (const [code, brackets] of Object.entries(SEED_LTV_BRACKETS)) {
-      stmt.run(JSON.stringify(brackets), Date.now(), code);
+      const row = sel.get(code);
+      if (!row) continue;
+      const seedJson = JSON.stringify(brackets);
+      if (row.ltvBrackets === seedJson) continue;
+      upd.run(seedJson, Date.now(), code);
     }
   } catch (e) {
     console.error("banks.js: reconcileLtvBracketsToDb:", e.message);
