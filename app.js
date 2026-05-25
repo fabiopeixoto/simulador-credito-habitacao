@@ -122,7 +122,7 @@ function calcIMT(v,j,finalidade) {
     if(v<=145470) return v*0.02-1063.46;
     if(v<=198347) return v*0.05-5427.56;
     if(v<=330539) return v*0.07-9394.50;
-    if(v<=660982) return v*0.08-12699.89;
+    if(v<=633931) return v*0.08-12699.89;
     return v*0.06;
   }
   // Tabela I 2026: HPP
