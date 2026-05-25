@@ -114,28 +114,28 @@ function sTot(g,a1,a2,is2,cap,val,anos) {
 }
 
 
-// IMT — tabelas Portaria 352/2024 (valores 2025)
+// IMT — tabelas OE 2026 (escalões atualizados, valores 2026)
 function calcIMT(v,j,finalidade) {
   if(finalidade!=="hpp"){
-    // Tabela II 2025: 2ª habitação e arrendamento (progressiva 1%→8%, flat 6% acima)
-    if(v<=99407)  return v*0.01;
-    if(v<=136025) return v*0.02-994.07;
-    if(v<=185474) return v*0.05-5074.82;
-    if(v<=309140) return v*0.07-8784.30;
-    if(v<=618313) return v*0.08-11875.70;
+    // Tabela II 2026: 2ª habitação e arrendamento (progressiva 1%→8%, flat 6% acima)
+    if(v<=106346) return v*0.01;
+    if(v<=145470) return v*0.02-1063.46;
+    if(v<=198347) return v*0.05-5427.56;
+    if(v<=330539) return v*0.07-9394.50;
+    if(v<=660982) return v*0.08-12699.89;
     return v*0.06;
   }
-  // Tabela I 2025: HPP
+  // Tabela I 2026: HPP
   // IMT Jovem (OE 2026, continente): isenção total até 330.539€; entre 330.539€ e 660.982€ taxa 8% só sobre o excedente; acima do teto parcial aplica-se a tabela normal (sem benefício)
   if(j){
     if(v<=330539)return 0;
     if(v<=660982)return(v-330539)*0.08;
   }
-  if(v<=99407)  return 0;
-  if(v<=136025) return v*0.02-1988.14;
-  if(v<=185474) return v*0.05-6069.39;
-  if(v<=309140) return v*0.07-9778.87;
-  if(v<=618313) return v*0.08-12869.52;
+  if(v<=106346) return 0;
+  if(v<=145470) return v*0.02-2126.92;
+  if(v<=198347) return v*0.05-6491.02;
+  if(v<=330539) return v*0.07-10457.96;
+  if(v<=660982) return v*0.08-13763.35;
   return v*0.06;
 }
 
