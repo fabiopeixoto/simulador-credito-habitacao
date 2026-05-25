@@ -183,7 +183,7 @@ const SEED_LTV_BRACKETS = {
   BCP:   [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
   ACTVO: [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
   BPI:   [{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
-  MNTPO: [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
+  MNTPO: [{max:70,add:0},{max:80,add:0},{max:90,add:0},{max:100,add:0}],
   SANTR: [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
   NB:    [{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
   CGD:   [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
@@ -218,7 +218,7 @@ const SEED_SPREADS = {
   BCP:   { sCom:0.70,sSem:1.50,mCom:3.45,mSem:4.25,fCom:4.10,fSem:4.65,jsCom:0.85,jsSem:1.50,promoPeriodo:24,promoSpread:0,dossier:300,avaliacao:250,contaMes:5.00,contaNota:"Conta Millennium (estimativa; comissões conta fora do §18.1 CH)",capMin:20000,capMax:3000000,vRef:19.92,mAno:256,insV:"Ocidental Vida",insM:"Ageas/Ocidental",minutas:0,jovemIsenta:true,jovemSameSpread:false,jovemIsentaAval:false,jmCom:null,jmSem:null,jfCom:null,jfSem:null,vCap:150000,vAge:30,pRef:200000 },
   ACTVO: { sCom:0.75,sSem:1.50,mCom:3.85,mSem:4.75,fCom:4.00,fSem:4.75,jsCom:0.68,jsSem:1.38,promoPeriodo:24,promoSpread:0,dossier:300,avaliacao:250,contaMes:0,contaNota:"Banco digital — sem comissão",capMin:20000,capMax:3000000,vRef:19.84,mAno:256,insV:"Ocidental Vida",insM:"Ageas/Ocidental",minutas:0,jovemIsenta:true,jovemSameSpread:false,jovemIsentaAval:false,jmCom:null,jmSem:null,jfCom:null,jfSem:null,vCap:150000,vAge:30,pRef:200000 },
   BPI:   { sCom:0.75,sSem:1.50,mCom:3.20,mSem:3.95,fCom:4.10,fSem:4.85,jsCom:0.75,jsSem:1.50,promoPeriodo:0,promoSpread:null,dossier:290,avaliacao:230,contaMes:4.90,contaNota:"Conta Pacote BPI (estimativa; FINE CH exclui manutenção da TAEG)",capMin:25000,capMax:3000000,vRef:13.12,mAno:195,insV:"BPI Vida",insM:"BPI Seguros",minutas:190,jovemIsenta:true,jovemSameSpread:false,jovemIsentaAval:false,jmCom:null,jmSem:null,jfCom:null,jfSem:null,vCap:150000,vAge:30,pRef:200000 },
-  MNTPO: { sCom:0.70,sSem:1.50,mCom:3.05,mSem:4.75,fCom:4.50,fSem:5.90,jsCom:0.70,jsSem:1.50,promoPeriodo:0,promoSpread:null,dossier:312,avaliacao:239,contaMes:5.41,contaNota:"Conta DO 5,20€/mês + IS 4% = 5,41€ (FINE mai.2026)",capMin:10000,capMax:2000000,vRef:8.29,mAno:79,insV:"Lusitania Vida",insM:"Lusitania",minutas:208,jovemIsenta:false,jovemSameSpread:true,jovemIsentaAval:false,jmCom:null,jmSem:null,jfCom:null,jfSem:null,vCap:100000,vAge:30,pRef:100000 },
+  MNTPO: { sCom:0.70,sSem:1.50,mCom:3.05,mSem:4.75,fCom:4.50,fSem:5.90,jsCom:0.70,jsSem:1.50,promoPeriodo:0,promoSpread:null,dossier:312,avaliacao:239.20,contaMes:5.41,contaNota:"Conta DO 5,20€/mês + IS 4% = 5,41€ (FINE mai.2026)",capMin:10000,capMax:2000000,vRef:8.006,mAno:62.88,insV:"Lusitania Vida",insM:"Lusitania",minutas:208,jovemIsenta:false,jovemSameSpread:true,jovemIsentaAval:false,jmCom:null,jmSem:null,jfCom:null,jfSem:null,vCap:100000,vAge:30,pRef:100000 },
   SANTR: { sCom:0.80,sSem:1.90,mCom:2.80,mSem:4.70,fCom:4.40,fSem:4.40,jsCom:0.80,jsSem:1.90,jmCom:2.80,jmSem:4.70,jfCom:null,jfSem:null,promoPeriodo:36,promoSpread:0.50,dossier:725,avaliacao:230,contaMes:2.90,contaNota:"Conta (estimativa; FINE CH exclui manutenção mensal da TAEG)",capMin:30000,capMax:3000000,vRef:22.55,mAno:246,insV:"Santander Seguros",insM:"Santander Seguros",minutas:0,jovemIsenta:false,jovemSameSpread:true,jovemIsentaAval:false,vCap:150000,vAge:30,pRef:200000 },
   NB:    { sCom:0.75,sSem:1.70,mCom:3.65,mSem:4.60,fCom:3.71,fSem:5.99,jsCom:0.65,jsSem:1.60,promoPeriodo:0,promoSpread:null,dossier:333,avaliacao:322,contaMes:8.22,contaNota:"Conta Pacote (fam. 100%) 7,90€/mês + IS 4% ≈ 8,22€ (PRE-FC fev.2026)",capMin:10000,capMax:3000000,vRef:17.55,mAno:98,insV:"GamaLife",insM:"Mudum",minutas:0,jovemIsenta:true,jovemSameSpread:false,jovemIsentaAval:false,jmCom:null,jmSem:null,jfCom:null,jfSem:null,vCap:150000,vAge:30,pRef:200000 },
   CGD:   { sCom:0.70,sSem:2.90,mCom:3.15,mSem:5.35,fCom:4.75,fSem:6.95,jsCom:0.65,jsSem:1.35,promoPeriodo:24,promoSpread:null,dossier:250,avaliacao:200,contaMes:6.30,contaNota:"Conta Caixadirecta €6,30/mês IS incluído",capMin:5000,capMax:3000000,vRef:29.82,mAno:110,insV:"Fidelidade",insM:"Fidelidade Casa",minutas:0,jovemIsenta:true,jovemSameSpread:false,jovemIsentaAval:false,jmCom:null,jmSem:null,jfCom:null,jfSem:null,vCap:150000,vAge:30,pRef:200000 },
@@ -331,11 +331,16 @@ reconcileSeedSpreadsToDb();
 function reconcileLtvBracketsToDb() {
   if (!sqliteDb) return;
   try {
-    const stmt = sqliteDb.prepare(
-      "UPDATE banks SET ltvBrackets = ?, updated_at = ? WHERE code = ? AND ltvBrackets IS NULL"
+    const sel = sqliteDb.prepare("SELECT ltvBrackets FROM banks WHERE code = ?");
+    const upd = sqliteDb.prepare(
+      "UPDATE banks SET ltvBrackets = ?, updated_at = ? WHERE code = ?"
     );
     for (const [code, brackets] of Object.entries(SEED_LTV_BRACKETS)) {
-      stmt.run(JSON.stringify(brackets), Date.now(), code);
+      const row = sel.get(code);
+      if (!row) continue;
+      const seedJson = JSON.stringify(brackets);
+      if (row.ltvBrackets === seedJson) continue;
+      upd.run(seedJson, Date.now(), code);
     }
   } catch (e) {
     console.error("banks.js: reconcileLtvBracketsToDb:", e.message);
