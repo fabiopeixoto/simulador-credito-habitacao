@@ -232,7 +232,7 @@ function ReverseCalcPage({onBack,onSimulate,onOpenComments,onOpenGlossario,comme
           React.createElement("div",{style:{fontSize:11,color:"#4b5563",lineHeight:1.7}},"🔄 Euribor via BCE · Cache 8h. 📊 Spread: LTV + finalidade + cert. energético. 🧮 TAEG: Directiva 2014/17/UE. 💰 MTIC = total pago. 🛡️ Seg. vida sobre capital médio. 🏠 IS HPP: €0 (art. 7º CIS). 📅 Prazo: BdP Aviso 4/2022.")
         )
       )
-    ),window.PageFooter&&React.createElement(window.PageFooter,null)
+    ),window.PageFooter&&React.createElement(window.PageFooter,null),window.CookieBanner&&React.createElement(window.CookieBanner,null)
   );
 }
 

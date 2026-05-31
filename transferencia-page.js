@@ -334,7 +334,7 @@
             style:{background:"none",border:"none",color:Au,cursor:"pointer",fontWeight:600,fontSize:12,textDecoration:"underline",padding:0}
           },"Ver simulador completo →")
         )
-      ),window.PageFooter&&h(window.PageFooter,null)
+      ),window.PageFooter&&h(window.PageFooter,null),window.CookieBanner&&h(window.CookieBanner,null)
     );
   }
 

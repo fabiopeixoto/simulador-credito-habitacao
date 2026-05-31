@@ -208,7 +208,7 @@
               spreadsData.length===0?"Sem histórico de spreads — os dados ficam registados a cada atualização":"Histórico insuficiente para gráfico (mínimo 2 registos)"
             )
         )
-      ),window.PageFooter&&h(window.PageFooter,null)
+      ),window.PageFooter&&h(window.PageFooter,null),window.CookieBanner&&h(window.CookieBanner,null)
     );
   }
 

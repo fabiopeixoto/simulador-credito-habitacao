@@ -1037,7 +1037,7 @@ React.createElement("button", {onClick:handleSave,"aria-label":"Guardar simulaç
                 ))
               )
             )
-  ),showGlossario&&window.GlossarioModal&&React.createElement(window.GlossarioModal,{onClose:()=>setShowGlossario(false)}),window.PageFooter&&React.createElement(window.PageFooter,null));
+  ),showGlossario&&window.GlossarioModal&&React.createElement(window.GlossarioModal,{onClose:()=>setShowGlossario(false)}),window.PageFooter&&React.createElement(window.PageFooter,null),window.CookieBanner&&React.createElement(window.CookieBanner,null));
 }
 window._App=App;
 }catch(e){
