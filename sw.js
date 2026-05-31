@@ -1,4 +1,4 @@
-const CACHE = "simulador-v66";
+const CACHE = "simulador-v67";
 
 /** URLs exactas referenciadas em index.html / quanto-posso-pedir.html / historico.html (incl. query ?v=). */
 const PRECACHE = [
@@ -20,12 +20,12 @@ const PRECACHE = [
   "/page-header.js?v=13",
   "/glossario-modal.js?v=1",
   "/transferencia.html",
-  "/transferencia-page.js?v=6",
-  "/transferencia-mount.js?v=5",
-  "/reverse-calc-page.js?v=16",
-  "/inversa-mount.js?v=6",
-  "/historico-page.js?v=8",
-  "/historico-mount.js?v=4",
+  "/transferencia-page.js?v=7",
+  "/transferencia-mount.js?v=6",
+  "/reverse-calc-page.js?v=17",
+  "/inversa-mount.js?v=7",
+  "/historico-page.js?v=9",
+  "/historico-mount.js?v=5",
 ];
 
 self.addEventListener("install", (e) => {

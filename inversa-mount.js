@@ -130,8 +130,7 @@
       }),
       showGlossario && GlossarioModal && h(GlossarioModal, {
         onClose: function () { setShowGlossario(false); },
-      }),
-      window.PageFooter && h(window.PageFooter, null)
+      })
     );
   }
 
