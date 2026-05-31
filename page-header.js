@@ -91,6 +91,14 @@
     );
   }
 
+  function PageFooter(){
+    return h("footer",{style:{textAlign:"center",padding:"18px 16px 28px",fontSize:12,color:"#9ca3af",fontFamily:"'Inter',system-ui,sans-serif"}},
+      "© 2026 simhabitacao.pt · ",
+      h("a",{href:"/privacidade.html",style:{color:"#6b7280",textDecoration:"underline"}},"Política de Privacidade")
+    );
+  }
+
   window.NavTabs=NavTabs;
   window.PageHeader=PageHeader;
+  window.PageFooter=PageFooter;
 })();
