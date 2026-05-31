@@ -164,6 +164,7 @@
 
     return h("div",{style:{background:N,minHeight:"100vh",fontFamily:"'Inter',system-ui,sans-serif",color:"#111827"}},
       h(window.PageHeader,{EUR:EUR,activePage:"transferencia",commentCount:commentCount,onOpenComments:onOpenComments,onOpenGlossario:onOpenGlossario,subtitle:"Simula a transferência do teu crédito habitação para outro banco · Compara poupanças mensais, custos e ponto de equilíbrio"}),
+      window.NoticeBanner&&h(window.NoticeBanner,null),
       h("div",{style:{maxWidth:1440,margin:"0 auto",padding:"14px 14px 40px"}},
 
         h("div",{style:cardS},

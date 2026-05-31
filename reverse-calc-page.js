@@ -45,6 +45,7 @@ function ReverseCalcPage({onBack,onSimulate,onOpenComments,onOpenGlossario,comme
   const secTitleS={fontSize:11,letterSpacing:3,color:Au,fontFamily:"monospace",marginBottom:10};
   return React.createElement("div",{style:{fontFamily:"'Inter',system-ui,sans-serif",background:N,minHeight:"100vh",color:"#111827"}},
     React.createElement(window.PageHeader||function(){return null;},{EUR:EUR,activePage:"inversa",commentCount:commentCount,onOpenComments:onOpenComments,onOpenGlossario:onOpenGlossario,subtitle:"Descobre o capital máximo que podes pedir com base na tua capacidade financeira · Indicativo"}),
+    window.NoticeBanner&&React.createElement(window.NoticeBanner,null),
     React.createElement("div",{style:{maxWidth:1440,margin:"0 auto",padding:"12px 14px"}},
       React.createElement("div",{style:{display:"flex",borderRadius:9,overflow:"hidden",border:"1px solid rgba(0,0,0,0.07)",marginBottom:10}},
         [{id:false,icon:"🏦",label:"Crédito Normal (LTV 80%)",c:Au},{id:true,icon:"🎓",label:"Crédito Jovem ≤35a",c:G}].map(({id,icon,label,c})=>
