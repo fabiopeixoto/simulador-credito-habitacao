@@ -202,7 +202,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     const ext = path.extname(fullPath).toLowerCase();
-    const contentType = mimeTypes[ext] || "application/octet-stream";
+    const contentType = (pathname === "/LICENSE" ? "text/plain; charset=utf-8" : null) || mimeTypes[ext] || "application/octet-stream";
     const headers = {
       "Content-Type": contentType,
       "Cache-Control": getCacheControl(pathname, ext),
