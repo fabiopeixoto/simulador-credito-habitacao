@@ -104,6 +104,23 @@
     );
   }
 
+
+  function CookieBanner(){
+    var _s=React.useState(function(){try{return!!localStorage.getItem('cookie_consent');}catch(_){return true;}});
+    var hidden=_s[0],setHidden=_s[1];
+    if(hidden)return null;
+    return h("div",{style:{position:"fixed",bottom:0,left:0,right:0,zIndex:9999,background:"#fff",borderTop:"1px solid #e5e7eb",padding:"12px 20px",display:"flex",alignItems:"center",justifyContent:"center",gap:16,flexWrap:"wrap",fontSize:13,color:"#374151",fontFamily:"'Inter',system-ui,sans-serif",boxShadow:"0 -2px 8px rgba(0,0,0,0.08)"}},
+      h("span",null,"Este site utiliza armazenamento local para guardar as tuas preferências e carrega fontes do Google Fonts."),
+      h("div",{style:{display:"flex",gap:8,flexShrink:0}},
+        h("a",{href:"/privacidade.html",style:{color:"#2563eb",fontSize:13,textDecoration:"underline"}},"Política de Privacidade"),
+        h("button",{
+          onClick:function(){try{localStorage.setItem('cookie_consent','1');}catch(_){}setHidden(true);},
+          style:{background:"#2563eb",color:"#fff",border:"none",borderRadius:6,padding:"6px 16px",fontSize:13,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}
+        },"Aceitar")
+      )
+    );
+  }
+
   function PageFooter(){
     return h("footer",{style:{textAlign:"center",padding:"18px 16px 28px",fontSize:12,color:"#9ca3af",fontFamily:"'Inter',system-ui,sans-serif"}},
       "© 2026 simhabitacao.pt · ",
@@ -117,4 +134,5 @@
   window.PageHeader=PageHeader;
   window.PageFooter=PageFooter;
   window.NoticeBanner=NoticeBanner;
+  window.CookieBanner=CookieBanner;
 })();
