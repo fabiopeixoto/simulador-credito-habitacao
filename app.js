@@ -400,7 +400,6 @@ function App(props){
   },[loadRates]);
   useEffect(()=>{const id=setInterval(()=>loadRates(true),CACHE_H*3600*1000);return()=>clearInterval(id);},[loadRates]);
   useEffect(()=>{try{const sp=new URLSearchParams(window.location.search);if(sp.get("comments")==="1"){setShowComments(true);sp.delete("comments");const q=sp.toString();const nu=q?"?"+q:"";window.history.replaceState({},"",window.location.pathname+nu+(window.location.hash||""));}}catch(_){}},[]);
-  useEffect(()=>{var fn=window.__creditSimRevealAds;if(typeof fn==="function")fn();},[]);
   
   // ── Derivados ────────────────────────────────────────────────────────────
   const is2=titulares===2;
