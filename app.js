@@ -466,10 +466,18 @@ function App(props){
       const jovMF=(x)=>!x||x<=0?x:Math.max(0.15,Math.round((x-0.12)*100)/100);
       let mC=b.mCom??0,mS=b.mSem??0,fC=b.fCom??0,fS=b.fSem??0;
       if(modoJovem&&b.jOk){
-        mC=b.jmCom!=null?b.jmCom:jovMF(mC);
-        mS=b.jmSem!=null?b.jmSem:jovMF(mS);
-        fC=b.jfCom!=null?b.jfCom:jovMF(fC);
-        fS=b.jfSem!=null?b.jfSem:jovMF(fS);
+        if(b.s==="CGD"&&finalidade==="hpp"&&valorRef>0){
+          const acima90=capital/valorRef>0.9;
+          mC=acima90&&b.jmCom!=null?b.jmCom:mC;
+          mS=acima90&&b.jmSem!=null?b.jmSem:mS;
+          fC=acima90&&b.jfCom!=null?b.jfCom:fC;
+          fS=acima90&&b.jfSem!=null?b.jfSem:fS;
+        } else {
+          mC=b.jmCom!=null?b.jmCom:jovMF(mC);
+          mS=b.jmSem!=null?b.jmSem:jovMF(mS);
+          fC=b.jfCom!=null?b.jfCom:jovMF(fC);
+          fS=b.jfSem!=null?b.jfSem:jovMF(fS);
+        }
       }
       return{
         ...b,
