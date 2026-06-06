@@ -22,25 +22,39 @@
     var activePage=props.activePage||"";
     var commentCount=props.commentCount||0;
     var onOpenComments=props.onOpenComments||function(){};
-    return h("div",{style:{display:"flex",borderRadius:9,overflow:"hidden",border:"1px solid rgba(0,0,0,0.07)"}},
+    var _m=React.useState(typeof window!=='undefined'&&window.innerWidth<640);
+    var isMobile=_m[0];var setIsMobile=_m[1];
+    React.useEffect(function(){
+      function onResize(){setIsMobile(window.innerWidth<640);}
+      window.addEventListener('resize',onResize,{passive:true});
+      return function(){window.removeEventListener('resize',onResize);};
+    },[]);
+    var flex=isMobile?"1 1 33%":1;
+    var fs=isMobile?12:13;
+    var nb=Object.assign({},navBase,{flex:flex,fontSize:fs,padding:isMobile?"7px 4px":"9px",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"});
+    var na=Object.assign({},navActive,{flex:flex,fontSize:fs,padding:isMobile?"7px 4px":"9px",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"});
+    var labels=isMobile
+      ?["🏠 Simulador","💰 Posso Pedir?","🔄 Transferência","📈 Histórico","💬 Comentários"]
+      :["🏠 Simulador","💰 Quanto Posso Pedir?","🔄 Transferência de Crédito","📈 Histórico de Euribor e Spreads","💬 Comentários"];
+    return h("div",{style:{display:"flex",flexWrap:"wrap",borderRadius:9,overflow:"hidden",border:"1px solid rgba(0,0,0,0.07)",background:isMobile?"rgba(0,0,0,0.06)":"rgba(255,255,255,1)",rowGap:isMobile?1:0}},
       h("button",{
         onClick:activePage==="simulador"?undefined:function(){window.location.href="/";},
-        style:activePage==="simulador"?navActive:navBase
-      },"🏠 Simulador"),
+        style:activePage==="simulador"?na:nb
+      },labels[0]),
       h("button",{
         onClick:activePage==="inversa"?undefined:function(){window.location.href="/quanto-posso-pedir.html";},
-        style:activePage==="inversa"?navActive:navBase
-      },"💰 Quanto Posso Pedir?"),
+        style:activePage==="inversa"?na:nb
+      },labels[1]),
       h("button",{
         onClick:activePage==="transferencia"?undefined:function(){window.location.href="/transferencia.html";},
-        style:activePage==="transferencia"?navActive:navBase
-      },"🔄 Transferência de Crédito"),
+        style:activePage==="transferencia"?na:nb
+      },labels[2]),
       h("button",{
         onClick:activePage==="historico"?undefined:function(){window.location.href="/historico.html";},
-        style:activePage==="historico"?navActive:navBase
-      },"📈 Histórico de Euribor e Spreads"),
-      h("button",{onClick:onOpenComments,style:{flex:1,padding:"9px",border:"none",background:"rgba(255,255,255,1)",borderBottom:"2px solid transparent",color:"#4b5563",fontSize:13,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600}},
-        "💬 Comentários"+(commentCount>0?" ("+commentCount+")":"")
+        style:activePage==="historico"?na:nb
+      },labels[3]),
+      h("button",{onClick:onOpenComments,style:Object.assign({},nb,{cursor:"pointer"})},
+        labels[4]+(commentCount>0?" ("+commentCount+")":"")
       )
     );
   }
@@ -61,14 +75,21 @@
     var onOpenComments=props.onOpenComments||function(){};
     var onOpenGlossario=props.onOpenGlossario||null;
     var subtitle=props.subtitle||"";
+    var _pm=React.useState(typeof window!=='undefined'&&window.innerWidth<640);
+    var isMobileH=_pm[0];var setIsMobileH=_pm[1];
+    React.useEffect(function(){
+      function onR(){setIsMobileH(window.innerWidth<640);}
+      window.addEventListener('resize',onR,{passive:true});
+      return function(){window.removeEventListener('resize',onR);};
+    },[]);
 
     return h("div",{style:{background:"linear-gradient(135deg,#ffffff 0%,#eff6ff 55%,#ffffff 100%)",borderBottom:"1px solid rgba(37,99,235,0.4)",padding:"10px 16px 0"}},
       h("div",{style:{maxWidth:1440,margin:"0 auto"}},
         h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8,paddingBottom:10}},
           h("div",null,
             h("a",{href:"/",style:{display:"flex",alignItems:"center",gap:8,textDecoration:"none",color:"inherit"}},
-              h("img",{src:"/images/logo.png",alt:"Simulador Crédito Habitação",style:{height:40,width:"auto",flexShrink:0}}),
-              h("h1",{style:{margin:0,fontSize:21,fontWeight:700,color:"#111827",letterSpacing:-0.3,fontFamily:"'Inter',system-ui,sans-serif"}},"Simulador Crédito Habitação")
+              h("img",{src:"/images/logo.png",alt:"Simulador Crédito Habitação",style:{height:isMobileH?32:40,width:"auto",flexShrink:0}}),
+              h("h1",{style:{margin:0,fontSize:isMobileH?16:21,fontWeight:700,color:"#111827",letterSpacing:-0.3,fontFamily:"'Inter',system-ui,sans-serif"}},"Simulador Crédito Habitação")
             ),
             h("div",{style:{fontSize:11,color:"#4b5563",fontFamily:"sans-serif",marginTop:2}},"Portugal · 14 bancos · Euribor em tempo real"),
             h("div",{style:{display:"flex",gap:5,marginTop:7,flexWrap:"wrap"}},

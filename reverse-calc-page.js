@@ -57,7 +57,7 @@ function ReverseCalcPage({onBack,onSimulate,onOpenComments,onOpenGlossario,comme
           React.createElement("button",{key:ltv,onClick:()=>setJovemLTV(ltv),style:{flex:1,padding:"8px",border:"none",background:jovemLTV===ltv?"rgba(22,163,74,0.10)":"rgba(255,255,255,1)",borderBottom:"2px solid "+(jovemLTV===ltv?G:"transparent"),color:jovemLTV===ltv?G:"#4b5563",fontSize:12,fontFamily:"sans-serif",cursor:"pointer",fontWeight:jovemLTV===ltv?700:400}},label)
         )
       ),
-      React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}},
+      React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:10,marginBottom:10}},
         React.createElement("div",{style:secS},
           React.createElement("div",{style:secTitleS},"RENDIMENTO & TAXA DE ESFORÇO"),
           React.createElement("div",{style:{display:"flex",gap:6,marginBottom:10}},
