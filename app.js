@@ -761,9 +761,9 @@ function App(props){
           const bg=rbg(isContinuation?distinctBanks-1:distinctBanks);
           const top=i===0;
           return React.createElement("tr",{key:b.rowKey,onClick:()=>setDetalheBanco(b),style:{background:bg,cursor:"pointer",WebkitTapHighlightColor:"transparent"}},
-            React.createElement("td",{style:{...tdBC,borderRadius:"6px 0 0 6px",background:bg,borderLeft:top?"3px solid "+Au:undefined}},
+            React.createElement("td",{style:{...tdBC,verticalAlign:"middle",borderRadius:"6px 0 0 6px",background:bg,borderLeft:top?"3px solid "+Au:undefined}},
               React.createElement("span",{style:{width:22,height:22,borderRadius:"50%",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,background:i===0?Au:i===1?"rgba(192,192,192,0.85)":i===2?"rgba(160,108,50,0.85)":"rgba(0,0,0,0.06)",color:i<=2?N:"#111827"}},i+1)),
-            React.createElement("td",{style:{...tdBC,background:bg}},
+            React.createElement("td",{style:{...tdBC,verticalAlign:"middle",background:bg}},
               React.createElement("div",{style:{display:"flex",alignItems:"center",gap:5}},
                 React.createElement("div",{style:{width:24,height:22,borderRadius:4,background:"rgba(0,0,0,0.05)",border:"1px solid "+b.color+"55",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,overflow:"hidden"}},
                   React.createElement("img",{src:"https://www.google.com/s2/favicons?domain="+(BANK_DOMAINS[b.s]||"bank.pt")+"&sz=32",width:18,height:18,style:{objectFit:"contain",display:"block"},alt:b.s,onError:function(e){const d=e.currentTarget.parentElement;d.innerHTML='<span style="font-size:8px;font-weight:700;font-family:monospace;color:'+b.color+'">'+b.s+'</span>';e.currentTarget.onError=null;}})),
@@ -771,11 +771,11 @@ function App(props){
                   React.createElement("span",{style:{fontWeight:700,color:top?"#2563eb":"#111827",fontSize:12}},b.name),
                   b.spreadUpdated&&React.createElement("span",{style:{fontSize:8,color:G,marginLeft:3}},"✓"),
                   !b.capitalOk&&React.createElement("div",{style:{fontSize:8,color:R}},capital<b.capitalMin?"⚠️ mín. "+fE(b.capitalMin):"⚠️ máx. "+fE(b.capitalMax))))),
-            React.createElement("td",{style:{...tdBC,background:bg,textAlign:"center"}},
+            React.createElement("td",{style:{...tdBC,verticalAlign:"middle",background:bg,textAlign:"center"}},
               React.createElement(RefBadge,{refKey:b.ref}),
               React.createElement("div",{style:{fontSize:10,color:"#111827",marginTop:1}},b.ev.toFixed(3).replace(".",",")+"%")),
-            React.createElement("td",{style:{...tdGC(i),fontWeight:700,textAlign:"center"}},fP(b.tanC)),
-            React.createElement("td",{style:{...tdBC,borderRadius:"0 6px 6px 0",background:top?"rgba(37,99,235,0.1)":bg,textAlign:"center",borderLeft:"2px solid "+(top?Au:"rgba(37,99,235,0.15)")}},
+            React.createElement("td",{style:{...tdGC(i),verticalAlign:"middle",fontWeight:700,textAlign:"center"}},fP(b.tanC)),
+            React.createElement("td",{style:{...tdBC,verticalAlign:"middle",borderRadius:"0 6px 6px 0",background:top?"rgba(37,99,235,0.1)":bg,textAlign:"center",borderLeft:"2px solid "+(top?Au:"rgba(37,99,235,0.15)")}},
               React.createElement("div",{style:{display:"flex",alignItems:"center",gap:3}},
                 React.createElement("span",{style:{flex:1,textAlign:"center",fontSize:top?15:13,fontWeight:700,color:top?Au:"#111827",whiteSpace:"nowrap"}},fE(b.ptC)),
                 React.createElement("span",{style:{color:"#374151",fontSize:16,fontWeight:800,flexShrink:0,lineHeight:1,marginLeft:"auto"}},"›")))
