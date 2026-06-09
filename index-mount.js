@@ -9,13 +9,10 @@
   window.ReactDOM.createRoot(document.getElementById('root')).render(
     window.React.createElement(window._App,initialProps)
   );
+  // Sem reload em controllerchange: a estratégia do SW é network-first e os
+  // assets são versionados (?v=), pelo que o SW novo pode assumir o controlo
+  // sem recarregar a página (evita o "abre e volta a recarregar").
   if('serviceWorker' in navigator){
-    var _swRefreshing=false;
-    navigator.serviceWorker.addEventListener('controllerchange',function(){
-      if(_swRefreshing)return;
-      _swRefreshing=true;
-      window.location.reload();
-    });
     navigator.serviceWorker.register('/sw.js');
   }
 })();
