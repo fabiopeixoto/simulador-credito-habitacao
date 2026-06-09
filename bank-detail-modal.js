@@ -57,7 +57,7 @@
               h("div",{style:{fontSize:11,color:"#4b5563",fontFamily:"sans-serif",marginTop:1}},"Detalhes da simulação")
             )
           ),
-          h("button",{onClick:onClose,"aria-label":"Fechar detalhes",style:{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#4b5563",padding:"4px 8px",borderRadius:6,lineHeight:1,flexShrink:0}},"×")
+          h("button",{onClick:onClose,"aria-label":"Fechar detalhes",style:{background:"none",border:"none",fontSize:28,fontWeight:800,cursor:"pointer",color:"#dc2626",padding:"4px 8px",borderRadius:6,lineHeight:1,flexShrink:0}},"×")
         ),
         h("div",{style:{overflowY:"auto",padding:"4px 18px 16px",flex:1}},
           h("div",{style:{marginTop:12,padding:"10px 14px",background:"rgba(37,99,235,0.08)",border:"1px solid rgba(37,99,235,0.3)",borderRadius:10,textAlign:"center"}},
