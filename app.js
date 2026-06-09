@@ -760,7 +760,7 @@ function App(props){
           const distinctBanks=new Set(resultados.slice(0,i).map(r=>r.s)).size;
           const bg=rbg(isContinuation?distinctBanks-1:distinctBanks);
           const top=i===0;
-          return React.createElement("tr",{key:b.rowKey,onClick:()=>setDetalheBanco(b),style:{background:bg,cursor:"pointer"}},
+          return React.createElement("tr",{key:b.rowKey,onClick:()=>setDetalheBanco(b),style:{background:bg,cursor:"pointer",WebkitTapHighlightColor:"transparent"}},
             React.createElement("td",{style:{...tdBC,borderRadius:"6px 0 0 6px",background:bg,borderLeft:top?"3px solid "+Au:undefined}},
               React.createElement("span",{style:{width:22,height:22,borderRadius:"50%",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,background:i===0?Au:i===1?"rgba(192,192,192,0.85)":i===2?"rgba(160,108,50,0.85)":"rgba(0,0,0,0.06)",color:i<=2?N:"#111827"}},i+1)),
             React.createElement("td",{style:{...tdBC,background:bg}},
