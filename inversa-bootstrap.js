@@ -105,7 +105,7 @@
         "div",
         { style: { display: "flex", alignItems: "center", gap: 6, marginTop: 4, minWidth: 0 } },
         prefix &&
-          React.createElement("span", { style: { fontSize: 13, color: "#4b5563", fontFamily: "sans-serif", flexShrink: 0 } }, prefix),
+          React.createElement("span", { style: { fontSize: 13, color: "#374151", fontFamily: "sans-serif", flexShrink: 0 } }, prefix),
         React.createElement("input", {
           type: "text",
           inputMode: "numeric",
@@ -134,7 +134,7 @@
             cursor: "text",
           },
         }),
-        suffix && React.createElement("span", { style: { fontSize: 13, color: "#4b5563", fontFamily: "sans-serif" } }, suffix)
+        suffix && React.createElement("span", { style: { fontSize: 13, color: "#374151", fontFamily: "sans-serif" } }, suffix)
       )
     );
   }
