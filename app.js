@@ -745,7 +745,7 @@ function App(props){
   // com todos os detalhes (BankDetailModal).
   function renderCompTableMobile(){
     return React.createElement("div",null,
-      React.createElement("div",{style:{marginBottom:8,fontSize:11,fontWeight:700,color:"#4b5563",fontFamily:"sans-serif",textAlign:"center"}},"Toque numa linha para ver todos os detalhes da simulação"),
+      React.createElement("div",{style:{marginBottom:8,fontSize:11,fontWeight:700,color:"#111827",fontFamily:"sans-serif",textAlign:"center"}},"Toque numa linha para ver todos os detalhes da simulação"),
       React.createElement("div",{style:{overflowX:"auto"}},React.createElement("table",{style:{width:"100%",borderCollapse:"separate",borderSpacing:"0 3px",fontFamily:"sans-serif",fontSize:12}},
         React.createElement("thead",null,React.createElement("tr",null,
           React.createElement("th",{style:thSC},"#"),
