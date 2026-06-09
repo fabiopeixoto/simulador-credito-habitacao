@@ -161,6 +161,8 @@ function prestacaoCarencia(C, tanA) { return C * tanA/100/12; }
 
 // ── Domínios dos bancos (para favicon) ────────────────────────────────────
 const BANK_DOMAINS=window._SIM.BANK_DOMAINS;
+// Vista compacta da Comparação só em dispositivos móveis reais (user-agent)
+const IS_MOBILE=!!(window._SIM_SHARED&&window._SIM_SHARED.isMobileDevice);
 // ── Cores e estilos ───────────────────────────────────────────────────────
 const G="#16a34a",R="#dc2626",Au="#2563eb",N="#e5e7eb",Sky="#0284c7";
 const ecC=ef=>ef<=35?G:ef<=40?Au:R;
@@ -322,6 +324,7 @@ function App(props){
   const[bancoCustos,setBancoCustos]=useState("");
   const[bancoAmort,setBancoAmort]=useState("");
   const[bancoCen,setBancoCen]=useState("");
+  const[detalheBanco,setDetalheBanco]=useState(null);
   
   // ── Load rates ──────────────────────────────────────────────────────────
   const loadRates=useCallback(async(force)=>{
@@ -737,6 +740,51 @@ function App(props){
     setSaved(true);setTimeout(()=>setSaved(false),2000);
   }
 
+  // ── Tabela de comparação compacta (dispositivos móveis) ──────────────────
+  // Só Banco / Euribor / TAN c/produtos / Total; toque na linha abre o popup
+  // com todos os detalhes (BankDetailModal).
+  function renderCompTableMobile(){
+    return React.createElement("div",null,
+      React.createElement("table",{style:{width:"100%",borderCollapse:"separate",borderSpacing:"0 3px",fontFamily:"sans-serif",fontSize:12}},
+        React.createElement("thead",null,React.createElement("tr",null,
+          React.createElement("th",{style:thSC},"#"),
+          React.createElement("th",{style:thSC},"BANCO"),
+          React.createElement("th",{style:{...thSC,textAlign:"center"}},"EUR."),
+          React.createElement("th",{style:{...thSC,color:G,textAlign:"center"}},"TAN"),
+          React.createElement("th",{style:{...thSC,color:Au,fontWeight:700,textAlign:"center"}},"★ TOTAL"),
+          React.createElement("th",{style:thSC},"")
+        )),
+        React.createElement("tbody",null,resultados.map((b,i)=>{
+          const prevBank=i>0?resultados[i-1].s:null;
+          const isContinuation=prevBank===b.s;
+          const distinctBanks=new Set(resultados.slice(0,i).map(r=>r.s)).size;
+          const bg=rbg(isContinuation?distinctBanks-1:distinctBanks);
+          const top=i===0;
+          return React.createElement("tr",{key:b.rowKey,onClick:()=>setDetalheBanco(b),style:{background:bg,cursor:"pointer"}},
+            React.createElement("td",{style:{...tdBC,borderRadius:"6px 0 0 6px",background:bg,borderLeft:top?"3px solid "+Au:undefined}},
+              React.createElement("span",{style:{width:22,height:22,borderRadius:"50%",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,background:i===0?Au:i===1?"rgba(192,192,192,0.85)":i===2?"rgba(160,108,50,0.85)":"rgba(0,0,0,0.06)",color:i<=2?N:"#111827"}},i+1)),
+            React.createElement("td",{style:{...tdBC,background:bg}},
+              React.createElement("div",{style:{display:"flex",alignItems:"center",gap:5}},
+                React.createElement("div",{style:{width:24,height:22,borderRadius:4,background:"rgba(0,0,0,0.05)",border:"1px solid "+b.color+"55",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,overflow:"hidden"}},
+                  React.createElement("img",{src:"https://www.google.com/s2/favicons?domain="+(BANK_DOMAINS[b.s]||"bank.pt")+"&sz=32",width:18,height:18,style:{objectFit:"contain",display:"block"},alt:b.s,onError:function(e){const d=e.currentTarget.parentElement;d.innerHTML='<span style="font-size:8px;font-weight:700;font-family:monospace;color:'+b.color+'">'+b.s+'</span>';e.currentTarget.onError=null;}})),
+                React.createElement("div",null,
+                  React.createElement("span",{style:{fontWeight:700,color:top?"#2563eb":"#111827",fontSize:12}},b.name),
+                  b.spreadUpdated&&React.createElement("span",{style:{fontSize:8,color:G,marginLeft:3}},"✓"),
+                  !b.capitalOk&&React.createElement("div",{style:{fontSize:8,color:R}},capital<b.capitalMin?"⚠️ mín. "+fE(b.capitalMin):"⚠️ máx. "+fE(b.capitalMax))))),
+            React.createElement("td",{style:{...tdBC,background:bg,textAlign:"center"}},
+              React.createElement(RefBadge,{refKey:b.ref}),
+              React.createElement("div",{style:{fontSize:10,color:"#111827",marginTop:1}},b.ev.toFixed(3).replace(".",",")+"%")),
+            React.createElement("td",{style:{...tdGC(i),fontWeight:700,textAlign:"center"}},fP(b.tanC)),
+            React.createElement("td",{style:{...tdBC,background:top?"rgba(37,99,235,0.1)":bg,textAlign:"center",borderLeft:"2px solid "+(top?Au:"rgba(37,99,235,0.15)")}},
+              React.createElement("div",{style:{fontSize:top?16:13,fontWeight:700,color:top?Au:"#111827",whiteSpace:"nowrap"}},fE(b.ptC)+"/mês")),
+            React.createElement("td",{style:{...tdBC,borderRadius:"0 6px 6px 0",background:bg,textAlign:"center",color:"#9ca3af",fontSize:16}},"›")
+          );
+        }))
+      ),
+      React.createElement("div",{style:{marginTop:8,fontSize:11,color:"#6b7280",fontFamily:"sans-serif",textAlign:"center"}},"Toque numa linha para ver todos os detalhes da simulação")
+    );
+  }
+
   // Status
   const stIcon=status==="loading"?"⏳":status==="ok"?"✅":status==="cached"?"🔄":"⚠️";
   const stColor=status==="ok"?G:status==="cached"?Sky:status==="error"?R:Au;
@@ -805,7 +853,7 @@ React.createElement("button", {onClick:handleSave,"aria-label":"Guardar simulaç
           )), nav==="comp"&&(
           React.createElement("div", {style:{background:"rgba(255,255,255,1)",border:"1px solid rgba(37,99,235,0.15)",borderRadius:11,padding:16}}, tipoTaxa==="variável"&&(
               React.createElement("div", {style: {padding:"7px 12px",background:"rgba(2,132,199,0.06)",border:"1px solid rgba(2,132,199,0.2)",borderRadius:8,marginBottom:8,fontSize:11,color:"#4b5563",fontFamily:"sans-serif"}}, filtroEuribor==="all"?React.createElement(React.Fragment,null,"💡 Filtro «Indexante» na Comparação: com «Todas (3m / 6m / 12m)», cada linha é um par banco + Euribor; quem oferece mais do que um indexante aparece várias vezes. Com «Só Euribor …» ficam só os bancos com esse tenor no CH (precário), uma linha por banco. A ordem do quadro segue o critério do menu ao lado.",React.createElement("br",null),"✓ = spread confirmado pela API. Spread inclui ajuste LTV ("+pctR+"%) e finalidade."):React.createElement(React.Fragment,null,"💡 Com «Só Euribor ",React.createElement("strong",null,filtroEuribor),"» seleccionado: só entram bancos que disponibilizam esse indexante no CH (precário), uma linha por banco. Ordenação: critério do menu ao lado.",React.createElement("br",null),"✓ = spread confirmado pela API. Spread inclui ajuste LTV ("+pctR+"%) e finalidade."))
-            ), filtroEuribor!=="all"&&tipoTaxa!=="variável"&&React.createElement("div", {style: {padding:"7px 12px",background:"rgba(2,132,199,0.06)",border:"1px solid rgba(2,132,199,0.2)",borderRadius:8,marginBottom:8,fontSize:11,color:"#4b5563",fontFamily:"sans-serif"}}, "💡 Taxa ",React.createElement("strong",null,tipoTaxa),": a coluna Euribor mostra ",React.createElement("strong",null,filtroEuribor)," como referência; só entram bancos que oferecem este indexante em variável (precário)."), resultados.length===0&&React.createElement("div", {style: {padding:"14px 16px",background:"rgba(248,113,113,0.08)",border:"1px solid rgba(248,113,113,0.35)",borderRadius:8,marginBottom:10,fontSize:12,color:"#991b1b",fontFamily:"sans-serif"}}, "Sem resultados para este filtro e tipo de taxa. Escolha «Todas» ou outro indexante, ou mude o tipo de taxa (variável / mista / fixa)."), React.createElement("div", {style: {overflowX:"auto"}}, React.createElement("table", {style: {width:"100%",borderCollapse:"separate",borderSpacing:"0 3px",fontFamily:"sans-serif",fontSize:11}}, React.createElement("thead", null, React.createElement("tr", null, React.createElement("th", {rowSpan: 2, style: thSC}, "#"), React.createElement("th", {rowSpan: 2, style: thSC}, "BANCO"), React.createElement("th", {rowSpan: 2, style: {...thSC,color:"#4b5563"}}, "EUR."), React.createElement("th", {colSpan: 2, style: {...thSC,textAlign:"center"}}, "SPREAD", React.createElement("br", null), React.createElement("span", {style: {fontSize:8,fontWeight:600,color:modoJovem?G:Au,letterSpacing:0.2}}, modoJovem?"Medida jovem":"Crédito normal")), React.createElement("th", {colSpan: 2, style: {...thSC,textAlign:"center"}}, "TAN"), carencia>0&&React.createElement("th", {rowSpan: 2, style: {...thSC,color:Sky,textAlign:"center"}}, "⚡CARÊNCIA", React.createElement("br", null), "/mês"), React.createElement("th", {colSpan: 2, style: {...thSC,textAlign:"center"}}, "PRESTAÇÃO CAPITAL"), React.createElement("th", {rowSpan: 2, style: {...thSC,color:"#14532d"}}, "SEGUROS+IS"), React.createElement("th", {rowSpan: 2, style: {...thSC,color:"#4b5563"}}, "CONTA"), React.createElement("th", {rowSpan: 2, style: {...thSC,color:Au,fontWeight:700}}, "★ TOTAL"), React.createElement("th", {rowSpan: 2, style: {...thSC,color:G}}, "POUPAR"), React.createElement("th", {rowSpan: 2, style: {...thSC,color:Au}}, "DSTI"), React.createElement("th", {rowSpan: 2, style: {...thSC,color:"#f97316"}}, "STRESS"), React.createElement("th", {rowSpan: 2, style: {...thSC,color:Sky,fontWeight:700}}, "TAEG"), React.createElement("th", {rowSpan: 2, style: {...thSC,color:"#4b5563"}}, "MTIC"), React.createElement("th", {rowSpan: 2, style: {...thSC,color:"#4b5563"}}, "CAPITAL", React.createElement("br", null), "OK?")), React.createElement("tr", null, React.createElement("th", {style: {...thSC,color:G,textAlign:"center"}}, "c/prod."), React.createElement("th", {style: {...thSC,color:R,textAlign:"center"}}, "s/prod."), React.createElement("th", {style: {...thSC,color:G,textAlign:"center"}}, "c/prod."), React.createElement("th", {style: {...thSC,color:R,textAlign:"center"}}, "s/prod."), React.createElement("th", {style: {...thSC,color:G,textAlign:"center"}}, "c/prod."), React.createElement("th", {style: {...thSC,color:R,textAlign:"center"}}, "s/prod."))), React.createElement("tbody", null, resultados.map((b,i)=>{
+            ), filtroEuribor!=="all"&&tipoTaxa!=="variável"&&React.createElement("div", {style: {padding:"7px 12px",background:"rgba(2,132,199,0.06)",border:"1px solid rgba(2,132,199,0.2)",borderRadius:8,marginBottom:8,fontSize:11,color:"#4b5563",fontFamily:"sans-serif"}}, "💡 Taxa ",React.createElement("strong",null,tipoTaxa),": a coluna Euribor mostra ",React.createElement("strong",null,filtroEuribor)," como referência; só entram bancos que oferecem este indexante em variável (precário)."), resultados.length===0&&React.createElement("div", {style: {padding:"14px 16px",background:"rgba(248,113,113,0.08)",border:"1px solid rgba(248,113,113,0.35)",borderRadius:8,marginBottom:10,fontSize:12,color:"#991b1b",fontFamily:"sans-serif"}}, "Sem resultados para este filtro e tipo de taxa. Escolha «Todas» ou outro indexante, ou mude o tipo de taxa (variável / mista / fixa)."), IS_MOBILE&&renderCompTableMobile(), !IS_MOBILE&&React.createElement("div", {style: {overflowX:"auto"}}, React.createElement("table", {style: {width:"100%",borderCollapse:"separate",borderSpacing:"0 3px",fontFamily:"sans-serif",fontSize:11}}, React.createElement("thead", null, React.createElement("tr", null, React.createElement("th", {rowSpan: 2, style: thSC}, "#"), React.createElement("th", {rowSpan: 2, style: thSC}, "BANCO"), React.createElement("th", {rowSpan: 2, style: {...thSC,color:"#4b5563"}}, "EUR."), React.createElement("th", {colSpan: 2, style: {...thSC,textAlign:"center"}}, "SPREAD", React.createElement("br", null), React.createElement("span", {style: {fontSize:8,fontWeight:600,color:modoJovem?G:Au,letterSpacing:0.2}}, modoJovem?"Medida jovem":"Crédito normal")), React.createElement("th", {colSpan: 2, style: {...thSC,textAlign:"center"}}, "TAN"), carencia>0&&React.createElement("th", {rowSpan: 2, style: {...thSC,color:Sky,textAlign:"center"}}, "⚡CARÊNCIA", React.createElement("br", null), "/mês"), React.createElement("th", {colSpan: 2, style: {...thSC,textAlign:"center"}}, "PRESTAÇÃO CAPITAL"), React.createElement("th", {rowSpan: 2, style: {...thSC,color:"#14532d"}}, "SEGUROS+IS"), React.createElement("th", {rowSpan: 2, style: {...thSC,color:"#4b5563"}}, "CONTA"), React.createElement("th", {rowSpan: 2, style: {...thSC,color:Au,fontWeight:700}}, "★ TOTAL"), React.createElement("th", {rowSpan: 2, style: {...thSC,color:G}}, "POUPAR"), React.createElement("th", {rowSpan: 2, style: {...thSC,color:Au}}, "DSTI"), React.createElement("th", {rowSpan: 2, style: {...thSC,color:"#f97316"}}, "STRESS"), React.createElement("th", {rowSpan: 2, style: {...thSC,color:Sky,fontWeight:700}}, "TAEG"), React.createElement("th", {rowSpan: 2, style: {...thSC,color:"#4b5563"}}, "MTIC"), React.createElement("th", {rowSpan: 2, style: {...thSC,color:"#4b5563"}}, "CAPITAL", React.createElement("br", null), "OK?")), React.createElement("tr", null, React.createElement("th", {style: {...thSC,color:G,textAlign:"center"}}, "c/prod."), React.createElement("th", {style: {...thSC,color:R,textAlign:"center"}}, "s/prod."), React.createElement("th", {style: {...thSC,color:G,textAlign:"center"}}, "c/prod."), React.createElement("th", {style: {...thSC,color:R,textAlign:"center"}}, "s/prod."), React.createElement("th", {style: {...thSC,color:G,textAlign:"center"}}, "c/prod."), React.createElement("th", {style: {...thSC,color:R,textAlign:"center"}}, "s/prod."))), React.createElement("tbody", null, resultados.map((b,i)=>{
                     const prevBank = i>0 ? resultados[i-1].s : null;
                     const isContinuation = prevBank === b.s;
                     const distinctBanks = new Set(resultados.slice(0,i).map(r=>r.s)).size;
@@ -1045,7 +1093,7 @@ React.createElement("button", {onClick:handleSave,"aria-label":"Guardar simulaç
                 ))
               )
             )
-  ),showGlossario&&window.GlossarioModal&&React.createElement(window.GlossarioModal,{onClose:()=>setShowGlossario(false)}),window.PageFooter&&React.createElement(window.PageFooter,null),window.CookieBanner&&React.createElement(window.CookieBanner,null));
+  ),detalheBanco&&window.BankDetailModal&&React.createElement(window.BankDetailModal,{row:detalheBanco,ctx:{carencia,segProtecao,segProtMensal,is2,rendT,modoJovem,capital,margem:margemVsOficial(detalheBanco.ptC)},onClose:()=>setDetalheBanco(null)}),showGlossario&&window.GlossarioModal&&React.createElement(window.GlossarioModal,{onClose:()=>setShowGlossario(false)}),window.PageFooter&&React.createElement(window.PageFooter,null),window.CookieBanner&&React.createElement(window.CookieBanner,null));
 }
 window._App=App;
 }catch(e){

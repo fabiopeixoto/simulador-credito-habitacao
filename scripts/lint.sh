@@ -19,6 +19,7 @@ for f in \
   page-header.js \
   comments-modal.js \
   glossario-modal.js \
+  bank-detail-modal.js \
   reverse-calc-page.js \
   transferencia-page.js \
   historico-page.js \
