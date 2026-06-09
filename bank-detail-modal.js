@@ -9,17 +9,17 @@
 
   function Row(props){
     return h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"baseline",gap:12,padding:"7px 0",borderBottom:"1px solid rgba(0,0,0,0.05)"}},
-      h("span",{style:{fontSize:12,color:"#4b5563",fontFamily:"sans-serif",flexShrink:0}},props.l),
+      h("span",{style:{fontSize:12,color:"#374151",fontFamily:"sans-serif",flexShrink:0}},props.l),
       h("span",{style:{fontSize:props.big?17:13,fontWeight:props.big?700:600,color:props.c||"#111827",fontFamily:"sans-serif",textAlign:"right"}},
         props.v,
-        props.sub&&h("div",{style:{fontSize:10,fontWeight:400,color:"#6b7280",marginTop:1}},props.sub)
+        props.sub&&h("div",{style:{fontSize:10,fontWeight:400,color:"#4b5563",marginTop:1}},props.sub)
       )
     );
   }
 
   function Sec(props){
     return h("div",{style:{marginTop:14}},
-      h("div",{style:{fontSize:10,letterSpacing:2,color:"#6b7280",fontFamily:"monospace",marginBottom:2}},props.t),
+      h("div",{style:{fontSize:10,letterSpacing:2,color:"#4b5563",fontFamily:"monospace",marginBottom:2}},props.t),
       props.children
     );
   }
@@ -54,16 +54,16 @@
                 b.spreadUpdated&&h("span",{style:{fontSize:10,color:G,marginLeft:4}},"✓"),
                 ctx.modoJovem&&h("span",{style:{fontSize:10,background:"rgba(74,222,128,0.12)",border:"1px solid rgba(74,222,128,0.25)",color:G,borderRadius:3,padding:"1px 4px",marginLeft:5,verticalAlign:"middle"}},"JOVEM")
               ),
-              h("div",{style:{fontSize:11,color:"#6b7280",fontFamily:"sans-serif",marginTop:1}},"Detalhes da simulação")
+              h("div",{style:{fontSize:11,color:"#4b5563",fontFamily:"sans-serif",marginTop:1}},"Detalhes da simulação")
             )
           ),
-          h("button",{onClick:onClose,"aria-label":"Fechar detalhes",style:{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#6b7280",padding:"4px 8px",borderRadius:6,lineHeight:1,flexShrink:0}},"×")
+          h("button",{onClick:onClose,"aria-label":"Fechar detalhes",style:{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#4b5563",padding:"4px 8px",borderRadius:6,lineHeight:1,flexShrink:0}},"×")
         ),
         h("div",{style:{overflowY:"auto",padding:"4px 18px 16px",flex:1}},
           h("div",{style:{marginTop:12,padding:"10px 14px",background:"rgba(37,99,235,0.08)",border:"1px solid rgba(37,99,235,0.3)",borderRadius:10,textAlign:"center"}},
             h("div",{style:{fontSize:10,letterSpacing:2,color:Au,fontFamily:"monospace"}},"★ PRESTAÇÃO TOTAL"),
             h("div",{style:{fontSize:24,fontWeight:700,color:Au,fontFamily:"sans-serif",marginTop:2}},fE(b.ptC)+"/mês"),
-            margem>0&&h("div",{style:{fontSize:11,color:"#6b7280",fontFamily:"monospace",marginTop:1}},fE(b.ptC-margem)+" – "+fE(b.ptC+margem))
+            margem>0&&h("div",{style:{fontSize:11,color:"#4b5563",fontFamily:"monospace",marginTop:1}},fE(b.ptC-margem)+" – "+fE(b.ptC+margem))
           ),
           h(Sec,{t:"TAXAS"},
             h(Row,{l:"Euribor",v:h("span",null,
@@ -85,7 +85,7 @@
             h(Row,{l:"Poupança c/produtos",v:"+"+fE(b.diff)+"/mês",c:G,sub:fE(b.diffTot)+" ao longo do prazo"})
           ),
           h(Sec,{t:"VIABILIDADE E CUSTO TOTAL"},
-            h(Row,{l:"Taxa de esforço (DSTI)",v:ctx.rendT>0?b.efC.toFixed(1)+"% · "+ecL(b.efC):"—",c:ctx.rendT>0?ecC(b.efC):"#4b5563"}),
+            h(Row,{l:"Taxa de esforço (DSTI)",v:ctx.rendT>0?b.efC.toFixed(1)+"% · "+ecL(b.efC):"—",c:ctx.rendT>0?ecC(b.efC):"#374151"}),
             h(Row,{l:"Stress (+1,5pp)",v:ctx.rendT>0?b.efSt.toFixed(1)+"%":"—",c:"#f97316",sub:ctx.rendT>0?fE(b.pSt)+"/mês":null}),
             h(Row,{l:"TAEG",v:(b.taeg||0).toFixed(2).replace(".",",")+"%",c:Sky}),
             h(Row,{l:"MTIC (total pago)",v:fE(b.mtic||0)}),
@@ -93,7 +93,7 @@
               v:b.capitalOk?"✅ Dentro dos limites":(ctx.capital<b.capitalMin?"⚠️ mínimo "+fE(b.capitalMin):"⚠️ máximo "+fE(b.capitalMax)),
               c:b.capitalOk?G:R})
           ),
-          h("div",{style:{marginTop:14,padding:"8px 12px",background:"rgba(37,99,235,0.06)",border:"1px solid rgba(37,99,235,0.18)",borderRadius:8,fontSize:10,color:"#6b7280",fontFamily:"sans-serif",lineHeight:1.6}},
+          h("div",{style:{marginTop:14,padding:"8px 12px",background:"rgba(37,99,235,0.06)",border:"1px solid rgba(37,99,235,0.18)",borderRadius:8,fontSize:10,color:"#4b5563",fontFamily:"sans-serif",lineHeight:1.6}},
             "Estimativa indicativa — intervalo ±5% na prestação total (mín. 25 €). Não substitui a FINE nem a proposta do banco.")
         )
       )

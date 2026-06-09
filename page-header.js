@@ -8,7 +8,7 @@
   var FALLBACK_EUR=window._SIM.FALLBACK_EUR;
   var EUR_COLORS=window._SIM.EUR_COLORS;
 
-  var navBase={flex:1,padding:"9px",border:"none",background:"rgba(255,255,255,1)",borderBottom:"2px solid transparent",color:"#4b5563",fontSize:13,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600};
+  var navBase={flex:1,padding:"9px",border:"none",background:"rgba(255,255,255,1)",borderBottom:"2px solid transparent",color:"#374151",fontSize:13,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600};
   var navActive={flex:1,padding:"9px",border:"none",background:"rgba(37,99,235,0.08)",borderBottom:"2px solid "+Au,color:Au,fontSize:13,fontFamily:"sans-serif",cursor:"default",fontWeight:600};
 
   /**
@@ -91,7 +91,7 @@
               h("img",{src:"/images/logo.png",alt:"Simulador Crédito Habitação",style:{height:isMobileH?32:40,width:"auto",flexShrink:0}}),
               h("h1",{style:{margin:0,fontSize:isMobileH?16:21,fontWeight:700,color:"#111827",letterSpacing:-0.3,fontFamily:"'Inter',system-ui,sans-serif"}},"Simulador Crédito Habitação")
             ),
-            h("div",{style:{fontSize:11,color:"#4b5563",fontFamily:"sans-serif",marginTop:2}},"Portugal · 14 bancos · Euribor em tempo real"),
+            h("div",{style:{fontSize:11,color:"#374151",fontFamily:"sans-serif",marginTop:2}},"Portugal · 14 bancos · Euribor em tempo real"),
             h("div",{style:{display:"flex",gap:5,marginTop:7,flexWrap:"wrap"}},
               ["3m","6m","12m"].map(function(k){
                 var v=EUR[k]||FALLBACK_EUR[k];
@@ -99,7 +99,7 @@
                 return h("div",{key:k,style:{display:"flex",alignItems:"center",gap:5,padding:"3px 9px",background:ebg,borderRight:"1px solid rgba(0,0,0,0.04)",borderRadius:4}},
                   h("span",{style:{color:ec,fontWeight:700,fontSize:10,fontFamily:"monospace",letterSpacing:1}},"EUR "+k.toUpperCase()),
                   h("span",{style:{color:"#111827",fontSize:13,fontWeight:700,fontFamily:"monospace"}},v.valor.toFixed(3).replace(".",",")+"%"),
-                  v.data&&h("span",{style:{color:"#4b5563",fontSize:10,fontFamily:"sans-serif",marginLeft:2}},v.data)
+                  v.data&&h("span",{style:{color:"#374151",fontSize:10,fontFamily:"sans-serif",marginLeft:2}},v.data)
                 );
               })
             )
@@ -107,7 +107,7 @@
           onOpenGlossario&&h("button",{onClick:onOpenGlossario,style:{padding:"6px 13px",border:"1px solid rgba(37,99,235,0.25)",borderRadius:7,background:"rgba(255,255,255,0.85)",color:Au,fontSize:12,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600,alignSelf:"flex-start",whiteSpace:"nowrap"}},"📖 Glossário")
         ),
         h(NavTabs,{activePage:activePage,commentCount:commentCount,onOpenComments:onOpenComments}),
-        h("div",{style:{paddingBottom:8}},subtitle&&h("span",{style:{fontSize:11,color:"#4b5563"}},subtitle))
+        h("div",{style:{paddingBottom:8}},subtitle&&h("span",{style:{fontSize:11,color:"#374151"}},subtitle))
       )
     );
   }
@@ -141,11 +141,11 @@
   }
 
   function PageFooter(){
-    return h("footer",{style:{textAlign:"center",padding:"18px 16px 28px",fontSize:12,color:"#9ca3af",fontFamily:"'Inter',system-ui,sans-serif"}},
+    return h("footer",{style:{textAlign:"center",padding:"18px 16px 28px",fontSize:12,color:"#6b7280",fontFamily:"'Inter',system-ui,sans-serif"}},
       "© 2026 simhabitacao.pt · ",
-      h("a",{href:"/privacidade.html",style:{color:"#6b7280",textDecoration:"underline"}},"Política de Privacidade"),
+      h("a",{href:"/privacidade.html",style:{color:"#4b5563",textDecoration:"underline"}},"Política de Privacidade"),
       " · ",
-      h("a",{href:"/LICENSE",target:"_blank",style:{color:"#6b7280",textDecoration:"underline"}},"Licença")
+      h("a",{href:"/LICENSE",target:"_blank",style:{color:"#4b5563",textDecoration:"underline"}},"Licença")
     );
   }
 

@@ -50,9 +50,9 @@
         h("div",{style:{padding:"16px 20px 12px",borderBottom:"1px solid rgba(0,0,0,0.07)",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}},
           h("div",null,
             h("div",{style:{fontSize:11,letterSpacing:3,color:Au,fontFamily:"monospace",marginBottom:2}},"GLOSSÁRIO"),
-            h("div",{style:{fontSize:13,color:"#6b7280",fontFamily:"sans-serif"}},"Termos e siglas técnicas do simulador")
+            h("div",{style:{fontSize:13,color:"#4b5563",fontFamily:"sans-serif"}},"Termos e siglas técnicas do simulador")
           ),
-          h("button",{onClick:onClose,style:{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#6b7280",padding:"4px 8px",borderRadius:6,lineHeight:1}},"×")
+          h("button",{onClick:onClose,style:{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#4b5563",padding:"4px 8px",borderRadius:6,lineHeight:1}},"×")
         ),
         h("div",{style:{padding:"10px 20px",borderBottom:"1px solid rgba(0,0,0,0.06)",flexShrink:0}},
           h("input",{type:"text",placeholder:"Pesquisar termo…",value:q,
@@ -62,7 +62,7 @@
         ),
         h("div",{style:{overflowY:"auto",padding:"8px 20px 16px",flex:1}},
           filtered.length===0?
-            h("div",{style:{padding:"24px 0",textAlign:"center",color:"#9ca3af",fontSize:13}},"Nenhum termo encontrado"):
+            h("div",{style:{padding:"24px 0",textAlign:"center",color:"#6b7280",fontSize:13}},"Nenhum termo encontrado"):
           filtered.map(function(x){
             return h("div",{key:x.t,style:{padding:"10px 0",borderBottom:"1px solid rgba(0,0,0,0.05)"}},
               h("div",{style:{fontWeight:700,fontSize:13,color:Au,fontFamily:"monospace",marginBottom:3}},x.t),

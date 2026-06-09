@@ -25,7 +25,7 @@
   ];
   var SPR_SERIES=[
     {key:"sCom", label:"Spread c/ produtos", color:Au},
-    {key:"sSem", label:"Spread s/ produtos", color:"#9ca3af"},
+    {key:"sSem", label:"Spread s/ produtos", color:"#6b7280"},
   ];
 
   function mergeEur(data){
@@ -68,14 +68,14 @@
       var gv=yMin+(yMax-yMin)*g/4;
       var gy=toY(gv).toFixed(1);
       p.push('<line x1="'+margin.left+'" y1="'+gy+'" x2="'+(margin.left+innerW)+'" y2="'+gy+'" stroke="rgba(0,0,0,0.05)" stroke-width="0.5"/>');
-      p.push('<text x="'+(margin.left-3)+'" y="'+(+gy+4)+'" text-anchor="end" font-size="9" fill="#9ca3af" font-family="monospace">'+gv.toFixed(2).replace(".",",")+'</text>');
+      p.push('<text x="'+(margin.left-3)+'" y="'+(+gy+4)+'" text-anchor="end" font-size="9" fill="#6b7280" font-family="monospace">'+gv.toFixed(2).replace(".",",")+'</text>');
     }
 
     // zero line when range straddles zero
     if(yMin<0&&yMax>0){
       var zy=toY(0).toFixed(1);
       p.push('<line x1="'+margin.left+'" y1="'+zy+'" x2="'+(margin.left+innerW)+'" y2="'+zy+'" stroke="rgba(0,0,0,0.18)" stroke-width="1" stroke-dasharray="4,3"/>');
-      p.push('<text x="'+(margin.left-3)+'" y="'+(+zy+4)+'" text-anchor="end" font-size="9" fill="#6b7280" font-family="monospace" font-weight="bold">0,00</text>');
+      p.push('<text x="'+(margin.left-3)+'" y="'+(+zy+4)+'" text-anchor="end" font-size="9" fill="#4b5563" font-family="monospace" font-weight="bold">0,00</text>');
     }
 
     // x-axis labels
@@ -86,7 +86,7 @@
       prevLbl=lbl;
       var lx=toX(i).toFixed(1);
       p.push('<line x1="'+lx+'" y1="'+margin.top+'" x2="'+lx+'" y2="'+(margin.top+innerH)+'" stroke="rgba(0,0,0,0.04)" stroke-width="0.5"/>');
-      p.push('<text x="'+lx+'" y="'+(H-3)+'" text-anchor="middle" font-size="9" fill="#9ca3af" font-family="monospace">'+lbl+'</text>');
+      p.push('<text x="'+lx+'" y="'+(H-3)+'" text-anchor="middle" font-size="9" fill="#6b7280" font-family="monospace">'+lbl+'</text>');
     });
 
     // lines
@@ -111,7 +111,7 @@
       props.series.map(function(s){
         return h("div",{key:s.key,style:{display:"flex",alignItems:"center",gap:5}},
           h("div",{style:{width:20,height:3,background:s.color,borderRadius:2,flexShrink:0}}),
-          h("span",{style:{fontSize:12,fontFamily:"monospace",color:"#6b7280"}},s.label),
+          h("span",{style:{fontSize:12,fontFamily:"monospace",color:"#4b5563"}},s.label),
           props.latest&&props.latest[s.key]!=null&&
             h("span",{style:{fontSize:12,fontFamily:"monospace",fontWeight:700,color:s.color}},
               Number(props.latest[s.key]).toFixed(3).replace(".",",")+"%")
@@ -185,10 +185,10 @@
           h("div",{style:titleS},"EURIBOR — HISTÓRICO BCE"),
           h(LegendRow,{series:EUR_SERIES,latest:eurLatest}),
           loading?
-            h("div",{style:{height:210,display:"flex",alignItems:"center",justifyContent:"center",color:"#9ca3af",fontSize:13}},"A carregar dados BCE…"):
+            h("div",{style:{height:210,display:"flex",alignItems:"center",justifyContent:"center",color:"#6b7280",fontSize:13}},"A carregar dados BCE…"):
           eurSvg?
             h("div",{style:{overflow:"visible"},dangerouslySetInnerHTML:{__html:eurSvg}}):
-            h("div",{style:{height:210,display:"flex",alignItems:"center",justifyContent:"center",color:"#9ca3af",fontSize:13}},"Dados indisponíveis")
+            h("div",{style:{height:210,display:"flex",alignItems:"center",justifyContent:"center",color:"#6b7280",fontSize:13}},"Dados indisponíveis")
         ),
         h("div",{style:cardS},
           h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8,marginBottom:10}},
@@ -201,10 +201,10 @@
           ),
           h(LegendRow,{series:SPR_SERIES,latest:sprLatest}),
           loading&&!sprData.length?
-            h("div",{style:{height:180,display:"flex",alignItems:"center",justifyContent:"center",color:"#9ca3af",fontSize:13}},"A carregar…"):
+            h("div",{style:{height:180,display:"flex",alignItems:"center",justifyContent:"center",color:"#6b7280",fontSize:13}},"A carregar…"):
           sprSvg?
             h("div",{style:{overflow:"visible"},dangerouslySetInnerHTML:{__html:sprSvg}}):
-            h("div",{style:{height:180,display:"flex",alignItems:"center",justifyContent:"center",color:"#9ca3af",fontSize:13,textAlign:"center",padding:"0 20px"}},
+            h("div",{style:{height:180,display:"flex",alignItems:"center",justifyContent:"center",color:"#6b7280",fontSize:13,textAlign:"center",padding:"0 20px"}},
               spreadsData.length===0?"Sem histórico de spreads — os dados ficam registados a cada atualização":"Histórico insuficiente para gráfico (mínimo 2 registos)"
             )
         )
