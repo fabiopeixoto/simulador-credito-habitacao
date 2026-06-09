@@ -775,10 +775,9 @@ function App(props){
               React.createElement(RefBadge,{refKey:b.ref}),
               React.createElement("div",{style:{fontSize:10,color:"#111827",marginTop:1}},b.ev.toFixed(3).replace(".",",")+"%")),
             React.createElement("td",{style:{...tdGC(i),verticalAlign:"middle",fontWeight:700,textAlign:"center"}},fP(b.tanC)),
-            React.createElement("td",{style:{...tdBC,verticalAlign:"middle",borderRadius:"0 6px 6px 0",background:top?"rgba(37,99,235,0.1)":bg,textAlign:"center",borderLeft:"2px solid "+(top?Au:"rgba(37,99,235,0.15)")}},
-              React.createElement("div",{style:{display:"flex",alignItems:"center",gap:3}},
-                React.createElement("span",{style:{flex:1,textAlign:"center",fontSize:top?15:13,fontWeight:700,color:top?Au:"#111827",whiteSpace:"nowrap"}},fE(b.ptC)),
-                React.createElement("span",{style:{color:"#374151",fontSize:16,fontWeight:800,flexShrink:0,lineHeight:1,marginLeft:"auto"}},"›")))
+            React.createElement("td",{style:{...tdBC,verticalAlign:"middle",position:"relative",borderRadius:"0 6px 6px 0",background:top?"rgba(37,99,235,0.1)":bg,textAlign:"center",borderLeft:"2px solid "+(top?Au:"rgba(37,99,235,0.15)")}},
+              React.createElement("div",{style:{fontSize:top?15:13,fontWeight:700,color:top?Au:"#111827",whiteSpace:"nowrap",padding:"0 10px"}},fE(b.ptC)),
+              React.createElement("span",{style:{position:"absolute",right:2,top:"50%",transform:"translateY(-50%)",color:"#374151",fontSize:16,fontWeight:800,lineHeight:1}},"›"))
           );
         }))
       ))
