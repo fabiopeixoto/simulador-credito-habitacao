@@ -745,14 +745,13 @@ function App(props){
   // com todos os detalhes (BankDetailModal).
   function renderCompTableMobile(){
     return React.createElement("div",null,
-      React.createElement("table",{style:{width:"100%",borderCollapse:"separate",borderSpacing:"0 3px",fontFamily:"sans-serif",fontSize:12}},
+      React.createElement("div",{style:{overflowX:"auto"}},React.createElement("table",{style:{width:"100%",borderCollapse:"separate",borderSpacing:"0 3px",fontFamily:"sans-serif",fontSize:12}},
         React.createElement("thead",null,React.createElement("tr",null,
           React.createElement("th",{style:thSC},"#"),
           React.createElement("th",{style:thSC},"BANCO"),
           React.createElement("th",{style:{...thSC,textAlign:"center"}},"EUR."),
           React.createElement("th",{style:{...thSC,color:G,textAlign:"center"}},"TAN"),
-          React.createElement("th",{style:{...thSC,color:Au,fontWeight:700,textAlign:"center"}},"★ TOTAL"),
-          React.createElement("th",{style:thSC},"")
+          React.createElement("th",{style:{...thSC,color:Au,fontWeight:700,textAlign:"center"}},"★ TOTAL",React.createElement("br",null),"/mês")
         )),
         React.createElement("tbody",null,resultados.map((b,i)=>{
           const prevBank=i>0?resultados[i-1].s:null;
@@ -775,12 +774,13 @@ function App(props){
               React.createElement(RefBadge,{refKey:b.ref}),
               React.createElement("div",{style:{fontSize:10,color:"#111827",marginTop:1}},b.ev.toFixed(3).replace(".",",")+"%")),
             React.createElement("td",{style:{...tdGC(i),fontWeight:700,textAlign:"center"}},fP(b.tanC)),
-            React.createElement("td",{style:{...tdBC,background:top?"rgba(37,99,235,0.1)":bg,textAlign:"center",borderLeft:"2px solid "+(top?Au:"rgba(37,99,235,0.15)")}},
-              React.createElement("div",{style:{fontSize:top?16:13,fontWeight:700,color:top?Au:"#111827",whiteSpace:"nowrap"}},fE(b.ptC)+"/mês")),
-            React.createElement("td",{style:{...tdBC,borderRadius:"0 6px 6px 0",background:bg,textAlign:"center",color:"#9ca3af",fontSize:16}},"›")
+            React.createElement("td",{style:{...tdBC,borderRadius:"0 6px 6px 0",background:top?"rgba(37,99,235,0.1)":bg,textAlign:"center",borderLeft:"2px solid "+(top?Au:"rgba(37,99,235,0.15)")}},
+              React.createElement("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",gap:3}},
+                React.createElement("span",{style:{fontSize:top?15:13,fontWeight:700,color:top?Au:"#111827",whiteSpace:"nowrap"}},fE(b.ptC)),
+                React.createElement("span",{style:{color:"#9ca3af",fontSize:14,flexShrink:0,lineHeight:1}},"›")))
           );
         }))
-      ),
+      )),
       React.createElement("div",{style:{marginTop:8,fontSize:11,color:"#6b7280",fontFamily:"sans-serif",textAlign:"center"}},"Toque numa linha para ver todos os detalhes da simulação")
     );
   }
