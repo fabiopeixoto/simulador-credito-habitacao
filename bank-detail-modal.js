@@ -61,9 +61,10 @@
         ),
         h("div",{style:{overflowY:"auto",padding:"4px 18px 16px",flex:1}},
           h("div",{style:{marginTop:12,padding:"10px 14px",background:"rgba(37,99,235,0.08)",border:"1px solid rgba(37,99,235,0.3)",borderRadius:10,textAlign:"center"}},
-            h("div",{style:{fontSize:10,letterSpacing:2,color:Au,fontFamily:"monospace"}},"★ PRESTAÇÃO TOTAL"),
+            h("div",{style:{fontSize:10,letterSpacing:2,color:Au,fontFamily:"monospace"}},"★ PRESTAÇÃO TOTAL C/PRODUTOS"),
             h("div",{style:{fontSize:24,fontWeight:700,color:Au,fontFamily:"sans-serif",marginTop:2}},fE(b.ptC)+"/mês"),
-            margem>0&&h("div",{style:{fontSize:11,color:"#4b5563",fontFamily:"monospace",marginTop:1}},fE(b.ptC-margem)+" – "+fE(b.ptC+margem))
+            margem>0&&h("div",{style:{fontSize:11,color:"#4b5563",fontFamily:"monospace",marginTop:1}},fE(b.ptC-margem)+" – "+fE(b.ptC+margem)),
+            h("div",{style:{fontSize:12,fontWeight:600,color:R,fontFamily:"sans-serif",marginTop:4}},"s/produtos: "+fE(b.ptS)+"/mês")
           ),
           h(Sec,{t:"TAXAS"},
             h(Row,{l:"Euribor",v:h("span",null,
