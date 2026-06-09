@@ -776,9 +776,9 @@ function App(props){
               React.createElement("div",{style:{fontSize:10,color:"#111827",marginTop:1}},b.ev.toFixed(3).replace(".",",")+"%")),
             React.createElement("td",{style:{...tdGC(i),fontWeight:700,textAlign:"center"}},fP(b.tanC)),
             React.createElement("td",{style:{...tdBC,borderRadius:"0 6px 6px 0",background:top?"rgba(37,99,235,0.1)":bg,textAlign:"center",borderLeft:"2px solid "+(top?Au:"rgba(37,99,235,0.15)")}},
-              React.createElement("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",gap:3}},
-                React.createElement("span",{style:{fontSize:top?15:13,fontWeight:700,color:top?Au:"#111827",whiteSpace:"nowrap"}},fE(b.ptC)),
-                React.createElement("span",{style:{color:"#6b7280",fontSize:14,flexShrink:0,lineHeight:1}},"›")))
+              React.createElement("div",{style:{display:"flex",alignItems:"center",gap:3}},
+                React.createElement("span",{style:{flex:1,textAlign:"center",fontSize:top?15:13,fontWeight:700,color:top?Au:"#111827",whiteSpace:"nowrap"}},fE(b.ptC)),
+                React.createElement("span",{style:{color:"#374151",fontSize:16,fontWeight:800,flexShrink:0,lineHeight:1,marginLeft:"auto"}},"›")))
           );
         }))
       ))
