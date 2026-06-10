@@ -746,7 +746,7 @@ function App(props){
   // com todos os detalhes (BankDetailModal).
   function renderCompTableMobile(){
     // Células estreitas para o quadro caber em ecrãs ≥360px sem scroll lateral
-    const tdM={padding:"6px 3px"};
+    const tdM={padding:"6px 2px"};
     return React.createElement("div",null,
       React.createElement("div",{style:{marginBottom:8,fontSize:11,fontWeight:700,color:"#111827",fontFamily:"sans-serif",textAlign:"center"}},"Toque numa linha para ver todos os detalhes da simulação"),
       React.createElement("div",{style:{overflowX:"auto",margin:"0 -12px"}},React.createElement("table",{style:{width:"100%",borderCollapse:"separate",borderSpacing:"0 3px",fontFamily:"sans-serif",fontSize:12}},
@@ -776,9 +776,9 @@ function App(props){
                   b.spreadUpdated&&React.createElement("span",{style:{fontSize:8,color:G,marginLeft:3}},"✓"),
                   !b.capitalOk&&React.createElement("div",{style:{fontSize:8,color:R}},capital<b.capitalMin?"⚠️ mín. "+fE(b.capitalMin):"⚠️ máx. "+fE(b.capitalMax))))),
             React.createElement("td",{style:{...tdM,verticalAlign:"middle",background:bg,textAlign:"center"}},
-              React.createElement("span",{style:{display:"inline-block",background:refBg,border:"1px solid "+refC,borderRadius:4,padding:"2px 4px",fontSize:10,fontFamily:"monospace",fontWeight:700,color:refC}},b.ref),
-              React.createElement("div",{style:{fontSize:10,color:"#111827",marginTop:1}},b.ev.toFixed(3).replace(".",",")+"%")),
-            React.createElement("td",{style:{...tdGC(i),padding:"6px 3px",verticalAlign:"middle",textAlign:"center"}},
+              React.createElement("span",{style:{display:"inline-block",background:refBg,border:"1px solid "+refC,borderRadius:4,padding:"2px 7px",fontSize:12,fontFamily:"monospace",fontWeight:700,color:refC}},b.ref),
+              React.createElement("div",{style:{fontSize:11,color:"#111827",marginTop:1}},b.ev.toFixed(3).replace(".",",")+"%")),
+            React.createElement("td",{style:{...tdGC(i),padding:"6px 2px",verticalAlign:"middle",textAlign:"center"}},
               React.createElement("div",{style:{fontSize:13,fontWeight:800,color:G,whiteSpace:"nowrap"}},React.createElement("span",{style:{fontSize:9,fontWeight:600,marginRight:2}},"c/"),fP(b.tanC)),
               React.createElement("div",{style:{fontSize:9,fontWeight:600,color:"#4b5563",whiteSpace:"nowrap",marginTop:1}},React.createElement("span",{style:{fontSize:8,marginRight:2}},"s/"),fP(b.tanS))),
             React.createElement("td",{style:{...tdM,verticalAlign:"middle",position:"relative",borderRadius:"0 6px 6px 0",background:top?"rgba(37,99,235,0.1)":bg,textAlign:"center",borderLeft:"2px solid "+(top?Au:"rgba(37,99,235,0.15)")}},
