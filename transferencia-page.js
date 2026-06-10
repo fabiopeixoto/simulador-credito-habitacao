@@ -43,11 +43,10 @@
     return h("button",{
       onClick:onClick,
       style:{
-        padding:"6px 13px",border:"none",borderRadius:6,cursor:"pointer",
-        fontSize:13,fontWeight:600,
-        background:active?"rgba(37,99,235,0.12)":"rgba(0,0,0,0.05)",
-        color:active?Au:"#374151",
-        borderBottom:active?"2px solid "+Au:"2px solid transparent"
+        padding:"6px 10px",border:"1px solid "+(active?Au:"rgba(0,0,0,0.08)"),borderRadius:6,cursor:"pointer",
+        fontSize:12,fontWeight:active?700:400,
+        background:active?"rgba(37,99,235,0.1)":"transparent",
+        color:active?Au:"#374151"
       }
     },label);
   }
@@ -153,14 +152,14 @@
     var ltvColor=ltv<=80?G:ltv<=90?"#b45309":R;
 
     // Sistema tipográfico consistente — herda Inter do wrapper, sem "sans-serif" explícito
-    var cardS={background:"#fff",borderRadius:11,padding:"14px 16px",marginBottom:12,border:"1px solid rgba(0,0,0,0.07)"};
-    var secTitleS={fontSize:11,letterSpacing:3,color:Au,fontFamily:"monospace",marginBottom:12,fontWeight:700,textTransform:"uppercase"};
-    var labelS={fontSize:13,color:"#374151",marginBottom:5,fontWeight:600};
+    var cardS={background:"rgba(0,0,0,0.03)",borderRadius:11,padding:"13px 14px",marginBottom:10,border:"1px solid rgba(37,99,235,0.16)"};
+    var secTitleS={fontSize:11,letterSpacing:3,color:Au,fontFamily:"monospace",marginBottom:10,textTransform:"uppercase"};
+    var labelS={fontSize:11,color:"#374151",marginBottom:3,fontWeight:600,textTransform:"uppercase"};
     var fieldS={marginBottom:14};
-    var thS={padding:"9px 12px",fontSize:12,color:"#374151",fontWeight:700,borderBottom:"1px solid rgba(0,0,0,0.08)",background:"rgba(37,99,235,0.04)",textAlign:"right",whiteSpace:"nowrap"};
-    var thSL={padding:"9px 12px",fontSize:12,color:"#374151",fontWeight:700,borderBottom:"1px solid rgba(0,0,0,0.08)",background:"rgba(37,99,235,0.04)",textAlign:"left"};
-    var tdS={padding:"9px 12px",fontSize:14,borderBottom:"1px solid rgba(0,0,0,0.05)",textAlign:"right",verticalAlign:"middle"};
-    var tdSL={padding:"9px 12px",fontSize:14,borderBottom:"1px solid rgba(0,0,0,0.05)",textAlign:"left",verticalAlign:"middle"};
+    var thS={padding:"7px 10px",fontSize:11,color:"#374151",fontWeight:700,letterSpacing:0.5,borderBottom:"1px solid rgba(37,99,235,0.22)",background:"rgba(37,99,235,0.04)",textAlign:"right",whiteSpace:"nowrap"};
+    var thSL={padding:"7px 10px",fontSize:11,color:"#374151",fontWeight:700,letterSpacing:0.5,borderBottom:"1px solid rgba(37,99,235,0.22)",background:"rgba(37,99,235,0.04)",textAlign:"left"};
+    var tdS={padding:"7px 10px",fontSize:12,borderBottom:"1px solid rgba(0,0,0,0.05)",textAlign:"right",verticalAlign:"middle"};
+    var tdSL={padding:"7px 10px",fontSize:12,borderBottom:"1px solid rgba(0,0,0,0.05)",textAlign:"left",verticalAlign:"middle"};
 
     return h("div",{style:{background:N,minHeight:"100vh",fontFamily:"'Inter',system-ui,sans-serif",color:"#111827"}},
       h(window.PageHeader,{EUR:EUR,activePage:"transferencia",commentCount:commentCount,onOpenComments:onOpenComments,onOpenGlossario:onOpenGlossario,subtitle:"Simula a transferência do teu crédito habitação para outro banco · Compara poupanças mensais, custos e ponto de equilíbrio"}),
@@ -184,9 +183,10 @@
                 h("div",{style:{display:"flex",alignItems:"center",gap:8}},
                   h("input",{
                     type:"number",step:"0.01",min:"0",max:"15",
+                    className:"val-compact",
                     value:taxaAtualStr,
                     onChange:function(e){setTaxaAtualStr(e.target.value);},
-                    style:{width:90,padding:"5px 8px",background:"rgba(37,99,235,0.08)",border:"1px solid rgba(37,99,235,0.35)",borderRadius:6,color:"#111827",fontSize:15,fontWeight:700,textAlign:"right",outline:"none"}
+                    style:{width:78,padding:"2px 6px",background:"rgba(37,99,235,0.05)",border:"1px solid rgba(37,99,235,0.22)",borderRadius:6,color:"#111827",fontSize:12,fontWeight:600,textAlign:"right",outline:"none"}
                   }),
                   h("span",{style:{fontSize:14,color:"#374151"}},"%")
                 )
@@ -222,17 +222,17 @@
 
           h("div",{style:{display:"flex",flexWrap:"wrap",gap:20,marginTop:4,padding:"12px 16px",background:"rgba(37,99,235,0.05)",borderRadius:8,border:"1px solid rgba(37,99,235,0.12)"}},
             h("div",null,
-              h("div",{style:{fontSize:12,color:"#374151",marginBottom:3,fontWeight:500}},"Prestação atual (est.)"),
+              h("div",{style:{fontSize:10,color:"#374151",fontFamily:"monospace",letterSpacing:1,marginBottom:4,textTransform:"uppercase"}},"Prestação atual (est.)"),
               h("div",{style:{fontSize:22,fontWeight:700,color:"#111827",fontFamily:"monospace"}},
                 isFinite(prestacaoAtual)&&prestacaoAtual>0?fE(prestacaoAtual)+"/mês":"—"
               )
             ),
             h("div",null,
-              h("div",{style:{fontSize:12,color:"#374151",marginBottom:3,fontWeight:500}},"LTV atual"),
+              h("div",{style:{fontSize:10,color:"#374151",fontFamily:"monospace",letterSpacing:1,marginBottom:4,textTransform:"uppercase"}},"LTV atual"),
               h("div",{style:{fontSize:22,fontWeight:700,color:ltvColor,fontFamily:"monospace"}},fP(ltv))
             ),
             h("div",null,
-              h("div",{style:{fontSize:12,color:"#374151",marginBottom:3,fontWeight:500}},"Penalização reembolso ant."),
+              h("div",{style:{fontSize:10,color:"#374151",fontFamily:"monospace",letterSpacing:1,marginBottom:4,textTransform:"uppercase"}},"Penalização reembolso ant."),
               h("div",{style:{fontSize:22,fontWeight:700,color:"#111827",fontFamily:"monospace"}},
                 fE(penaltyCost)," ",h("span",{style:{fontSize:12,color:"#374151",fontWeight:400}},"("+(penaltyRate*100).toFixed(1).replace(".0","").replace(".",",")+"% do capital)")
               )
@@ -299,7 +299,7 @@
                                 }
                               })
                             ),
-                            h("span",{style:{fontWeight:700,color:"#111827",fontSize:15}},row.name),
+                            h("span",{style:{fontWeight:700,color:"#111827",fontSize:13}},row.name),
                             row.refMismatch&&h("span",{style:{fontSize:11,color:"#b45309",marginLeft:4}},"("+row.useRef+")")
                           )
                         ),
