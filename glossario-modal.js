@@ -32,6 +32,8 @@
     {t:"Capital em Dívida",d:"Montante de capital ainda por pagar ao banco num determinado momento do crédito. Diminui a cada prestação paga."},
     {t:"HPP",         d:"Habitação Própria Permanente. Imóvel destinado a residência principal do proprietário. LTV máximo de 90% recomendado pelo BdP."},
   ];
+  // Apresentação por ordem alfabética (locale pt — trata acentos correctamente)
+  TERMOS.sort(function(a,b){return a.t.localeCompare(b.t,"pt");});
 
   function GlossarioModal(props){
     var onClose=props.onClose||function(){};
