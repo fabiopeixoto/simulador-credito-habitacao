@@ -782,9 +782,9 @@ function App(props){
               React.createElement("div",{style:{fontSize:13,fontWeight:800,color:G,whiteSpace:"nowrap"}},React.createElement("span",{style:{fontSize:9,fontWeight:600,marginRight:2}},"c/"),fP(b.tanC)),
               React.createElement("div",{style:{fontSize:9,fontWeight:600,color:"#4b5563",whiteSpace:"nowrap",marginTop:1}},React.createElement("span",{style:{fontSize:8,marginRight:2}},"s/"),fP(b.tanS))),
             React.createElement("td",{style:{...tdM,verticalAlign:"middle",position:"relative",borderRadius:"0 6px 6px 0",background:top?"rgba(37,99,235,0.1)":bg,textAlign:"center",borderLeft:"2px solid "+(top?Au:"rgba(37,99,235,0.15)")}},
-              React.createElement("div",{style:{fontSize:top?15:14,fontWeight:800,color:top?Au:"#111827",whiteSpace:"nowrap",padding:"0 8px 0 2px"}},React.createElement("span",{style:{fontSize:9,fontWeight:600,color:G,marginRight:2}},"c/"),fE(b.ptC)),
-              React.createElement("div",{style:{fontSize:9,fontWeight:600,color:"#4b5563",whiteSpace:"nowrap",padding:"0 8px 0 2px",marginTop:1}},React.createElement("span",{style:{fontSize:8,marginRight:2}},"s/"),fE(b.ptS)),
-              React.createElement("span",{style:{position:"absolute",right:0,top:"50%",transform:"translateY(-50%)",color:"#374151",fontSize:14,fontWeight:800,lineHeight:1}},"›"))
+              React.createElement("div",{style:{fontSize:top?15:14,fontWeight:800,color:top?Au:"#111827",whiteSpace:"nowrap",padding:"0 10px 0 0"}},React.createElement("span",{style:{fontSize:9,fontWeight:600,color:G,marginRight:2}},"c/"),fE(b.ptC)),
+              React.createElement("div",{style:{fontSize:9,fontWeight:600,color:"#4b5563",whiteSpace:"nowrap",padding:"0 10px 0 0",marginTop:1}},React.createElement("span",{style:{fontSize:8,marginRight:2}},"s/"),fE(b.ptS)),
+              React.createElement("span",{style:{position:"absolute",right:6,top:"50%",transform:"translateY(-50%)",color:"#374151",fontSize:13,fontWeight:800,lineHeight:1}},"›"))
           );
         }))
       ))
