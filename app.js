@@ -222,11 +222,11 @@ function SliderInput({min,max,step,value,onChange,color,prefix,suffix,formatFn,a
   const displayFn = formatFn || (v=>v.toLocaleString('pt-PT'));
 
   return (
-    React.createElement("div", null, React.createElement("input", {type: "range", min: min, max: max, step: step, value: value, onChange: e=>onChange(+e.target.value), "aria-label": ariaLabel||suffix||"valor", style: {width:"100%",accentColor:color||"#2563eb"}}), React.createElement("div", {style: {display:"flex",alignItems:"center",gap:6,marginTop:4,minWidth:0}}, prefix&&React.createElement("span", {style: {fontSize:13,color:"#374151",fontFamily:"sans-serif",flexShrink:0}}, prefix), React.createElement("input", {type: "text", inputMode: "numeric", "aria-label": (ariaLabel||suffix||"valor")+" (editar)", value: editing ? inputVal : displayFn(value), onFocus: ()=>{ setEditing(true); setInputVal(String(value)); }, onChange: handleInputChange, onBlur: handleInputBlur, onKeyDown: handleKeyDown, style: {
-            flex:"0 1 90px",minWidth:"40px",padding:"4px 8px",
-            background:"rgba(37,99,235,0.08)",
-            border:"1px solid rgba(37,99,235,0.35)",
-            borderRadius:6,color:"#111827",fontSize:14,fontWeight:700,
+    React.createElement("div", null, React.createElement("input", {type: "range", min: min, max: max, step: step, value: value, onChange: e=>onChange(+e.target.value), "aria-label": ariaLabel||suffix||"valor", style: {width:"100%",accentColor:color||"#2563eb"}}), React.createElement("div", {style: {display:"flex",alignItems:"center",gap:6,marginTop:4,minWidth:0}}, prefix&&React.createElement("span", {style: {fontSize:13,color:"#374151",fontFamily:"sans-serif",flexShrink:0}}, prefix), React.createElement("input", {type: "text", inputMode: "numeric", className: "val-compact", "aria-label": (ariaLabel||suffix||"valor")+" (editar)", value: editing ? inputVal : displayFn(value), onFocus: ()=>{ setEditing(true); setInputVal(String(value)); }, onChange: handleInputChange, onBlur: handleInputBlur, onKeyDown: handleKeyDown, style: {
+            flex:"0 1 78px",minWidth:"40px",padding:"2px 6px",
+            background:"rgba(37,99,235,0.05)",
+            border:"1px solid rgba(37,99,235,0.22)",
+            borderRadius:6,color:"#111827",fontSize:12,fontWeight:600,
             fontFamily:"sans-serif",textAlign:"right",outline:"none",
             cursor:"text"
           }}), suffix&&React.createElement("span", {style: {fontSize:13,color:"#374151",fontFamily:"sans-serif"}}, suffix)))
