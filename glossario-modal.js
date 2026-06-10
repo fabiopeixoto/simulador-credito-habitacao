@@ -31,6 +31,19 @@
     {t:"Penalização Antecipada",d:"Custo por reembolso antecipado parcial ou total. Taxa variável ou mista em período variável: 0,5% do capital reembolsado. Taxa fixa ou mista em período fixo: 2%."},
     {t:"Capital em Dívida",d:"Montante de capital ainda por pagar ao banco num determinado momento do crédito. Diminui a cada prestação paga."},
     {t:"HPP",         d:"Habitação Própria Permanente. Imóvel destinado a residência principal do proprietário. LTV máximo de 90% recomendado pelo BdP."},
+    {t:"Produtos Vinculados",d:"Vendas associadas facultativas: produtos contratados com o banco (domiciliação de ordenado, cartões, seguros) em troca de redução do spread. O cliente pode recusar — paga o spread base (s/produtos)."},
+    {t:"Crédito Jovem",d:"Medida para jovens ≤35 anos (DL 44/2024): garantia pública do Estado que permite financiar até 100% do valor do imóvel e isenção de IMT e Imposto de Selo na compra da 1.ª habitação, dentro de limites de valor."},
+    {t:"Taxa de Esforço",d:"Percentagem do rendimento líquido mensal consumida pelos encargos com créditos. O mesmo que DSTI. Neste simulador: ≤35% aprovável, 35–40% no limite, >40% difícil."},
+    {t:"Stress Test", d:"Teste exigido pelo BdP: a prestação é recalculada com a taxa agravada (+1,5 p.p. em créditos a mais de 10 anos) para verificar se o orçamento aguenta subidas da Euribor."},
+    {t:"IMT",         d:"Imposto Municipal sobre as Transmissões Onerosas de Imóveis. Pago na compra, por escalões, sobre o maior entre o preço e o valor patrimonial. HPP tem isenção parcial; jovens ≤35 anos podem ficar isentos."},
+    {t:"Seguro de Vida",d:"Seguro exigido pelos bancos que liquida o capital em dívida em caso de morte ou invalidez dos titulares. O prémio cresce com a idade e acompanha o capital em dívida."},
+    {t:"Seguro Multirriscos",d:"Seguro sobre o imóvel hipotecado (incêndio é o mínimo legal obrigatório). Cobre danos na habitação; o prémio depende do valor de reconstrução do imóvel."},
+    {t:"Seguro Protecção Crédito",d:"Seguro facultativo que cobre as prestações em caso de desemprego involuntário ou incapacidade temporária. Acresce ao custo mensal do crédito."},
+    {t:"Entrada",     d:"Capital próprio pago pelo comprador: diferença entre o preço do imóvel e o montante financiado. Ex.: LTV 90% → entrada de 10% do valor."},
+    {t:"Escritura",   d:"Formalização da compra e venda e da hipoteca (notário ou Casa Pronta) e respetivos registos prediais. Custos típicos entre €500 e €1.000."},
+    {t:"Comissão de Manutenção de Conta",d:"Custo mensal da conta à ordem no banco credor, frequentemente associada à domiciliação do ordenado. Entra no custo total mensal (coluna CONTA na comparação)."},
+    {t:"Hipoteca",    d:"Garantia real sobre o imóvel a favor do banco: em caso de incumprimento, o banco pode executar o imóvel para recuperar o crédito. É registada no início e cancelada no fim do contrato."},
+    {t:"Revisão da Taxa",d:"Periodicidade com que a TAN é atualizada ao valor da Euribor (3, 6 ou 12 meses, conforme o indexante contratado). A prestação muda em cada revisão."},
   ];
   // Apresentação por ordem alfabética (locale pt — trata acentos correctamente)
   TERMOS.sort(function(a,b){return a.t.localeCompare(b.t,"pt");});
