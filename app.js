@@ -776,7 +776,7 @@ function App(props){
                   b.spreadUpdated&&React.createElement("span",{style:{fontSize:8,color:G,marginLeft:3}},"✓"),
                   !b.capitalOk&&React.createElement("div",{style:{fontSize:8,color:R}},capital<b.capitalMin?"⚠️ mín. "+fE(b.capitalMin):"⚠️ máx. "+fE(b.capitalMax))))),
             React.createElement("td",{style:{...tdM,verticalAlign:"middle",background:bg,textAlign:"center"}},
-              React.createElement("span",{style:{display:"inline-block",background:refBg,border:"1px solid "+refC,borderRadius:5,padding:"3px 9px",fontSize:14,fontFamily:"monospace",fontWeight:700,color:refC}},b.ref),
+              React.createElement("span",{style:{display:"inline-block",background:refBg,border:"1px solid "+refC,borderRadius:4,padding:"1px 5px",fontSize:12,fontFamily:"monospace",fontWeight:700,color:refC}},b.ref),
               React.createElement("div",{style:{fontSize:12,color:"#111827",marginTop:2}},b.ev.toFixed(3).replace(".",",")+"%")),
             React.createElement("td",{style:{...tdGC(i),padding:"6px 2px",verticalAlign:"middle",textAlign:"center"}},
               React.createElement("div",{style:{fontSize:13,fontWeight:800,color:G,whiteSpace:"nowrap"}},React.createElement("span",{style:{fontSize:9,fontWeight:600,marginRight:2}},"c/"),fP(b.tanC)),
