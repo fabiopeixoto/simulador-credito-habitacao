@@ -1,4 +1,4 @@
-const CACHE = "simulador-v99";
+const CACHE = "simulador-v100";
 
 /** URLs exactas referenciadas em index.html / quanto-posso-pedir.html / historico.html (incl. query ?v=). */
 const PRECACHE = [
@@ -13,7 +13,7 @@ const PRECACHE = [
   "/react-runtime.js?v=1",
   "/recharts-polyfill.js?v=1",
   "/sim-shared-constants.js?v=2",
-  "/app.js?v=59",
+  "/app.js?v=60",
   "/bank-detail-modal.js?v=4",
   "/comp-table-mobile.js?v=1",
   "/comp-table-desktop.js?v=1",
