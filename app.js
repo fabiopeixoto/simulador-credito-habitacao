@@ -755,7 +755,7 @@ function App(props){
           React.createElement("th",{style:{...thSC,padding:"4px 3px"}},"BANCO"),
           React.createElement("th",{style:{...thSC,padding:"4px 3px",textAlign:"center"}},"EUR."),
           React.createElement("th",{style:{...thSC,padding:"4px 3px",color:G,textAlign:"center"}},"TAN"),
-          React.createElement("th",{style:{...thSC,padding:"4px 3px",color:Au,fontWeight:700,textAlign:"center"}},"★ TOTAL",React.createElement("br",null),"/mês")
+          React.createElement("th",{style:{...thSC,padding:"4px 3px",color:Au,fontWeight:700,textAlign:"center",width:"26%"}},"★ TOTAL",React.createElement("br",null),"/mês")
         )),
         React.createElement("tbody",null,resultados.map((b,i)=>{
           const prevBank=i>0?resultados[i-1].s:null;
@@ -781,7 +781,7 @@ function App(props){
             React.createElement("td",{style:{...tdGC(i),padding:"6px 2px",verticalAlign:"middle",textAlign:"center"}},
               React.createElement("div",{style:{fontSize:13,fontWeight:800,color:G,whiteSpace:"nowrap"}},React.createElement("span",{style:{fontSize:9,fontWeight:600,marginRight:2}},"c/"),fP(b.tanC)),
               React.createElement("div",{style:{fontSize:9,fontWeight:600,color:"#4b5563",whiteSpace:"nowrap",marginTop:1}},React.createElement("span",{style:{fontSize:8,marginRight:2}},"s/"),fP(b.tanS))),
-            React.createElement("td",{style:{...tdM,verticalAlign:"middle",position:"relative",borderRadius:"0 6px 6px 0",background:top?"rgba(37,99,235,0.1)":bg,textAlign:"center",borderLeft:"2px solid "+(top?Au:"rgba(37,99,235,0.15)")}},
+            React.createElement("td",{style:{...tdM,width:"26%",verticalAlign:"middle",position:"relative",borderRadius:"0 6px 6px 0",background:top?"rgba(37,99,235,0.1)":bg,textAlign:"center",borderLeft:"2px solid "+(top?Au:"rgba(37,99,235,0.15)")}},
               React.createElement("div",{style:{fontSize:top?15:14,fontWeight:800,color:top?Au:"#111827",whiteSpace:"nowrap",padding:"0 10px 0 0"}},React.createElement("span",{style:{fontSize:9,fontWeight:600,color:G,marginRight:2}},"c/"),fE(b.ptC)),
               React.createElement("div",{style:{fontSize:9,fontWeight:600,color:"#4b5563",whiteSpace:"nowrap",padding:"0 10px 0 0",marginTop:1}},React.createElement("span",{style:{fontSize:8,marginRight:2}},"s/"),fE(b.ptS)),
               React.createElement("span",{style:{position:"absolute",right:6,top:"50%",transform:"translateY(-50%)",color:"#374151",fontSize:13,fontWeight:800,lineHeight:1}},"›"))
