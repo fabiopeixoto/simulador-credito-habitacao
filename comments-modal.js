@@ -71,7 +71,7 @@
             h("div", {style:{fontSize:15,fontWeight:700,color:"#111827"}}, "💬 Comentários da Comunidade"),
             h("div", {style:{fontSize:11,color:"#4b5563",marginTop:2}}, "Partilha a tua experiência: quanto calculou o simulador vs o que conseguiste")
           ),
-          h("button", {onClick:onClose,style:{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#4b5563",padding:"0 4px",lineHeight:1}}, "✕")
+          h("button", {onClick:onClose,"aria-label":"Fechar comentários",style:{background:"none",border:"none",fontSize:28,fontWeight:800,cursor:"pointer",color:"#dc2626",padding:"4px 8px",borderRadius:6,lineHeight:1,flexShrink:0}}, "×")
         ),
         h("div", {style:{flex:1,overflowY:"auto",padding:"14px 18px"}},
           h("form", {onSubmit:submitComment,style:{background:"rgba(139,92,246,0.04)",border:"1px solid rgba(139,92,246,0.18)",borderRadius:10,padding:14,marginBottom:16}},
