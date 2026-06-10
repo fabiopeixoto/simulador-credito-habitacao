@@ -119,7 +119,7 @@
               ),
               h("div", {style:{fontSize:13,color:"#374151",lineHeight:1.5}}, c.text),
               h("div", {style:{display:"flex",alignItems:"center",gap:8,marginTop:8}},
-                h("button", {type:"button",onClick:function(){setReplyTo(replyTo===c.id?null:c.id);setReplyErr("");setReplyForm({name:"",text:""});},style:{background:"rgba(37,99,235,0.08)",border:"1px solid rgba(37,99,235,0.18)",borderRadius:6,color:"#2563eb",fontSize:11,fontWeight:700,padding:"4px 9px",cursor:"pointer",fontFamily:"sans-serif"}}, replyTo===c.id?"Cancelar":"Responder"),
+                h("button", {type:"button",className:"btn-mini",onClick:function(){setReplyTo(replyTo===c.id?null:c.id);setReplyErr("");setReplyForm({name:"",text:""});},style:{background:"rgba(37,99,235,0.08)",border:"1px solid rgba(37,99,235,0.18)",borderRadius:6,color:"#2563eb",fontSize:10,fontWeight:600,padding:"2px 7px",cursor:"pointer",fontFamily:"sans-serif"}}, replyTo===c.id?"Cancelar":"Responder"),
                 replyOk===c.id&&h("span", {style:{fontSize:11,color:"#059669"}}, "Resposta publicada!")
               ),
               replyTo===c.id&&h("form", {onSubmit:function(e){submitReply(e,c.id);},style:{marginTop:8,background:"rgba(37,99,235,0.04)",border:"1px solid rgba(37,99,235,0.14)",borderRadius:8,padding:10}},
