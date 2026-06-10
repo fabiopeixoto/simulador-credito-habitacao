@@ -67,7 +67,7 @@
             h("div",{style:{fontSize:11,letterSpacing:3,color:Au,fontFamily:"monospace",marginBottom:2}},"GLOSSÁRIO"),
             h("div",{style:{fontSize:13,color:"#4b5563",fontFamily:"sans-serif"}},"Termos e siglas técnicas do simulador")
           ),
-          h("button",{onClick:onClose,style:{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#4b5563",padding:"4px 8px",borderRadius:6,lineHeight:1}},"×")
+          h("button",{onClick:onClose,"aria-label":"Fechar glossário",style:{background:"none",border:"none",fontSize:28,fontWeight:800,cursor:"pointer",color:"#dc2626",padding:"4px 8px",borderRadius:6,lineHeight:1,flexShrink:0}},"×")
         ),
         h("div",{style:{padding:"10px 20px",borderBottom:"1px solid rgba(0,0,0,0.06)",flexShrink:0}},
           h("input",{type:"text",placeholder:"Pesquisar termo…",value:q,

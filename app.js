@@ -778,7 +778,7 @@ React.createElement("button", {onClick:handleSave,"aria-label":"Guardar simulaç
             React.createElement("div", {style:{background:"#fff",borderRadius:14,padding:20,maxWidth:520,width:"calc(100% - 32px)",maxHeight:"80vh",overflowY:"auto",boxShadow:"0 20px 60px rgba(0,0,0,0.3)"},onClick:e=>e.stopPropagation()},
               React.createElement("div", {style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}},
                 React.createElement("div", {style:{fontSize:12,letterSpacing:2,color:Sky,fontFamily:"monospace",fontWeight:700}}, "HISTÓRICO — ÚLTIMAS SIMULAÇÕES GUARDADAS"),
-                React.createElement("button", {onClick:()=>setShowHist(false),style:{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#4b5563",padding:"0 4px",lineHeight:1}}, "✕")
+                React.createElement("button", {onClick:()=>setShowHist(false),"aria-label":"Fechar histórico",style:{background:"none",border:"none",fontSize:28,fontWeight:800,cursor:"pointer",color:"#dc2626",padding:"4px 8px",borderRadius:6,lineHeight:1,flexShrink:0}}, "×")
               ),
               histSaved.map((h,i)=>React.createElement("div", {key:h.ts,style:{display:"flex",alignItems:"center",gap:8,padding:"10px 0",borderBottom:i<histSaved.length-1?"1px solid rgba(0,0,0,0.08)":"none"}},
                 React.createElement("div", {style:{flex:1,fontSize:12,color:"#111827"}},
@@ -956,7 +956,7 @@ React.createElement("button", {onClick:handleSave,"aria-label":"Guardar simulaç
                   React.createElement("div", {style:{fontSize:15,fontWeight:700,color:"#111827"}}, "💬 Comentários da Comunidade"),
                   React.createElement("div", {style:{fontSize:11,color:"#4b5563",marginTop:2}}, "Partilha a tua experiência: quanto calculou o simulador vs o que conseguiste")
                 ),
-                React.createElement("button", {onClick:()=>setShowComments(false),style:{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#4b5563",padding:"0 4px",lineHeight:1}}, "✕")
+                React.createElement("button", {onClick:()=>setShowComments(false),"aria-label":"Fechar comentários",style:{background:"none",border:"none",fontSize:28,fontWeight:800,cursor:"pointer",color:"#dc2626",padding:"4px 8px",borderRadius:6,lineHeight:1,flexShrink:0}}, "×")
               ),
               React.createElement("div", {style:{flex:1,overflowY:"auto",padding:"14px 18px"}},
                 React.createElement("form", {onSubmit:submitComment,style:{background:"rgba(139,92,246,0.04)",border:"1px solid rgba(139,92,246,0.18)",borderRadius:10,padding:14,marginBottom:16}},
