@@ -120,16 +120,6 @@ function App(props){
   const[titularesOpen,setTitularesOpen]=useState(!IS_MOBILE);
   const showTitulares=!IS_MOBILE||titularesOpen;
   const[comments,setComments]=useState([]);
-  const[commentLoad,setCommentLoad]=useState(false);
-  const[commentForm,setCommentForm]=useState({name:"",text:"",bank:"",simPt:"",realPt:""});
-  const[commentSubmit,setCommentSubmit]=useState(false);
-  const[commentErr,setCommentErr]=useState("");
-  const[commentOk,setCommentOk]=useState(false);
-  const[replyTo,setReplyTo]=useState(null);
-  const[replyForm,setReplyForm]=useState({name:"",text:""});
-  const[replySubmit,setReplySubmit]=useState(false);
-  const[replyErr,setReplyErr]=useState("");
-  const[replyOk,setReplyOk]=useState("");
   const[bancoCustos,setBancoCustos]=useState("");
   const[bancoAmort,setBancoAmort]=useState("");
   const[bancoCen,setBancoCen]=useState("");
@@ -462,41 +452,15 @@ function App(props){
       .map(r=>({name:r.s,"Vida T1":Math.round(r.seg.v1),"Vida T2":Math.round(r.seg.v2),"Multirriscos":Math.round(r.seg.m)}));
   },[resultados]);
 
-  // Comentários
+  // Comentários — o formulário/respostas vivem em comments-modal.js;
+  // o App só mantém a lista (para o contador no header) actualizada.
   const loadComments=useCallback(async()=>{
-    setCommentLoad(true);
     try{const r=await fetch("/api/comments");if(r.ok)setComments(await r.json());}catch(_){}
-    setCommentLoad(false);
   },[]);
   useEffect(()=>{loadComments();},[loadComments]);
   useEffect(()=>{if(showComments)loadComments();},[showComments,loadComments]);
   useEffect(()=>{const id=setInterval(()=>loadComments(),60000);return()=>clearInterval(id);},[loadComments]);
   const commentTotal=useMemo(()=>comments.reduce((total,c)=>total+1+((c.replies||[]).length),0),[comments]);
-  async function submitComment(e){
-    e.preventDefault();
-    setCommentErr("");setCommentOk(false);setCommentSubmit(true);
-    try{
-      const r=await fetch("/api/comments",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(commentForm)});
-      const d=await r.json();
-      if(!r.ok){setCommentErr(d.error||"Erro ao enviar");}
-      else{setComments(c=>[{...d,replies:d.replies||[]},...c]);setCommentForm({name:"",text:"",bank:"",simPt:"",realPt:""});setCommentOk(true);setTimeout(()=>setCommentOk(false),4000);}
-    }catch(_){setCommentErr("Erro de ligação");}
-    setCommentSubmit(false);
-  }
-  async function submitReply(e,parentId){
-    e.preventDefault();
-    setReplyErr("");setReplySubmit(true);
-    try{
-      const r=await fetch("/api/comments",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...replyForm,parentId})});
-      const d=await r.json();
-      if(!r.ok){setReplyErr(d.error||"Erro ao responder");}
-      else{
-        setComments(list=>list.map(c=>c.id===parentId?{...c,replies:[...(c.replies||[]),d]}:c));
-        setReplyForm({name:"",text:""});setReplyTo(null);setReplyOk(parentId);setTimeout(()=>setReplyOk(""),4000);
-      }
-    }catch(_){setReplyErr("Erro de ligação");}
-    setReplySubmit(false);
-  }
 
   // Partilha por URL
   function handleShare(){
@@ -753,85 +717,7 @@ React.createElement("button", {onClick:handleSave,"aria-label":"Guardar simulaç
               React.createElement("div", {style: {background:"rgba(255,255,255,1)",border:"1px solid rgba(74,222,128,0.15)",borderRadius:11,padding:14}}, React.createElement("div", {style: {fontSize:11,letterSpacing:2,color:G,fontFamily:"monospace",marginBottom:10}}, "CAPITAL EM DÍVIDA AO LONGO DO TEMPO"), React.createElement(ResponsiveContainer, {width: "100%", height: 250}, React.createElement(LineChart, {data: amCh, margin: {top:5,right:10,left:5,bottom:5}}, React.createElement(CartesianGrid, {strokeDasharray: "3 3", stroke: "rgba(0,0,0,0.05)"}), React.createElement(XAxis, {dataKey: "ano", tick: {fill:"#374151",fontSize:11}, axisLine: false, tickLine: false}), React.createElement(YAxis, {tick: {fill:"#374151",fontSize:11}, axisLine: false, tickLine: false, tickFormatter: v=>Math.round(v/1000)+"k€"}), React.createElement(Tooltip, {formatter: (v,n)=>[fE(v),n], contentStyle: {background:"#ffffff",border:"1px solid "+Au,borderRadius:8,color:"#111827",fontFamily:"sans-serif",fontSize:12}, labelFormatter: l=>"Ano "+l}), React.createElement(Legend, {wrapperStyle: {color:"#374151",fontSize:12,fontFamily:"sans-serif"}}), React.createElement(Line, {type: "monotone", dataKey: "Sem amort.", stroke: R, strokeWidth: 2, dot: false}), React.createElement(Line, {type: "monotone", dataKey: "Com amort.", stroke: G, strokeWidth: 2.5, dot: false}))))
             ))
         ), React.createElement("div", {style: {marginTop:14,padding:"10px 14px",background:"rgba(255,255,255,1)",border:"1px solid rgba(37,99,235,0.25)",borderRadius:9,fontFamily:"sans-serif"}}, React.createElement("div", {style: {fontSize:12,fontWeight:700,color:Au,marginBottom:4}}, "⚠️ Simulação indicativa — não substitui a FINE"), React.createElement("div", {style: {fontSize:11,color:"#4b5563",lineHeight:1.7}}, "Os valores apresentados são estimativas com base em spreads e comissões publicadas. As condições efectivas dependem da análise de risco de cada banco. Consulte sempre a Ficha de Informação Normalizada Europeia (FINE) antes de contratar.")), React.createElement("div", {style: {marginTop:6,padding:"10px 14px",background:"rgba(255,255,255,1)",border:"1px solid rgba(37,99,235,0.25)",borderRadius:9,fontFamily:"sans-serif"}}, React.createElement("div", {style: {fontSize:11,color:"#374151",lineHeight:1.7}}, "🔄 Euribor via BCE · Cache 8h. 📊 Spread: LTV + finalidade + cert. energético. 🧮 TAEG: Directiva 2014/17/UE. 💰 MTIC = total pago. 🛡️ Seg. vida sobre capital médio. 🏠 IS HPP: €0 (art. 7º CIS). 📅 Prazo: BdP Aviso 4/2022."))))
-  ,showComments&&React.createElement("div", {onClick:()=>setShowComments(false),style:{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}},
-            React.createElement("div", {onClick:e=>e.stopPropagation(),style:{background:"#ffffff",borderRadius:14,width:"100%",maxWidth:580,maxHeight:"85vh",display:"flex",flexDirection:"column",boxShadow:"0 20px 60px rgba(0,0,0,0.3)",fontFamily:"'Inter',system-ui,sans-serif"}},
-              React.createElement("div", {style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 18px",borderBottom:"1px solid rgba(0,0,0,0.07)"}},
-                React.createElement("div", null,
-                  React.createElement("div", {style:{fontSize:15,fontWeight:700,color:"#111827"}}, "💬 Comentários da Comunidade"),
-                  React.createElement("div", {style:{fontSize:11,color:"#4b5563",marginTop:2}}, "Partilha a tua experiência: quanto calculou o simulador vs o que conseguiste")
-                ),
-                React.createElement("button", {onClick:()=>setShowComments(false),"aria-label":"Fechar comentários",style:{background:"none",border:"none",fontSize:28,fontWeight:800,cursor:"pointer",color:"#dc2626",padding:"4px 8px",borderRadius:6,lineHeight:1,flexShrink:0}}, "×")
-              ),
-              React.createElement("div", {style:{flex:1,overflowY:"auto",padding:"14px 18px"}},
-                React.createElement("form", {onSubmit:submitComment,style:{background:"rgba(139,92,246,0.04)",border:"1px solid rgba(139,92,246,0.18)",borderRadius:10,padding:14,marginBottom:16}},
-                  React.createElement("div", {style:{fontSize:11,fontWeight:700,color:"#7c3aed",letterSpacing:1,marginBottom:10,fontFamily:"monospace"}}, "DEIXA O TEU COMENTÁRIO"),
-                  React.createElement("div", {style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:8,marginBottom:8}},
-                    React.createElement("div", null,
-                      React.createElement("label", {style:{fontSize:10,color:"#4b5563",display:"block",marginBottom:3}}, "Nome (opcional)"),
-                      React.createElement("input", {value:commentForm.name,onChange:e=>setCommentForm(f=>({...f,name:e.target.value})),placeholder:"Anónimo",maxLength:50,style:{width:"100%",padding:"6px 9px",border:"1px solid rgba(0,0,0,0.12)",borderRadius:6,fontSize:12,fontFamily:"sans-serif",boxSizing:"border-box"}})
-                    ),
-                    React.createElement("div", null,
-                      React.createElement("label", {style:{fontSize:10,color:"#4b5563",display:"block",marginBottom:3}}, "Banco (opcional)"),
-                      React.createElement("input", {value:commentForm.bank,onChange:e=>setCommentForm(f=>({...f,bank:e.target.value})),placeholder:"ex: CGD, BPI...",maxLength:40,style:{width:"100%",padding:"6px 9px",border:"1px solid rgba(0,0,0,0.12)",borderRadius:6,fontSize:12,fontFamily:"sans-serif",boxSizing:"border-box"}})
-                    )
-                  ),
-                  React.createElement("div", {style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:8,marginBottom:8}},
-                    React.createElement("div", null,
-                      React.createElement("label", {style:{fontSize:10,color:"#4b5563",display:"block",marginBottom:3}}, "Simulador calculou (€/mês)"),
-                      React.createElement("input", {value:commentForm.simPt,onChange:e=>setCommentForm(f=>({...f,simPt:e.target.value})),placeholder:"ex: 850",type:"text",inputMode:"decimal",style:{width:"100%",padding:"6px 9px",border:"1px solid rgba(0,0,0,0.12)",borderRadius:6,fontSize:12,fontFamily:"sans-serif",boxSizing:"border-box"}})
-                    ),
-                    React.createElement("div", null,
-                      React.createElement("label", {style:{fontSize:10,color:"#4b5563",display:"block",marginBottom:3}}, "Real conseguido (€/mês)"),
-                      React.createElement("input", {value:commentForm.realPt,onChange:e=>setCommentForm(f=>({...f,realPt:e.target.value})),placeholder:"ex: 870",type:"text",inputMode:"decimal",style:{width:"100%",padding:"6px 9px",border:"1px solid rgba(0,0,0,0.12)",borderRadius:6,fontSize:12,fontFamily:"sans-serif",boxSizing:"border-box"}})
-                    )
-                  ),
-                  React.createElement("div", {style:{marginBottom:8}},
-                    React.createElement("label", {style:{fontSize:10,color:"#4b5563",display:"block",marginBottom:3}}, "Comentário *"),
-                    React.createElement("textarea", {value:commentForm.text,onChange:e=>setCommentForm(f=>({...f,text:e.target.value})),placeholder:"Partilha a tua experiência com o simulador ou com o banco...",required:true,maxLength:500,rows:3,style:{width:"100%",padding:"6px 9px",border:"1px solid rgba(0,0,0,0.12)",borderRadius:6,fontSize:12,fontFamily:"sans-serif",resize:"vertical",boxSizing:"border-box"}})
-                  ),
-                  commentErr&&React.createElement("div", {style:{fontSize:11,color:"#dc2626",marginBottom:8,padding:"5px 9px",background:"rgba(220,38,38,0.06)",borderRadius:5}}, "⚠️ "+commentErr),
-                  commentOk&&React.createElement("div", {style:{fontSize:11,color:"#059669",marginBottom:8,padding:"5px 9px",background:"rgba(5,150,105,0.06)",borderRadius:5}}, "✅ Comentário publicado!"),
-                  React.createElement("button", {type:"submit",disabled:commentSubmit||commentForm.text.trim().length<5,style:{padding:"7px 18px",background:commentSubmit?"rgba(0,0,0,0.05)":"rgba(139,92,246,0.9)",border:"none",borderRadius:7,color:commentSubmit?"#9b9b9b":"#ffffff",fontSize:12,fontWeight:700,cursor:commentSubmit?"not-allowed":"pointer",fontFamily:"sans-serif"}}, commentSubmit?"A publicar...":"Publicar comentário")
-                ),
-                commentLoad?React.createElement("div", {style:{textAlign:"center",color:"#4b5563",fontSize:13,padding:20}}, "⏳ A carregar..."):
-                comments.length===0?React.createElement("div", {style:{textAlign:"center",color:"#6b7280",fontSize:13,padding:20}}, "Ainda não há comentários. Sê o primeiro!"):
-                React.createElement("div", null, comments.map(c=>
-                  React.createElement("div", {key:c.id,style:{borderBottom:"1px solid rgba(0,0,0,0.06)",paddingBottom:12,marginBottom:12}},
-                    React.createElement("div", {style:{display:"flex",alignItems:"baseline",gap:8,marginBottom:4}},
-                      React.createElement("span", {style:{fontWeight:700,fontSize:13,color:"#111827"}}, c.name),
-                      c.bank&&React.createElement("span", {style:{fontSize:11,background:"rgba(37,99,235,0.08)",border:"1px solid rgba(37,99,235,0.2)",color:"#2563eb",borderRadius:4,padding:"1px 6px"}}, c.bank),
-                      React.createElement("span", {style:{fontSize:11,color:"#6b7280",marginLeft:"auto"}}, new Date(c.ts).toLocaleDateString("pt-PT"))
-                    ),
-                    (c.simPt||c.realPt)&&React.createElement("div", {style:{display:"flex",gap:10,marginBottom:6}},
-                      c.simPt!=null&&c.simPt!==""&&Number.isFinite(Number(c.simPt))&&React.createElement("div", {style:{fontSize:11,background:"rgba(201,168,76,0.1)",border:"1px solid rgba(201,168,76,0.3)",borderRadius:5,padding:"2px 8px",color:"#92400e"}}, "🧮 Simulado: "+Number(c.simPt).toFixed(2).replace(".",",")+"/mês"),
-                      c.realPt!=null&&c.realPt!==""&&Number.isFinite(Number(c.realPt))&&React.createElement("div", {style:{fontSize:11,background:"rgba(5,150,105,0.08)",border:"1px solid rgba(5,150,105,0.25)",borderRadius:5,padding:"2px 8px",color:"#065f46"}}, "✅ Real: "+Number(c.realPt).toFixed(2).replace(".",",")+"/mês")
-                    ),
-                    React.createElement("div", {style:{fontSize:13,color:"#374151",lineHeight:1.5}}, c.text),
-                    React.createElement("div", {style:{display:"flex",alignItems:"center",gap:8,marginTop:8}},
-                      React.createElement("button", {type:"button",className:"btn-mini",onClick:()=>{setReplyTo(replyTo===c.id?null:c.id);setReplyErr("");setReplyForm({name:"",text:""});},style:{background:"rgba(37,99,235,0.08)",border:"1px solid rgba(37,99,235,0.18)",borderRadius:6,color:"#2563eb",fontSize:10,fontWeight:600,padding:"2px 7px",cursor:"pointer",fontFamily:"sans-serif"}}, replyTo===c.id?"Cancelar":"Responder"),
-                      replyOk===c.id&&React.createElement("span", {style:{fontSize:11,color:"#059669"}}, "Resposta publicada!")
-                    ),
-                    replyTo===c.id&&React.createElement("form", {onSubmit:e=>submitReply(e,c.id),style:{marginTop:8,background:"rgba(37,99,235,0.04)",border:"1px solid rgba(37,99,235,0.14)",borderRadius:8,padding:10}},
-                      React.createElement("div", {style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:8,marginBottom:8}},
-                        React.createElement("input", {value:replyForm.name,onChange:e=>setReplyForm(f=>({...f,name:e.target.value})),placeholder:"Nome (opcional)",maxLength:50,style:{width:"100%",padding:"6px 8px",border:"1px solid rgba(0,0,0,0.12)",borderRadius:6,fontSize:12,fontFamily:"sans-serif",boxSizing:"border-box"}}),
-                        React.createElement("textarea", {value:replyForm.text,onChange:e=>setReplyForm(f=>({...f,text:e.target.value})),placeholder:"Escreve a tua resposta...",required:true,maxLength:500,rows:2,style:{width:"100%",padding:"6px 8px",border:"1px solid rgba(0,0,0,0.12)",borderRadius:6,fontSize:12,fontFamily:"sans-serif",resize:"vertical",boxSizing:"border-box"}})
-                      ),
-                      replyErr&&React.createElement("div", {style:{fontSize:11,color:"#dc2626",marginBottom:8}}, "⚠️ "+replyErr),
-                      React.createElement("button", {type:"submit",disabled:replySubmit||replyForm.text.trim().length<5,style:{padding:"6px 13px",background:replySubmit?"rgba(0,0,0,0.05)":"#2563eb",border:"none",borderRadius:6,color:replySubmit?"#9b9b9b":"#ffffff",fontSize:12,fontWeight:700,cursor:replySubmit?"not-allowed":"pointer",fontFamily:"sans-serif"}}, replySubmit?"A responder...":"Publicar resposta")
-                    ),
-                    (c.replies||[]).length>0&&React.createElement("div", {style:{marginTop:10,marginLeft:14,paddingLeft:12,borderLeft:"2px solid rgba(37,99,235,0.16)"}}, c.replies.map(reply=>
-                      React.createElement("div", {key:reply.id,style:{background:"rgba(37,99,235,0.035)",borderRadius:8,padding:"8px 10px",marginTop:8}},
-                        React.createElement("div", {style:{display:"flex",alignItems:"baseline",gap:8,marginBottom:3}},
-                          React.createElement("span", {style:{fontWeight:700,fontSize:12,color:"#111827"}}, reply.name),
-                          React.createElement("span", {style:{fontSize:10,color:"#6b7280",marginLeft:"auto"}}, new Date(reply.ts).toLocaleDateString("pt-PT"))
-                        ),
-                        React.createElement("div", {style:{fontSize:12,color:"#374151",lineHeight:1.5}}, reply.text)
-                      )
-                    ))
-                  )
-                ))
-              )
-            )
+  ,showComments&&window.CommentsModal&&React.createElement(window.CommentsModal,{comments,setComments,onClose:()=>setShowComments(false)}
   ),detalheBanco&&window.BankDetailModal&&React.createElement(window.BankDetailModal,{row:detalheBanco,ctx:{carencia,segProtecao,segProtMensal,is2,rendT,modoJovem,capital,margem:margemVsOficial(detalheBanco.ptC)},onClose:()=>setDetalheBanco(null)}),showGlossario&&window.GlossarioModal&&React.createElement(window.GlossarioModal,{onClose:()=>setShowGlossario(false)}),window.PageFooter&&React.createElement(window.PageFooter,null),window.CookieBanner&&React.createElement(window.CookieBanner,null));
 }
 window._App=App;
