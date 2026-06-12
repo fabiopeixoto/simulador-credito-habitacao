@@ -47,15 +47,34 @@ Aplicação web para **simular e comparar** crédito habitação em Portugal: pr
 │
 ├── react-runtime.js         # React + ReactDOM (imutável, partilhado entre páginas)
 ├── recharts-polyfill.js     # Polyfill SVG Recharts (imutável)
-├── app.js                   # Componente App principal + utilitários
+├── app.js                   # Componente App (estado, derivados, orquestração das vistas)
 ├── index-mount.js           # Mount do App na página inicial + registo SW
-├── inversa-bootstrap.js     # Globals partilhados (_SIM): utilitários, constantes, SliderInput
+├── inversa-bootstrap.js     # Globals partilhados (_SIM): cores, LTV_BRACKETS, BANK_DOMAINS
 ├── page-header.js           # NavHeader partilhado (Euribor badges + tabs de navegação)
 ├── reverse-calc-page.js     # Componente da calculadora inversa
 ├── inversa-mount.js         # Mount da calculadora inversa
 ├── historico-page.js        # Componente da página de histórico
 ├── historico-mount.js       # Mount da página de histórico
 ├── comments-modal.js        # Modal de comentários (partilhado entre páginas)
+├── admin.css, admin.js      # Estilos e lógica do painel admin (extraídos de admin.html)
+│
+├── js/
+│   ├── core/                # Lógica pura, sem React — registada em window._SIM
+│   │   ├── calc.js          # calcP, calcTAEG, calcMTIC, sTot, calcIMT, simA, getLTVAddon, fE/fP…
+│   │   ├── constants.js     # FINALIDADE_ADDON, FINALIDADE_MAX_LTV, NAV
+│   │   └── styles.js        # Estilos de tabela (thS, tdB…) e helpers de cor (ecC, ecL, rbg)
+│   ├── components/          # Componentes React partilhados
+│   │   ├── slider-input.js  # SliderInput único (todas as páginas)
+│   │   ├── ref-badge.js     # Etiqueta do indexante Euribor
+│   │   └── hist-modal.js    # Modal de simulações guardadas
+│   └── views/               # Uma vista por tab do simulador (props in / JSX out, sem hooks)
+│       ├── header-bar.js    # Barra superior (chips Euribor, botões)
+│       ├── params-panel.js  # Parâmetros Globais + Titulares (acordeões mobile vivem aqui)
+│       ├── view-comp.js     # Comparação — IS_MOBILE ? CompTableMobile : CompTableDesktop
+│       └── view-{seguros,custos,viabilidade,cenarios,amortizacao}.js
+│
+├── comp-table-mobile.js     # Tabela de comparação compacta (só mobile)
+├── comp-table-desktop.js    # Tabela de comparação completa (23 colunas, desktop)
 │
 ├── api/
 │   ├── banks.js             # CRUD bancos/spreads, Euribor, seed SQLite; ETag em GET
@@ -73,6 +92,13 @@ Aplicação web para **simular e comparar** crédito habitação em Portugal: pr
 ├── AUDITORIA.md             # Template para validar resultados vs simuladores oficiais
 └── README.md
 ```
+
+### Convenções mobile/desktop
+
+- `IS_MOBILE` vem de `window._SIM_SHARED.isMobileDevice` (user-agent, definido **apenas** em `sim-shared-constants.js`). Cada vista lê-o no topo do próprio ficheiro — nunca passa por props.
+- Se o markup mobile divergir estruturalmente do desktop, divide-se em `*-mobile.js` / `*-desktop.js` com um único branch `IS_MOBILE ? A : B` no pai (exemplo: `comp-table-mobile.js` / `comp-table-desktop.js`, ramificados em `js/views/view-comp.js`). Se só mudam valores de estilo, fica um ficheiro com ternários.
+- A UI de parâmetros mobile (acordeões) vive em `js/views/params-panel.js` — alterações mobile a esta zona tocam só nesse ficheiro.
+- Ao alterar qualquer `.js` servido: incrementar o `?v=` no(s) HTML **e** no `PRECACHE` do `sw.js` (strings iguais), e subir a constante `CACHE` (`simulador-vNNN`) — caso contrário os clientes ficam presos na versão antiga (cache immutable de 1 ano). Ficheiros novos entram também em `scripts/lint.sh`.
 
 ---
 
