@@ -1,4 +1,4 @@
-const CACHE = "simulador-v125";
+const CACHE = "simulador-v126";
 
 /** URLs exactas referenciadas em index.html / quanto-posso-pedir.html / historico.html (incl. query ?v=). */
 const PRECACHE = [
@@ -17,7 +17,17 @@ const PRECACHE = [
   "/js/core/constants.js?v=1",
   "/js/core/styles.js?v=1",
   "/js/components/slider-input.js?v=1",
-  "/app.js?v=80",
+  "/js/components/ref-badge.js?v=1",
+  "/js/components/hist-modal.js?v=1",
+  "/js/views/header-bar.js?v=1",
+  "/js/views/params-panel.js?v=1",
+  "/js/views/view-comp.js?v=1",
+  "/js/views/view-seguros.js?v=1",
+  "/js/views/view-custos.js?v=1",
+  "/js/views/view-viabilidade.js?v=1",
+  "/js/views/view-cenarios.js?v=1",
+  "/js/views/view-amortizacao.js?v=1",
+  "/app.js?v=81",
   "/bank-detail-modal.js?v=4",
   "/comp-table-mobile.js?v=1",
   "/comp-table-desktop.js?v=1",

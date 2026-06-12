@@ -18,6 +18,16 @@ for f in \
   js/core/constants.js \
   js/core/styles.js \
   js/components/slider-input.js \
+  js/components/ref-badge.js \
+  js/components/hist-modal.js \
+  js/views/header-bar.js \
+  js/views/params-panel.js \
+  js/views/view-comp.js \
+  js/views/view-seguros.js \
+  js/views/view-custos.js \
+  js/views/view-viabilidade.js \
+  js/views/view-cenarios.js \
+  js/views/view-amortizacao.js \
   app.js \
   inversa-bootstrap.js \
   page-header.js \
