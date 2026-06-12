@@ -1,182 +1,27 @@
 ;(function(){
-if(!window.React||!window.Recharts)return;try{
+if(!window.React||!window.Recharts||!window._SIM)return;try{
 const { useState, useEffect, useMemo, useCallback } = React;
 const { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } = Recharts;
 
-// ── Euribor fallback (maio 2026) ──────────────────────────────────────────
-const FALLBACK_EUR = {
-  "3m":  { valor: 2.209, data: "maio 2026" },
-  "6m":  { valor: 2.541, data: "maio 2026" },
-  "12m": { valor: 2.860, data: "maio 2026" },
-};
+// ── Partilhado: cálculos, constantes, estilos e componentes ──────────────
+// (js/core/calc.js, js/core/constants.js, js/core/styles.js,
+//  js/components/slider-input.js, inversa-bootstrap.js)
+const {
+  fE,fE2,fP,fP1,margemVsOficial,
+  calcP,calcTAEG,calcMTIC,isJurosMedioMensal,sTot,calcIMT,simA,amChart,prestacaoCarencia,getLTVAddon,
+  FINALIDADE_ADDON,FINALIDADE_MAX_LTV,NAV,
+  ecC,ecL,thS,thSC,tdB,tdBC,tdG,tdGC,tdR,tdRC,rbg,
+  SliderInput,CONTRATO_FACTOR,FALLBACK_EUR,EUR_COLORS,
+  G,R,Au,N,Sky,BANK_DOMAINS,
+} = window._SIM;
+
 const CACHE_KEY   = "credito_cache_v14";
 const CACHE_H     = 8;
 const HIST_KEY    = 'simulador-hist-v1';
 const HIST_MAX  = 5;
 
-
-// ── Escalões de spread por LTV (verificados Mai.2026) ────────────────────
-// spread adicional sobre o spread base conforme o LTV
-const LTV_BRACKETS = window._SIM.LTV_BRACKETS;
-
-function getLTVAddon(bankS, ltv) {
-  const brackets = LTV_BRACKETS[bankS] || [];
-  for (const b of brackets) { if (ltv <= b.max) return b.add; }
-  return 0.15; // acima de todos os escalões
-}
-
-
-// ── Spread adicional por finalidade ──────────────────────────────────────
-const FINALIDADE_ADDON = {
-  hpp:    0,     // Habitação Própria Permanente
-  hab2:   0.20,  // Segunda habitação (típico: +0,10% a +0,30%)
-  arrendamento: 0.30,
-};
-const FINALIDADE_MAX_LTV = {
-  hpp:    90,    // HPP: máx 90% (ou 100% jovem)
-  hab2:   80,    // 2.ª habitação: máx 80%
-  arrendamento: 80,
-};
-
-// Os bancos aplicam um factor de correcção ao rendimento declarado
-const CONTRATO_FACTOR = {
-  efetivo:  1.00,  // Contrato sem termo — 100%
-  termo:    0.90,  // Contrato a termo certo — ~90%
-  parcial:  0.80,  // Part-time
-  recibo:   0.70,  // Trabalhador independente / recibos verdes — ~70%
-  pensao:   1.00,  // Pensão/reforma — 100%
-};
-
-// BANKS_STATIC removido — metadados dos bancos vêm da DB via /api/banks
-
-// ── Helpers matemáticos ───────────────────────────────────────────────────
-const fE  = v => isFinite(v) ? Math.round(v).toLocaleString("pt-PT",{style:"currency",currency:"EUR",maximumFractionDigits:0}) : "—";
-const fE2 = v => isFinite(v) ? v.toLocaleString("pt-PT",{style:"currency",currency:"EUR",minimumFractionDigits:2,maximumFractionDigits:2}) : "—";
-const fP  = v => isFinite(v) ? v.toFixed(3).replace(".",",")+"%" : "—";
-const fP1 = v => v.toFixed(1).replace(".",",") + "%";
-/** Margem orientativa vs simuladores oficiais (±5% na prestação total — ver docs/auditoria.md). */
-function margemVsOficial(pt){const x=Number(pt);return isFinite(x)?Math.max(25,Math.round(x*0.05)):50;}
-
-function calcP(C,tanA,anos) {
-  const r=tanA/100/12, n=anos*12;
-  if(r===0||n===0) return n>0?C/n:0;
-  return C*r*Math.pow(1+r,n)/(Math.pow(1+r,n)-1);
-}
-
-// ── TAEG — Taxa Anual de Encargos Efectiva Global ─────────────────────────
-// Fórmula EU Directiva 2014/17/UE (transposta DL 74-A/2017):
-// Capital = comIniciais_t0 + Σ(encargo_t / (1+r)^t, t=1..n)
-// onde r = TAEG/12 (taxa mensal). Resolve por bissecção.
-function calcTAEG(capital, comIniciais, encargo_mensal, n) {
-  if(!capital||!encargo_mensal||!n) return 0;
-  if(encargo_mensal * n <= capital) return 0;
-  let lo=0.00001, hi=0.05;
-  for(let i=0;i<200;i++){
-    const mid=(lo+hi)/2;
-    const pv=encargo_mensal*(1-Math.pow(1+mid,-n))/mid;
-    if(pv + comIniciais > capital) lo=mid; else hi=mid;
-  }
-  return Math.round((lo+hi)/2*12*10000)/100;
-}
-
-// ── MTIC — Montante Total Imputado ao Consumidor ─────────────────────────
-// Tudo o que o cliente paga ao longo da vida do crédito
-function calcMTIC(comIniciais, encargo_mensal, n) {
-  return Math.round(comIniciais + encargo_mensal * n);
-}
-
-// ── IS sobre juros — crédito hipotecário a prazo fixo ────────────────────
-// IS sobre a utilização de crédito (CIS Verba 17.1): 0,6% do capital em
-// contrato (pago na escritura, incluído em isCredTAEG). Não há IS adicional
-// sobre as prestações mensais para crédito hipotecário de prazo determinado.
-function isJurosMedioMensal(capital, tanA, anos, finalidade) {
-  return 0;
-}
-
-// ── Seguro de vida sobre capital médio em dívida ─────────────────────────
-function vidaR(a){
-  if(a<=25)return 0.0012; if(a<=30)return 0.0015; if(a<=35)return 0.0020;
-  if(a<=40)return 0.0028; if(a<=45)return 0.0040; if(a<=50)return 0.0060;
-  if(a<=55)return 0.0090; if(a<=60)return 0.0130; return 0.0180;
-}
-// Prémio mensal do seguro de vida — escalado pelo capital inicial e idade do titular.
-// Usa capital inicial (não médio) para corresponder ao prémio da 1.ª prestação,
-// que é o que os simuladores oficiais dos bancos apresentam na tabela.
-function sVida(g,age,cap) {
-  if(!g)return 0;
-  return g.vRef*(cap/g.vCap)*(vidaR(age)/vidaR(g.vAge));
-}
-function sTot(g,a1,a2,is2,cap,val,anos) {
-  if(!g)return {v1:0,v2:0,vTot:0,m:0,tot:0};
-  const v1=sVida(g,a1,cap), v2=is2?sVida(g,a2,cap):0;
-  const m=g.mAno*(val/g.pRef)/12;
-  return {v1,v2,vTot:v1+v2,m,tot:v1+v2+m};
-}
-
-
-// IMT — tabelas OE 2026 (escalões atualizados, valores 2026)
-function calcIMT(v,j,finalidade) {
-  if(finalidade!=="hpp"){
-    // Tabela II 2026: 2ª habitação e arrendamento (progressiva 1%→8%, flat 6% acima)
-    if(v<=106346) return v*0.01;
-    if(v<=145470) return v*0.02-1063.46;
-    if(v<=198347) return v*0.05-5427.56;
-    if(v<=330539) return v*0.07-9394.50;
-    if(v<=633931) return v*0.08-12699.89;
-    return v*0.06;
-  }
-  // Tabela I 2026: HPP
-  // IMT Jovem (OE 2026, continente): isenção total até 330.539€; entre 330.539€ e 660.982€ taxa 8% só sobre o excedente; acima do teto parcial aplica-se a tabela normal (sem benefício)
-  if(j){
-    if(v<=330539)return 0;
-    if(v<=660982)return(v-330539)*0.08;
-  }
-  if(v<=106346) return 0;
-  if(v<=145470) return v*0.02-2126.92;
-  if(v<=198347) return v*0.05-6491.02;
-  if(v<=330539) return v*0.07-10457.96;
-  if(v<=660982) return v*0.08-13763.35;
-  return v*0.06;
-}
-
-function simA(C,tanA,anos,extra) {
-  const r=tanA/100/12, P=calcP(C,tanA,anos);
-  let s=C,j=0,m=0;
-  while(s>0.01&&m<anos*12){const ji=s*r;j+=ji;s-=(P-ji);m++;if(extra>0&&m%12===0)s=Math.max(0,s-extra);}
-  return{meses:m,juros:j,economia:Math.max(0,P*anos*12-C-j),poupados:anos*12-m};
-}
-function amChart(C,tanA,anos,extra) {
-  const r=tanA/100/12, P=calcP(C,tanA,anos);
-  let s1=C,s2=C; const d=[{ano:0,"Com amort.":C,"Sem amort.":C}];
-  for(let m=1;m<=anos*12;m++){
-    s1=Math.max(0,s1-(P-s1*r)); s2=Math.max(0,s2-(P-s2*r));
-    if(extra>0&&m%12===0)s1=Math.max(0,s1-extra);
-    if(m%12===0)d.push({ano:m/12,"Com amort.":Math.round(s1),"Sem amort.":Math.round(s2)});
-  }
-  return d;
-}
-
-// Prestação durante carência (só juros)
-function prestacaoCarencia(C, tanA) { return C * tanA/100/12; }
-
-// ── Domínios dos bancos (para favicon) ────────────────────────────────────
-const BANK_DOMAINS=window._SIM.BANK_DOMAINS;
 // Vista compacta da Comparação só em dispositivos móveis reais (user-agent)
 const IS_MOBILE=!!(window._SIM_SHARED&&window._SIM_SHARED.isMobileDevice);
-// ── Cores e estilos ───────────────────────────────────────────────────────
-const G="#16a34a",R="#dc2626",Au="#2563eb",N="#e5e7eb",Sky="#0284c7";
-const ecC=ef=>ef<=35?G:ef<=40?Au:R;
-const ecL=ef=>ef<=35?"Aprovável":ef<=40?"Limite":"Difícil";
-const thS={padding:"6px 8px",textAlign:"left",color:"#374151",fontSize:11,letterSpacing:1,fontWeight:600,borderBottom:"1px solid rgba(37,99,235,0.22)",whiteSpace:"nowrap",verticalAlign:"bottom"};
-const tdB={padding:"8px 9px"};
-const tdG=i=>({...tdB,background:i===0?"rgba(74,222,128,0.09)":"rgba(74,222,128,0.035)",color:"#14532d"});
-const tdR=i=>({...tdB,background:i===0?"rgba(248,113,113,0.09)":"rgba(248,113,113,0.03)",color:"#7f1d1d"});
-const thSC={...thS,padding:"4px 6px"};
-const tdBC={padding:"6px 6px"};
-const tdGC=i=>({...tdBC,background:i===0?"rgba(74,222,128,0.09)":"rgba(74,222,128,0.035)",color:"#14532d"});
-const tdRC=i=>({...tdBC,background:i===0?"rgba(248,113,113,0.09)":"rgba(248,113,113,0.03)",color:"#7f1d1d"});
-const rbg=i=>i===0?"rgba(201,168,76,0.32)":i===1?"rgba(148,163,184,0.28)":i===2?"rgba(160,108,50,0.11)":"rgba(0,0,0,0.025)";
-const EUR_COLORS={"3m":["#f97316","rgba(249,115,22,0.18)"],"6m":[Sky,"rgba(2,132,199,0.18)"],"12m":[Au,"rgba(37,99,235,0.18)"]};
 
 function RefBadge({refKey}){
   const[c,bg]=EUR_COLORS[refKey]||[Au,"rgba(37,99,235,0.18)"];
@@ -192,46 +37,6 @@ function TCard({n,idade,setIdade,rend,setRend,tipoC,setTipoC,colorStr}){
   );
 }
 
-// ── Componente: slider + input numérico em simultâneo ─────────────────────
-function SliderInput({min,max,step,value,onChange,color,prefix,suffix,formatFn,ariaLabel}){
-  const [inputVal, setInputVal] = React.useState(String(value));
-  const [editing,  setEditing]  = React.useState(false);
-
-  // Sync input display when value changes externally (e.g. slider)
-  React.useEffect(()=>{ if(!editing) setInputVal(String(value)); },[value,editing]);
-
-  function handleInputChange(e){
-    setInputVal(e.target.value);
-  }
-  function handleInputBlur(){
-    setEditing(false);
-    const n = parseInt(inputVal.replace(/\D/g,''), 10);
-    if(!isNaN(n)){
-      const clamped = Math.min(max, Math.max(min, Math.round(n/step)*step));
-      onChange(clamped);
-      setInputVal(String(clamped));
-    } else {
-      setInputVal(String(value));
-    }
-  }
-  function handleKeyDown(e){
-    if(e.key==='Enter') e.target.blur();
-    if(e.key==='Escape'){ setEditing(false); setInputVal(String(value)); e.target.blur(); }
-  }
-
-  const displayFn = formatFn || (v=>v.toLocaleString('pt-PT'));
-
-  return (
-    React.createElement("div", null, React.createElement("input", {type: "range", min: min, max: max, step: step, value: value, onChange: e=>onChange(+e.target.value), "aria-label": ariaLabel||suffix||"valor", style: {width:"100%",accentColor:color||"#2563eb"}}), React.createElement("div", {style: {display:"flex",alignItems:"center",gap:6,marginTop:4,minWidth:0}}, prefix&&React.createElement("span", {style: {fontSize:13,color:"#374151",fontFamily:"sans-serif",flexShrink:0}}, prefix), React.createElement("input", {type: "text", inputMode: "numeric", className: "val-compact", "aria-label": (ariaLabel||suffix||"valor")+" (editar)", value: editing ? inputVal : displayFn(value), onFocus: ()=>{ setEditing(true); setInputVal(String(value)); }, onChange: handleInputChange, onBlur: handleInputBlur, onKeyDown: handleKeyDown, style: {
-            flex:"0 1 78px",minWidth:"40px",padding:"2px 6px",
-            background:"rgba(37,99,235,0.05)",
-            border:"1px solid rgba(37,99,235,0.22)",
-            borderRadius:6,color:"#111827",fontSize:12,fontWeight:600,
-            fontFamily:"sans-serif",textAlign:"right",outline:"none",
-            cursor:"text"
-          }}), suffix&&React.createElement("span", {style: {fontSize:13,color:"#374151",fontFamily:"sans-serif"}}, suffix)))
-  );
-}
 // ── Dados dos bancos via API local (SQLite) ───────────────────────────────
 async function fetchBanks() {
   const resp = await fetch("/api/banks");
@@ -255,14 +60,13 @@ function normalizeCampaignSpreadRow(d){
   o.sCom=hi;o.promoSpread=lo;return o;
 }
 
-const NAV=[{id:"comp",icon:"📋",label:"Comparação"},{id:"seg",icon:"🛡️",label:"Seguros"},{id:"cust",icon:"💰",label:"Custos"},{id:"viab",icon:"📊",label:"Viabilidade"},{id:"cen",icon:"⚡",label:"Cenários"},{id:"amort",icon:"🔄",label:"Amortização"}];
-
 const _Q=new URLSearchParams(location.search);
 const _qi=(k,d)=>{const n=parseInt(_Q.get(k),10);return Number.isFinite(n)?n:d;};
 const _qb=(k)=>_Q.get(k)==='1';
 const _qs=(k,d,o)=>{const v=_Q.get(k);return o.includes(v)?v:d;};
 
-window._SIM={fE,fP,fE2,SliderInput,CONTRATO_FACTOR,FALLBACK_EUR,G,Au,R,N,Sky,useState,EUR_COLORS,LTV_BRACKETS,BANK_DOMAINS,thS,thSC,tdB,tdBC,tdG,tdGC,tdR,tdRC,rbg,ecC,ecL,RefBadge,margemVsOficial};
+// O resto do _SIM vem dos ficheiros partilhados; o app.js só acrescenta o que define.
+Object.assign(window._SIM,{RefBadge});
 
 function App(props){
   // Euribor / spreads

@@ -14,6 +14,10 @@ for f in \
   sw.js \
   lib/open-sqlite.js \
   sim-shared-constants.js \
+  js/core/calc.js \
+  js/core/constants.js \
+  js/core/styles.js \
+  js/components/slider-input.js \
   app.js \
   inversa-bootstrap.js \
   page-header.js \
