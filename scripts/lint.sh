@@ -29,6 +29,7 @@ for f in \
   js/views/view-cenarios.js \
   js/views/view-amortizacao.js \
   app.js \
+  admin.js \
   inversa-bootstrap.js \
   page-header.js \
   comments-modal.js \
