@@ -141,7 +141,7 @@ function isRateLimited(ip) {
 // ── Anthropic API ─────────────────────────────────────────────────────────
 const BANK_CODES = ["CA", "CTT", "BNKTR", "ABANCA", "BCP", "ACTVO", "BPI", "MNTPO", "SANTR", "NB", "CGD", "UCI", "BNI", "BEST"];
 
-const ANTHROPIC_MODEL      = "claude-sonnet-4-6";
+const ANTHROPIC_MODEL      = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
 const WEB_FETCH_MAX_USES   = 14; // 1 por banco; o modelo deve chamá-los em paralelo (1 iteração)
 const PAUSE_TURN_MAX_CONT  = 3;  // continuações máximas após pause_turn
 
@@ -288,11 +288,20 @@ async function callWithContinuation(client, baseParams) {
   for (let i = 0; i <= PAUSE_TURN_MAX_CONT; i++) {
     const msg = await client.messages.create({ ...baseParams, messages });
     lastMessage = msg;
+    const u = msg.usage || {};
+    console.log(`spreads.js: usage iter ${i} — input=${u.input_tokens} cache_write=${u.cache_creation_input_tokens || 0} cache_read=${u.cache_read_input_tokens || 0} output=${u.output_tokens}`);
     if (msg.stop_reason !== "pause_turn") break;
     if (i < PAUSE_TURN_MAX_CONT) {
+      // cache_control no último bloco da resposta parcial: a próxima iteração lê todo o
+      // contexto anterior (conteúdo dos PDFs incluído) a ~10% do preço em vez de 100%.
+      const assistantContent = msg.content.map((b, idx) =>
+        idx === msg.content.length - 1
+          ? { ...b, cache_control: { type: "ephemeral" } }
+          : b
+      );
       messages = [
         ...messages,
-        { role: "assistant", content: msg.content },
+        { role: "assistant", content: assistantContent },
         { role: "user", content: [{ type: "text", text: "Continua com os bancos em falta e termina o JSON completo com os 14 bancos." }] },
       ];
       console.log(`spreads.js: pause_turn — continuação ${i + 1}/${PAUSE_TURN_MAX_CONT}`);
