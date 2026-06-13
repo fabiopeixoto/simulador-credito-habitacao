@@ -276,10 +276,10 @@ async function refreshSpreadsAI() {
     const data = await r.json().catch(() => ({}));
     if (!r.ok && r.status !== 202) throw new Error(data.error || 'HTTP ' + r.status);
 
-    // O refresh corre em background no servidor (1–3 min com pesquisa web) —
+    // O refresh corre em background no servidor (vários minutos com pesquisa web) —
     // o POST responde já; fazer polling do estado via GET /api/spreads.
-    aiEl.textContent = '⏳ Actualização em curso (pode demorar 2–3 min)...';
-    const deadline = Date.now() + 8 * 60 * 1000;
+    aiEl.textContent = '⏳ Actualização em curso (pode demorar 5–10 min)...';
+    const deadline = Date.now() + 16 * 60 * 1000;
     let st = null;
     while (Date.now() < deadline) {
       await new Promise(s => setTimeout(s, 5000));

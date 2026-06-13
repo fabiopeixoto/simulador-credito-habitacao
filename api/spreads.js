@@ -144,8 +144,9 @@ function isRateLimited(ip) {
 const BANK_CODES = ["CA", "CTT", "BNKTR", "ABANCA", "BCP", "ACTVO", "BPI", "MNTPO", "SANTR", "NB", "CGD", "UCI", "BNI", "BEST"];
 
 const ANTHROPIC_MODEL      = "claude-opus-4-8";
-const ANTHROPIC_TIMEOUT_MS = 180000; // web search + Opus pode demorar 1–3 min por pedido
-const MAX_PAUSE_TURNS      = 6;      // continuações quando stop_reason === "pause_turn"
+const ANTHROPIC_TIMEOUT_MS = 10 * 60 * 1000; // por pedido — Opus + web search demora vários minutos
+const ANTHROPIC_TOTAL_MS   = 15 * 60 * 1000; // tecto global incluindo continuações pause_turn
+const MAX_PAUSE_TURNS      = 6;              // continuações quando stop_reason === "pause_turn"
 
 // JSON schema para structured outputs — garante a forma exacta da resposta.
 // Nota: structured outputs não suporta minimum/maximum; gamas numéricas em validateSpreads().
@@ -279,13 +280,16 @@ async function callAnthropicAPI(apiKey) {
   let useStructured = true; // fallback sem output_config se a API rejeitar a combinação com web_search
   let response = null;
   let turns = 0;
+  const t0 = Date.now();
   while (turns < MAX_PAUSE_TURNS) {
+    if (Date.now() - t0 > ANTHROPIC_TOTAL_MS) throw new Error("API excedeu o tempo total de " + ANTHROPIC_TOTAL_MS / 60000 + " min");
     try {
-      response = await client.messages.create({
+      // Streaming evita timeouts de inactividade em pedidos longos; finalMessage() devolve a resposta completa
+      response = await client.messages.stream({
         ...baseParams,
         messages,
         ...(useStructured ? { output_config: { format: { type: "json_schema", schema: SPREADS_SCHEMA } } } : {}),
-      });
+      }).finalMessage();
     } catch (err) {
       if (useStructured && err instanceof Anthropic.BadRequestError) {
         useStructured = false;
