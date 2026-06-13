@@ -294,7 +294,8 @@ function parseSpreadsText(txt) {
 }
 
 async function callAnthropicAPI(apiKey) {
-  const client = new Anthropic({ apiKey, timeout: ANTHROPIC_TIMEOUT_MS, maxRetries: 1 });
+  // maxRetries: o SDK repete 408/409/429/5xx (inclui 529 overloaded) com backoff exponencial
+  const client = new Anthropic({ apiKey, timeout: ANTHROPIC_TIMEOUT_MS, maxRetries: 4 });
   const baseParams = {
     model: ANTHROPIC_MODEL,
     max_tokens: 32000, // o thinking adaptativo conta para o limite — dar folga
