@@ -140,7 +140,7 @@ Cache em memória + persistência em `banks.sqlite` (`kv_store`) com TTL 6 h. Ap
 
 ### `POST /api/spreads`
 
-Actualização massiva via **Anthropic** (modelo configurado em código) + Euribor BCE.
+Actualização massiva via **Anthropic** (Claude Opus 4.8 com pesquisa web dos preçários oficiais e resposta validada por JSON schema) + Euribor BCE. A chamada ao modelo pode demorar 1–3 minutos.
 
 - **Com `x-admin-token` válido**: ignora cache e limites diários (uso administrativo / Jenkins).
 - **Sem token**: **rate limit** por IP (~20 pedidos/h) e **limite global** ~2 chamadas "frescas" ao modelo por dia por instância (com cache SQLite ~25 h e cache em memória). Serve dados em cache quando excede limites.

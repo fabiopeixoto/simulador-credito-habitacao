@@ -1,4 +1,5 @@
 const path = require("path");
+const Anthropic = require("@anthropic-ai/sdk");
 const { openSqliteDb } = require(path.join(__dirname, "..", "lib", "open-sqlite.js"));
 const { fetchEuribor } = require("./euribor.js");
 
@@ -139,28 +140,180 @@ function isRateLimited(ip) {
   return e.count > RATE_MAX;
 }
 
-// ── Anthropic API
-async function callAnthropicAPI(apiKey, prompt) {
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method:  "POST",
-    headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
-    body:    JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 4096, messages: [{ role: "user", content: prompt }] }),
-    signal:  AbortSignal.timeout(30000),
-  });
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw Object.assign(new Error(err.error?.message || "Erro API"), { httpStatus: response.status });
+// ── Anthropic API ─────────────────────────────────────────────────────────
+const BANK_CODES = ["CA", "CTT", "BNKTR", "ABANCA", "BCP", "ACTVO", "BPI", "MNTPO", "SANTR", "NB", "CGD", "UCI", "BNI", "BEST"];
+
+const ANTHROPIC_MODEL      = "claude-opus-4-8";
+const ANTHROPIC_TIMEOUT_MS = 180000; // web search + Opus pode demorar 1–3 min por pedido
+const MAX_PAUSE_TURNS      = 6;      // continuações quando stop_reason === "pause_turn"
+
+// JSON schema para structured outputs — garante a forma exacta da resposta.
+// Nota: structured outputs não suporta minimum/maximum; gamas numéricas em validateSpreads().
+const SPREADS_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: BANK_CODES,
+  properties: Object.fromEntries(BANK_CODES.map(c => [c, { $ref: "#/$defs/bank" }])),
+  $defs: {
+    bank: {
+      type: "object",
+      additionalProperties: false,
+      required: [
+        "sCom", "sSem", "mCom", "mSem", "fCom", "fSem", "jsCom", "jsSem",
+        "promoPeriodo", "promoSpread", "dossier", "avaliacao", "contaMes",
+        "capMin", "capMax", "vRef", "mAno", "insV", "insM", "contaNota",
+        "minutas", "jovemIsenta",
+      ],
+      properties: {
+        sCom:         { type: "number", description: "Spread da taxa variável COM produtos associados, contratual fora do período promocional (pontos percentuais)" },
+        sSem:         { type: "number", description: "Spread da taxa variável SEM produtos associados (pontos percentuais); ≥ sCom" },
+        mCom:         { type: "number", description: "TAN do período fixo da taxa mista COM produtos (%)" },
+        mSem:         { type: "number", description: "TAN do período fixo da taxa mista SEM produtos (%); ≥ mCom" },
+        fCom:         { type: "number", description: "TAN da taxa fixa COM produtos (%)" },
+        fSem:         { type: "number", description: "TAN da taxa fixa SEM produtos (%); ≥ fCom" },
+        jsCom:        { type: "number", description: "Spread do Crédito Habitação Jovem COM produtos (pontos percentuais)" },
+        jsSem:        { type: "number", description: "Spread do Crédito Habitação Jovem SEM produtos (pontos percentuais); ≥ jsCom" },
+        promoPeriodo: { type: "integer", description: "Duração do período promocional em meses; 0 se não existir campanha" },
+        promoSpread:  { anyOf: [{ type: "number" }, { type: "null" }], description: "Spread reduzido durante a promoção (≤ sCom); null se não existir campanha" },
+        dossier:      { type: "number", description: "Comissão de dossier/abertura de processo, em EUR" },
+        avaliacao:    { type: "number", description: "Comissão de avaliação do imóvel, em EUR" },
+        contaMes:     { type: "number", description: "Custo mensal da conta à ordem exigida, em EUR; 0 se inexistente" },
+        capMin:       { type: "number", description: "Capital mínimo financiável, em EUR" },
+        capMax:       { type: "number", description: "Capital máximo financiável, em EUR" },
+        vRef:         { type: "number", description: "Prémio mensal do seguro de vida para titular de 30 anos e capital de 150.000 €, em EUR" },
+        mAno:         { type: "number", description: "Prémio anual do seguro multirriscos para imóvel de 200.000 €, em EUR" },
+        insV:         { type: "string", description: "Seguradora do seguro de vida (nome curto)" },
+        insM:         { type: "string", description: "Seguradora do multirriscos (nome curto)" },
+        contaNota:    { type: "string", description: "Fonte/nota da comissão de conta, ex.: \"Estimativa\" ou \"Preçário jun.2026\"" },
+        minutas:      { type: "number", description: "Comissão de preparação de minutas/formalização, em EUR; 0 se não existir" },
+        jovemIsenta:  { type: "boolean", description: "true se o banco isenta as comissões de dossier e avaliação no Crédito Habitação Jovem" },
+      },
+    },
+  },
+};
+
+const SYSTEM_PROMPT = `És um analista de crédito habitação em Portugal. A tua tarefa é apurar as condições ACTUAIS de crédito habitação para aquisição de habitação própria permanente (HPP) praticadas por 14 bancos portugueses, pesquisando na web os preçários e páginas oficiais de cada banco.
+
+Bancos a apurar (código = nome oficial):
+- CA = Crédito Agrícola
+- CTT = Banco CTT
+- BNKTR = Bankinter Portugal
+- ABANCA = ABANCA Portugal
+- BCP = Millennium BCP
+- ACTVO = ActivoBank
+- BPI = Banco BPI
+- MNTPO = Banco Montepio
+- SANTR = Santander Portugal
+- NB = novobanco
+- CGD = Caixa Geral de Depósitos
+- UCI = UCI Portugal
+- BNI = BNI Europa
+- BEST = Banco Best
+
+Regras de apuramento:
+- sCom é SEMPRE o spread contratual em vigor FORA do período promocional (ou após a promoção terminar) — nunca o spread reduzido da campanha. O spread de campanha vai em promoSpread.
+- Os valores "sem produtos" (sSem, mSem, fSem, jsSem) são as condições sem vendas associadas facultativas, por isso ≥ aos valores "com produtos".
+- Quando não há campanha promocional: promoPeriodo = 0 e promoSpread = null.
+- "Com produtos" assume o pacote típico exigido (domiciliação de ordenado, seguros no banco, cartões).
+- Pesquisa primeiro os preçários oficiais (documento "Preçário" exigido pelo Banco de Portugal, páginas de crédito habitação dos bancos, simuladores oficiais). Prefere fontes com data recente e indica o mês/ano da fonte em contaNota quando confirmares o valor (ex.: "Preçário jun.2026").
+- Quando não encontrares um valor concreto, usa uma estimativa razoável com base em bancos comparáveis e escreve "Estimativa" em contaNota (e "(est.)" em insV/insM se a seguradora for desconhecida).
+- Valores monetários em EUR; spreads e TANs em pontos percentuais (ex.: 0.70 = 0,70%).
+
+Responde apenas com o objecto JSON pedido, sem texto adicional.`;
+
+const USER_PROMPT = "Pesquisa e devolve as condições actuais de crédito habitação HPP para os 14 bancos indicados, no formato JSON definido.";
+
+// ── Validação da resposta antes de cachear/servir
+function assertNum(bank, field, v, min, max) {
+  if (typeof v !== "number" || !Number.isFinite(v) || v < min || v > max) {
+    throw new Error(`Spreads inválidos: ${bank}.${field}=${v} (esperado ${min}–${max})`);
   }
-  const data = await response.json().catch(() => null);
-  if (!data) throw new Error("Resposta inválida da API");
-  const txt   = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("");
+}
+
+function validateSpreads(spreads) {
+  if (!spreads || typeof spreads !== "object") throw new Error("Spreads inválidos: resposta não é um objecto");
+  for (const code of BANK_CODES) {
+    const b = spreads[code];
+    if (!b || typeof b !== "object") throw new Error(`Spreads inválidos: falta o banco ${code}`);
+    for (const f of ["sCom", "sSem", "jsCom", "jsSem"]) assertNum(code, f, b[f], 0, 6);
+    for (const f of ["mCom", "mSem", "fCom", "fSem"]) assertNum(code, f, b[f], 0, 12);
+    for (const f of ["dossier", "avaliacao", "minutas"]) assertNum(code, f, b[f], 0, 2000);
+    assertNum(code, "contaMes", b.contaMes, 0, 25);
+    assertNum(code, "promoPeriodo", b.promoPeriodo, 0, 120);
+    assertNum(code, "capMin", b.capMin, 0, 500000);
+    assertNum(code, "capMax", b.capMax, 100000, 10000000);
+    if (b.capMin >= b.capMax) throw new Error(`Spreads inválidos: ${code}.capMin >= capMax`);
+    assertNum(code, "vRef", b.vRef, 1, 150);
+    assertNum(code, "mAno", b.mAno, 20, 800);
+    if (b.promoSpread !== null) {
+      assertNum(code, "promoSpread", b.promoSpread, 0, 6);
+      if (b.promoSpread > b.sCom) throw new Error(`Spreads inválidos: ${code}.promoSpread > sCom`);
+    }
+    if (typeof b.jovemIsenta !== "boolean") throw new Error(`Spreads inválidos: ${code}.jovemIsenta não é boolean`);
+    for (const f of ["insV", "insM", "contaNota"]) {
+      if (typeof b[f] !== "string" || !b[f].trim()) throw new Error(`Spreads inválidos: ${code}.${f} vazio`);
+    }
+  }
+  return spreads;
+}
+
+function parseSpreadsText(txt) {
+  // Fallback de parsing quando a resposta não é JSON puro (sem structured outputs)
   const clean = txt.replace(/```(?:json)?/g, "").trim();
-  const m     = clean.match(/\{[\s\S]*\}/);
+  const m = clean.match(/\{[\s\S]*\}/);
   if (!m) throw new Error("Formato inválido: " + txt.slice(0, 60));
   try { return JSON.parse(m[0]); } catch (_) { throw new Error("JSON inválido: " + m[0].slice(0, 80)); }
 }
 
-const PROMPT = `Com base no teu conhecimento de treino, indica para cada banco português (CA, CTT, BNKTR, ABANCA, BCP, ACTVO, BPI, MNTPO, SANTR, NB, CGD, UCI, BNI, BEST) os seguintes dados actuais de crédito habitação HPP: sCom/sSem (spread variável com/sem produtos — sCom deve ser SEMPRE o spread normal FORA do período promocional ou após a promoção, nunca o spread reduzido da campanha), mCom/mSem (TAN misto com/sem produtos, em %), fCom/fSem (TAN fixo com/sem produtos, em %), jsCom/jsSem (spread Jovem com/sem produtos), promoPeriodo (meses de período promocional, 0 se não existir), promoSpread (spread durante promoção em %, em geral inferior ou igual a sCom; null se não existir), dossier/avaliacao (comissões iniciais em EUR), contaMes (comissão mensal de conta em EUR, 0 se inexistente), capMin/capMax (capital mínimo e máximo em EUR), vRef (prémio mensal seguro vida para titular de 30 anos e 150.000€ capital, em EUR), mAno (prémio anual seguro multirriscos para imóvel de 200.000€, em EUR), insV (nome da seguradora de vida, string curta), insM (nome da seguradora multirriscos, string curta), contaNota (fonte/nota da comissão de conta, string curta, ex: "Estimativa" ou "Confirmado preçário mai.2026"), minutas (comissão de preparação de minutas em EUR, inteiro, 0 se não existe), jovemIsenta (boolean, true se banco isenta comissões dossier e avaliação no CH Jovem, false caso contrário). Usa estimativas razoáveis quando não souberes o valor exacto. Responde APENAS com JSON puro e compacto (sem espaços, sem newlines, sem markdown, sem explicações): {"CA":{"sCom":0.70,"sSem":1.83,"mCom":3.45,"mSem":4.58,"fCom":4.70,"fSem":5.83,"jsCom":0.75,"jsSem":1.88,"promoPeriodo":24,"promoSpread":0.45,"dossier":250,"avaliacao":200,"contaMes":3.50,"capMin":25000,"capMax":2000000,"vRef":22.68,"mAno":160,"insV":"CA Seguros","insM":"CA Seguros","contaNota":"Estimativa","minutas":0,"jovemIsenta":true},"CTT":{"sCom":0.70,"sSem":2.60,"mCom":3.65,"mSem":5.35,"fCom":4.70,"fSem":4.70,"jsCom":0.70,"jsSem":2.60,"promoPeriodo":0,"promoSpread":null,"dossier":280,"avaliacao":230,"contaMes":1.73,"capMin":25000,"capMax":1000000,"vRef":15.71,"mAno":170,"insV":"CTT Seguros","insM":"CTT Seguros","contaNota":"Estimativa","minutas":160,"jovemIsenta":false},"BNKTR":{"sCom":0.70,"sSem":1.05,"mCom":2.90,"mSem":3.25,"fCom":3.45,"fSem":3.80,"jsCom":0.62,"jsSem":0.97,"promoPeriodo":24,"promoSpread":null,"dossier":350,"avaliacao":250,"contaMes":0,"capMin":100000,"capMax":3000000,"vRef":33.28,"mAno":196,"insV":"Bankinter Seguros","insM":"Bankinter Seguros","contaNota":"Estimativa","minutas":0,"jovemIsenta":false},"ABANCA":{"sCom":0.70,"sSem":1.70,"mCom":3.45,"mSem":4.45,"fCom":2.70,"fSem":3.50,"jsCom":0.58,"jsSem":1.58,"promoPeriodo":0,"promoSpread":null,"dossier":520,"avaliacao":286,"contaMes":6.24,"capMin":5000,"capMax":2000000,"vRef":16.76,"mAno":154,"insV":"Abanca Seguros","insM":"Abanca Seguros","contaNota":"Estimativa","minutas":0,"jovemIsenta":true},"BCP":{"sCom":0.70,"sSem":1.50,"mCom":3.45,"mSem":4.25,"fCom":4.10,"fSem":4.65,"jsCom":0.85,"jsSem":1.50,"promoPeriodo":24,"promoSpread":0,"dossier":300,"avaliacao":250,"contaMes":5.00,"capMin":20000,"capMax":3000000,"vRef":19.92,"mAno":256,"insV":"Ocidental Vida","insM":"Ageas/Ocidental","contaNota":"Estimativa","minutas":0,"jovemIsenta":true},"ACTVO":{"sCom":0.80,"sSem":1.50,"mCom":3.50,"mSem":4.25,"fCom":4.05,"fSem":5.05,"jsCom":0.68,"jsSem":1.38,"promoPeriodo":24,"promoSpread":0,"dossier":300,"avaliacao":250,"contaMes":0,"capMin":20000,"capMax":3000000,"vRef":19.84,"mAno":256,"insV":"Ocidental Vida","insM":"Ageas/Ocidental","contaNota":"Estimativa","minutas":0,"jovemIsenta":true},"BPI":{"sCom":0.75,"sSem":1.50,"mCom":3.20,"mSem":3.95,"fCom":4.10,"fSem":4.85,"jsCom":0.75,"jsSem":1.50,"promoPeriodo":0,"promoSpread":null,"dossier":290,"avaliacao":230,"contaMes":4.90,"capMin":25000,"capMax":3000000,"vRef":13.12,"mAno":195,"insV":"BPI Vida","insM":"BPI Seguros","contaNota":"Estimativa","minutas":190,"jovemIsenta":true},"MNTPO":{"sCom":0.70,"sSem":2.30,"mCom":3.15,"mSem":4.75,"fCom":3.10,"fSem":5.80,"jsCom":0.58,"jsSem":1.38,"promoPeriodo":0,"promoSpread":null,"dossier":312,"avaliacao":239,"contaMes":3.11,"capMin":10000,"capMax":2000000,"vRef":8.29,"mAno":79,"insV":"Lusitania Vida","insM":"Lusitania","contaNota":"Estimativa","minutas":0,"jovemIsenta":false},"SANTR":{"sCom":0.80,"sSem":1.90,"mCom":3.25,"mSem":4.35,"fCom":4.40,"fSem":4.40,"jsCom":0.80,"jsSem":1.90,"promoPeriodo":36,"promoSpread":0,"dossier":725,"avaliacao":230,"contaMes":2.90,"capMin":30000,"capMax":3000000,"vRef":22.55,"mAno":246,"insV":"Santander Seguros","insM":"Santander Seguros","contaNota":"Estimativa","minutas":0,"jovemIsenta":false},"NB":{"sCom":0.75,"sSem":1.70,"mCom":3.65,"mSem":4.60,"fCom":3.71,"fSem":5.99,"jsCom":0.65,"jsSem":1.60,"promoPeriodo":0,"promoSpread":null,"dossier":333,"avaliacao":322,"contaMes":8.22,"capMin":10000,"capMax":3000000,"vRef":17.55,"mAno":98,"insV":"GamaLife","insM":"Mudum","contaNota":"Estimativa","minutas":0,"jovemIsenta":true},"CGD":{"sCom":0.70,"sSem":2.90,"mCom":3.15,"mSem":5.35,"fCom":4.75,"fSem":6.95,"jsCom":0.65,"jsSem":1.35,"promoPeriodo":24,"promoSpread":null,"dossier":250,"avaliacao":200,"contaMes":6.30,"capMin":5000,"capMax":3000000,"vRef":29.82,"mAno":110,"insV":"Fidelidade","insM":"Fidelidade Casa","contaNota":"Estimativa","minutas":0,"jovemIsenta":true},"UCI":{"sCom":1.43,"sSem":2.30,"mCom":4.09,"mSem":5.09,"fCom":4.09,"fSem":5.09,"jsCom":1.43,"jsSem":2.30,"promoPeriodo":0,"promoSpread":null,"dossier":600,"avaliacao":225,"contaMes":0,"capMin":12500,"capMax":1000000,"vRef":19.00,"mAno":150,"insV":"(est.)","insM":"(est.)","contaNota":"Sem conta obrigatória","minutas":400,"jovemIsenta":false},"BNI":{"sCom":2.00,"sSem":3.10,"mCom":4.45,"mSem":5.55,"fCom":5.30,"fSem":6.20,"jsCom":2.00,"jsSem":3.10,"promoPeriodo":0,"promoSpread":null,"dossier":750,"avaliacao":200,"contaMes":3.00,"capMin":25000,"capMax":1000000,"vRef":19.00,"mAno":150,"insV":"(est.)","insM":"(est.)","contaNota":"Estimativa","minutas":0,"jovemIsenta":false},"BEST":{"sCom":0.90,"sSem":1.90,"mCom":3.65,"mSem":4.60,"fCom":4.41,"fSem":5.99,"jsCom":0.90,"jsSem":1.90,"promoPeriodo":0,"promoSpread":null,"dossier":333,"avaliacao":322,"contaMes":8.84,"capMin":10000,"capMax":1800000,"vRef":17.55,"mAno":123,"insV":"GamaLife","insM":"Mudum","contaNota":"Intermediário NB","minutas":0,"jovemIsenta":false}}`;
+async function callAnthropicAPI(apiKey) {
+  const client = new Anthropic({ apiKey, timeout: ANTHROPIC_TIMEOUT_MS, maxRetries: 1 });
+  const baseParams = {
+    model: ANTHROPIC_MODEL,
+    max_tokens: 16000,
+    thinking: { type: "adaptive" },
+    system: SYSTEM_PROMPT,
+    tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 15 }],
+  };
+  const messages = [{ role: "user", content: USER_PROMPT }];
+
+  let useStructured = true; // fallback sem output_config se a API rejeitar a combinação com web_search
+  let response = null;
+  let turns = 0;
+  while (turns < MAX_PAUSE_TURNS) {
+    try {
+      response = await client.messages.create({
+        ...baseParams,
+        messages,
+        ...(useStructured ? { output_config: { format: { type: "json_schema", schema: SPREADS_SCHEMA } } } : {}),
+      });
+    } catch (err) {
+      if (useStructured && err instanceof Anthropic.BadRequestError) {
+        useStructured = false;
+        continue;
+      }
+      const httpStatus = err instanceof Anthropic.APIConnectionTimeoutError ? 504 : (err?.status || 500);
+      throw Object.assign(new Error(err?.message || "Erro API"), { httpStatus });
+    }
+    turns++;
+    if (response.stop_reason === "pause_turn") {
+      // Loop de tools server-side atingiu o limite de iterações — reenviar para retomar
+      messages.push({ role: "assistant", content: response.content });
+      continue;
+    }
+    break;
+  }
+
+  if (!response || response.stop_reason === "pause_turn") throw new Error("API não terminou após " + MAX_PAUSE_TURNS + " continuações");
+  if (response.stop_reason === "refusal") throw new Error("API recusou o pedido");
+
+  const txt = (response.content || []).filter(b => b.type === "text").map(b => b.text).join("");
+  if (!txt.trim()) throw new Error("Resposta vazia da API (stop_reason: " + response.stop_reason + ")");
+
+  let parsed;
+  try { parsed = JSON.parse(txt); } catch (_) { parsed = parseSpreadsText(txt); }
+  return validateSpreads(parsed);
+}
+
 
 function withMeta(payload, source, fetchedAt) {
   return {
@@ -255,7 +408,7 @@ module.exports = async function handler(req, res) {
   try {
     const [eurResult, spreadsResult] = await Promise.allSettled([
       fetchEuribor(),
-      callAnthropicAPI(apiKey, PROMPT),
+      callAnthropicAPI(apiKey),
     ]);
 
     const eur      = eurResult.status === "fulfilled" ? eurResult.value.eur      : null;
@@ -309,7 +462,11 @@ module.exports = async function handler(req, res) {
       res.setHeader("X-Cache", "STALE");
       return res.status(200).json(withMeta(staleData, "stale-cache", staleFetchedAt));
     }
-    if (err.name === "TimeoutError") return res.status(504).json({ error: "Timeout: API demorou mais de 30s" });
+    if (err.httpStatus === 504 || err.name === "TimeoutError") return res.status(504).json({ error: "Timeout: a chamada à API excedeu o limite" });
     return res.status(500).json({ error: err.message });
   }
 };
+
+// Exposto para testes/admin (não usado pelo router)
+module.exports.validateSpreads = validateSpreads;
+module.exports.SPREADS_SCHEMA  = SPREADS_SCHEMA;
