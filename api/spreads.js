@@ -321,7 +321,12 @@ async function callGemini(ai, codes) {
     config: {
       systemInstruction: SYSTEM_PROMPT,
       tools: [{ urlContext: {} }],
-      maxOutputTokens: 32000,
+      maxOutputTokens: 48000,
+      // gemini-2.5-pro pensa por defeito e o thinking consome o orçamento de
+      // output; sem cap, a resposta pode atingir MAX_TOKENS antes de emitir
+      // qualquer JSON ("Resposta Gemini vazia"). Limitamos o thinking para
+      // deixar a maior parte do orçamento para o texto da resposta.
+      thinkingConfig: { thinkingBudget: 8192 },
     },
   });
 }
@@ -338,7 +343,12 @@ function geminiText(resp) {
   }
   if (!txt || !txt.trim()) {
     const blocked = resp.promptFeedback?.blockReason;
-    throw new Error("Resposta Gemini vazia" + (blocked ? " (bloqueada: " + blocked + ")" : ""));
+    const finish  = resp.candidates?.[0]?.finishReason;
+    const detail  = [
+      blocked ? "bloqueada: " + blocked : "",
+      finish  ? "finishReason: " + finish : "",
+    ].filter(Boolean).join(", ");
+    throw new Error("Resposta Gemini vazia" + (detail ? " (" + detail + ")" : ""));
   }
   return txt;
 }
