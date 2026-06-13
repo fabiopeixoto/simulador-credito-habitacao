@@ -380,7 +380,7 @@ function extractSpreads(message) {
 function buildRequestParams() {
   return {
     model: ANTHROPIC_MODEL,
-    max_tokens: 16000,
+    max_tokens: 32000,
     thinking: { type: "adaptive" },
     output_config: { effort: "medium", format: { type: "json_schema", schema: SPREADS_SCHEMA } },
     system: SYSTEM_PROMPT,
