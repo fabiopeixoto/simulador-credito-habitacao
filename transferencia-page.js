@@ -15,20 +15,10 @@
   var N=window._SIM.N;
   var Sky=window._SIM.Sky;
 
-  function calcP(C,tanA,anos){
-    var r=tanA/100/12,n=anos*12;
-    if(r===0||n===0)return n>0?C/n:0;
-    return C*r*Math.pow(1+r,n)/(Math.pow(1+r,n)-1);
-  }
-
-  var LTV_BRACKETS=window._SIM.LTV_BRACKETS;
+  // calcP e getLTVAddon vêm de js/core/calc.js (fonte única)
+  var calcP=window._SIM.calcP;
+  var getLTVAddon=window._SIM.getLTVAddon;
   var BANK_DOMAINS=window._SIM.BANK_DOMAINS;
-
-  function getLTVAddon(bankCode,ltv){
-    var brackets=LTV_BRACKETS[bankCode]||[];
-    for(var i=0;i<brackets.length;i++){if(ltv<=brackets[i].max)return brackets[i].add;}
-    return 0.15;
-  }
 
   function breakEvenColor(months,remainingMonths){
     if(!isFinite(months)||months>=remainingMonths)return R;
