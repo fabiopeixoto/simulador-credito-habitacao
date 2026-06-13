@@ -141,7 +141,7 @@ function isRateLimited(ip) {
 // ── Anthropic API ─────────────────────────────────────────────────────────
 const BANK_CODES = ["CA", "CTT", "BNKTR", "ABANCA", "BCP", "ACTVO", "BPI", "MNTPO", "SANTR", "NB", "CGD", "UCI", "BNI", "BEST"];
 
-const ANTHROPIC_MODEL      = "claude-opus-4-8";
+const ANTHROPIC_MODEL      = "claude-sonnet-4-6";
 const WEB_FETCH_MAX_USES   = 14; // 1 por banco; o modelo deve chamá-los em paralelo (1 iteração)
 const PAUSE_TURN_MAX_CONT  = 3;  // continuações máximas após pause_turn
 
