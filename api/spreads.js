@@ -144,27 +144,40 @@ function isRateLimited(ip) {
 const BANK_CODES = ["CA", "CTT", "BNKTR", "ABANCA", "BCP", "ACTVO", "BPI", "MNTPO", "SANTR", "NB", "CGD", "UCI", "BNI", "BEST"];
 
 const ANTHROPIC_MODEL      = "claude-opus-4-8";
-const ANTHROPIC_TIMEOUT_MS = 180000; // web search + Opus pode demorar 1–3 min por pedido
-const MAX_PAUSE_TURNS      = 6;      // continuações quando stop_reason === "pause_turn"
+const ANTHROPIC_TIMEOUT_MS = 10 * 60 * 1000; // timeout de ligação inicial (SDK)
+const ANTHROPIC_TOTAL_MS   = 20 * 60 * 1000; // tecto global com AbortController — inclui stream + continuações
+const MAX_PAUSE_TURNS      = 6;              // continuações quando stop_reason === "pause_turn"
+const WEB_SEARCH_MAX_USES  = 8;              // pesquisas por chamada — equilibrio velocidade/cobertura
 
 // JSON schema para structured outputs — garante a forma exacta da resposta.
+// Forma: {bancos:[{codigo,...}]} (array, não mapa por código) — um mapa com 14
+// chaves obrigatórias × 22 campos é rejeitado pela API com "Schema is too
+// complex for compilation" quando combinado com web_search.
 // Nota: structured outputs não suporta minimum/maximum; gamas numéricas em validateSpreads().
 const SPREADS_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: BANK_CODES,
-  properties: Object.fromEntries(BANK_CODES.map(c => [c, { $ref: "#/$defs/bank" }])),
+  required: ["bancos"],
+  properties: {
+    bancos: {
+      type: "array",
+      description: "Exactamente 14 entradas, uma por banco (campo codigo)",
+      items: { $ref: "#/$defs/bank" },
+    },
+  },
   $defs: {
     bank: {
       type: "object",
       additionalProperties: false,
       required: [
+        "codigo",
         "sCom", "sSem", "mCom", "mSem", "fCom", "fSem", "jsCom", "jsSem",
         "promoPeriodo", "promoSpread", "dossier", "avaliacao", "contaMes",
         "capMin", "capMax", "vRef", "mAno", "insV", "insM", "contaNota",
         "minutas", "jovemIsenta",
       ],
       properties: {
+        codigo:       { type: "string", enum: BANK_CODES, description: "Código do banco" },
         sCom:         { type: "number", description: "Spread da taxa variável COM produtos associados, contratual fora do período promocional (pontos percentuais)" },
         sSem:         { type: "number", description: "Spread da taxa variável SEM produtos associados (pontos percentuais); ≥ sCom" },
         mCom:         { type: "number", description: "TAN do período fixo da taxa mista COM produtos (%)" },
@@ -219,7 +232,7 @@ Regras de apuramento:
 - Quando não encontrares um valor concreto, usa uma estimativa razoável com base em bancos comparáveis e escreve "Estimativa" em contaNota (e "(est.)" em insV/insM se a seguradora for desconhecida).
 - Valores monetários em EUR; spreads e TANs em pontos percentuais (ex.: 0.70 = 0,70%).
 
-Responde apenas com o objecto JSON pedido, sem texto adicional.`;
+Responde apenas com o objecto JSON pedido — {"bancos":[...]} com exactamente 14 entradas, cada uma com o campo "codigo" — sem texto adicional.`;
 
 const USER_PROMPT = "Pesquisa e devolve as condições actuais de crédito habitação HPP para os 14 bancos indicados, no formato JSON definido.";
 
@@ -228,6 +241,22 @@ function assertNum(bank, field, v, min, max) {
   if (typeof v !== "number" || !Number.isFinite(v) || v < min || v > max) {
     throw new Error(`Spreads inválidos: ${bank}.${field}=${v} (esperado ${min}–${max})`);
   }
+}
+
+// Converte a forma do schema ({bancos:[{codigo,...}]}) num mapa por código;
+// aceita também o mapa directo (fallback sem structured outputs).
+function toSpreadsMap(parsed) {
+  if (parsed && Array.isArray(parsed.bancos)) {
+    const map = {};
+    for (const entry of parsed.bancos) {
+      if (entry && typeof entry === "object" && typeof entry.codigo === "string") {
+        const { codigo, ...rest } = entry;
+        map[codigo] = rest;
+      }
+    }
+    return map;
+  }
+  return parsed;
 }
 
 function validateSpreads(spreads) {
@@ -266,35 +295,49 @@ function parseSpreadsText(txt) {
 }
 
 async function callAnthropicAPI(apiKey) {
-  const client = new Anthropic({ apiKey, timeout: ANTHROPIC_TIMEOUT_MS, maxRetries: 1 });
+  // maxRetries: o SDK repete 408/409/429/5xx (inclui 529 overloaded) com backoff exponencial
+  const client = new Anthropic({ apiKey, timeout: ANTHROPIC_TIMEOUT_MS, maxRetries: 4 });
   const baseParams = {
     model: ANTHROPIC_MODEL,
     max_tokens: 16000,
     thinking: { type: "adaptive" },
     system: SYSTEM_PROMPT,
-    tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 15 }],
+    tools: [{ type: "web_search_20260209", name: "web_search", max_uses: WEB_SEARCH_MAX_USES }],
   };
   const messages = [{ role: "user", content: USER_PROMPT }];
 
   let useStructured = true; // fallback sem output_config se a API rejeitar a combinação com web_search
   let response = null;
   let turns = 0;
+  const abort = new AbortController();
+  const abortTimer = setTimeout(() => abort.abort(new Error("timeout global " + ANTHROPIC_TOTAL_MS / 60000 + " min")), ANTHROPIC_TOTAL_MS);
+  const t0 = Date.now();
+  try {
   while (turns < MAX_PAUSE_TURNS) {
+    if (abort.signal.aborted) throw abort.signal.reason || new Error("timeout global");
     try {
-      response = await client.messages.create({
+      // Streaming evita timeouts de inactividade em pedidos longos; finalMessage() devolve a resposta completa.
+      // O AbortController garante o corte mesmo durante o stream (sem ele .finalMessage() pode correr para sempre).
+      response = await client.messages.stream({
         ...baseParams,
         messages,
         ...(useStructured ? { output_config: { format: { type: "json_schema", schema: SPREADS_SCHEMA } } } : {}),
-      });
+      }, { signal: abort.signal }).finalMessage();
     } catch (err) {
       if (useStructured && err instanceof Anthropic.BadRequestError) {
+        console.error("spreads.js: pedido com structured outputs rejeitado (" + String(err?.message || "").slice(0, 200) + ") — a repetir sem output_config");
         useStructured = false;
         continue;
       }
+      if (err?.name === "AbortError" || abort.signal.aborted) throw new Error("timeout global " + ANTHROPIC_TOTAL_MS / 60000 + " min");
       const httpStatus = err instanceof Anthropic.APIConnectionTimeoutError ? 504 : (err?.status || 500);
       throw Object.assign(new Error(err?.message || "Erro API"), { httpStatus });
     }
     turns++;
+    console.log("spreads.js: iteração " + turns + " stop_reason=" + response.stop_reason
+      + " elapsed=" + Math.round((Date.now() - t0) / 1000) + "s"
+      + " out_tokens=" + (response.usage?.output_tokens ?? "?")
+      + (useStructured ? "" : " (sem structured outputs)"));
     if (response.stop_reason === "pause_turn") {
       // Loop de tools server-side atingiu o limite de iterações — reenviar para retomar
       messages.push({ role: "assistant", content: response.content });
@@ -302,18 +345,105 @@ async function callAnthropicAPI(apiKey) {
     }
     break;
   }
+  } finally {
+    clearTimeout(abortTimer);
+  }
 
   if (!response || response.stop_reason === "pause_turn") throw new Error("API não terminou após " + MAX_PAUSE_TURNS + " continuações");
   if (response.stop_reason === "refusal") throw new Error("API recusou o pedido");
 
-  const txt = (response.content || []).filter(b => b.type === "text").map(b => b.text).join("");
-  if (!txt.trim()) throw new Error("Resposta vazia da API (stop_reason: " + response.stop_reason + ")");
+  const textBlocks = (response.content || []).filter(b => b.type === "text").map(b => b.text);
+  if (!textBlocks.join("").trim()) throw new Error("Resposta vazia da API (stop_reason: " + response.stop_reason + ")");
 
+  // Com web search há blocos de texto intermédios (narração entre pesquisas);
+  // o JSON final (constrangido pelo schema) é o ÚLTIMO bloco de texto.
   let parsed;
-  try { parsed = JSON.parse(txt); } catch (_) { parsed = parseSpreadsText(txt); }
-  return validateSpreads(parsed);
+  try { parsed = JSON.parse(textBlocks[textBlocks.length - 1]); }
+  catch (_) { parsed = parseSpreadsText(textBlocks.join("\n")); }
+  parsed = toSpreadsMap(parsed);
+
+  try {
+    return validateSpreads(parsed);
+  } catch (err) {
+    console.error("spreads.js: validação falhou — chaves=[" + Object.keys(parsed || {}).join(",") + "]"
+      + " CA=" + JSON.stringify(parsed?.CA ?? null).slice(0, 300));
+    throw err;
+  }
 }
 
+
+// ── Refresh em background ─────────────────────────────────────────────────
+// O pedido HTTP não fica aberto durante a chamada à Anthropic (1–3 min com
+// web search) — proxies à frente do Node cortam pedidos longos e devolvem
+// páginas HTML de erro. O POST dispara o refresh e responde já; o estado
+// consulta-se via GET /api/spreads.
+const REFRESH = { running: false, startedAt: 0, finishedAt: 0, error: null };
+
+function refreshStatus() {
+  return {
+    running:    REFRESH.running,
+    startedAt:  REFRESH.startedAt  ? new Date(REFRESH.startedAt).toISOString()  : null,
+    finishedAt: REFRESH.finishedAt ? new Date(REFRESH.finishedAt).toISOString() : null,
+    error:      REFRESH.error,
+    updatedAt:  MEM.fetchedAt ? new Date(MEM.fetchedAt).toISOString() : null,
+  };
+}
+
+function startRefresh(apiKey, kvSlot, today) {
+  if (REFRESH.running) return false;
+  REFRESH.running    = true;
+  REFRESH.startedAt  = Date.now();
+  REFRESH.finishedAt = 0;
+  REFRESH.error      = null;
+
+  (async () => {
+    const [eurResult, spreadsResult] = await Promise.allSettled([
+      fetchEuribor(),
+      callAnthropicAPI(apiKey),
+    ]);
+
+    const eur      = eurResult.status === "fulfilled" ? eurResult.value.eur      : null;
+    const eurLabel = eurResult.status === "fulfilled" ? eurResult.value.eurLabel : "";
+
+    // Persistir Euribor em banks.sqlite para ser servido via GET /api/banks
+    if (eur && getBanksModule() && getBanksModule().setEuribor) {
+      try { getBanksModule().setEuribor(eur, eurLabel); } catch (e) { console.error("spreads.js: setEuribor failed:", e.message); }
+    }
+
+    if (spreadsResult.status === "rejected") {
+      REFRESH.error = spreadsResult.reason?.message || "Erro API";
+      console.error("spreads.js: refresh falhou:", REFRESH.error);
+      return;
+    }
+
+    const freshData = { spreads: spreadsResult.value, eur, eurLabel };
+    const fetchedAt = Date.now();
+
+    // Actualizar L1 (in-memory)
+    MEM.data       = freshData;
+    MEM.fetchedAt  = fetchedAt;
+    MEM.dayKey     = today;
+    MEM.callsToday = kvSlot !== null ? Number(kvSlot) : MEM.callsToday + 1;
+
+    // Opcional: persistir na SQLite do simulador (desactivado por defeito — evita sobrescrever dados auditados)
+    if (PERSIST_ANTHROPIC_SPREADS_TO_SQLITE && getBanksModule() && getBanksModule().bulkInsertSpreads && spreadsResult.value) {
+      try { getBanksModule().bulkInsertSpreads(spreadsResult.value, "anthropic"); } catch (e) { console.error("spreads.js: bulkInsertSpreads failed:", e.message); }
+    }
+
+    // Actualizar L2 (KV) — fire-and-forget
+    kvSet(KV_CACHE_KEY, { data: freshData, fetchedAt }, KV_CACHE_TTL).catch(() => {});
+    // kvIncr já foi chamado atomicamente antes de startRefresh (se KV disponível); só repetir em fallback
+    if (kvSlot === null) kvIncr(KV_CALLS_PFX + today, KV_CALLS_TTL).catch(() => {});
+  })().catch((err) => {
+    REFRESH.error = err?.message || String(err);
+    console.error("spreads.js: refresh falhou:", REFRESH.error);
+  }).finally(() => {
+    REFRESH.running    = false;
+    REFRESH.finishedAt = Date.now();
+  });
+
+  return true;
+}
 
 function withMeta(payload, source, fetchedAt) {
   return {
@@ -327,6 +457,8 @@ function withMeta(payload, source, fetchedAt) {
 }
 
 module.exports = async function handler(req, res) {
+  // GET — estado do refresh em background (para polling do admin)
+  if (req.method === "GET") return res.status(200).json(refreshStatus());
   if (req.method !== "POST") return res.status(405).json({ error: "Método não suportado" });
 
   // Admin override — bypassa rate limits e cache (token válido = acesso irrestrito)
@@ -404,69 +536,21 @@ module.exports = async function handler(req, res) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(503).json({ error: "ANTHROPIC_API_KEY não configurada" });
 
-  // ── 4. Chamar APIs (Anthropic + BCE)
-  try {
-    const [eurResult, spreadsResult] = await Promise.allSettled([
-      fetchEuribor(),
-      callAnthropicAPI(apiKey),
-    ]);
+  // ── 4. Disparar refresh em background (Anthropic + BCE) e responder de imediato
+  const started = startRefresh(apiKey, kvSlot, today);
+  // Já havia um refresh em curso — devolver o slot reservado em ── 3
+  if (!started && kvSlot !== null) kvDecr(KV_CALLS_PFX + today).catch(() => {});
 
-    const eur      = eurResult.status === "fulfilled" ? eurResult.value.eur      : null;
-    const eurLabel = eurResult.status === "fulfilled" ? eurResult.value.eurLabel : "";
-
-    // Persistir Euribor em banks.sqlite para ser servido via GET /api/banks
-    if (eur && getBanksModule() && getBanksModule().setEuribor) {
-      try { getBanksModule().setEuribor(eur, eurLabel); } catch (e) { console.error("spreads.js: setEuribor failed:", e.message); }
-    }
-
-    const staleData = kvCached?.data || MEM.data || null;
-    const staleFetchedAt = kvCached?.fetchedAt || MEM.fetchedAt || 0;
-
-    if (spreadsResult.status === "rejected") {
-      if (staleData) {
-        res.setHeader("X-Cache", "STALE");
-        return res.status(200).json(withMeta(eur ? { ...staleData, eur, eurLabel } : staleData, "stale-cache", staleFetchedAt));
-      }
-      const err = spreadsResult.reason;
-      return res.status(err.httpStatus || 500).json({ error: err.message });
-    }
-
-    const freshData  = { spreads: spreadsResult.value, eur, eurLabel };
-    const fetchedAt  = Date.now();
-
-    // Actualizar L1 (in-memory)
-    MEM.data       = freshData;
-    MEM.fetchedAt  = fetchedAt;
-    MEM.dayKey     = today;
-    MEM.callsToday = kvSlot !== null ? Number(kvSlot) : MEM.callsToday + 1;
-
-    // Opcional: persistir na SQLite do simulador (desactivado por defeito — evita sobrescrever dados auditados)
-    if (PERSIST_ANTHROPIC_SPREADS_TO_SQLITE && getBanksModule() && getBanksModule().bulkInsertSpreads && spreadsResult.value) {
-      try { getBanksModule().bulkInsertSpreads(spreadsResult.value, "anthropic"); } catch (e) { console.error("spreads.js: bulkInsertSpreads failed:", e.message); }
-    }
-
-    // Actualizar L2 (KV) — fire-and-forget, não bloqueia a resposta
-    kvSet(KV_CACHE_KEY, { data: freshData, fetchedAt }, KV_CACHE_TTL).catch(() => {});
-    // kvIncr já foi chamado atomicamente em ── 3 (se KV disponível); só repetir em fallback
-    if (kvSlot === null) kvIncr(KV_CALLS_PFX + today, KV_CALLS_TTL).catch(() => {});
-
-    res.setHeader("X-Cache",           "MISS");
-    res.setHeader("X-Calls-Today",     MEM.callsToday + "/" + MAX_CALLS_PER_DAY);
-    res.setHeader("X-Data-Updated-At", new Date(fetchedAt).toISOString());
-    return res.status(200).json(withMeta(freshData, "fresh", fetchedAt));
-
-  } catch (err) {
-    const staleData      = kvCached?.data || MEM.data || null;
-    const staleFetchedAt = kvCached?.fetchedAt || MEM.fetchedAt || 0;
-    if (staleData) {
-      res.setHeader("X-Cache", "STALE");
-      return res.status(200).json(withMeta(staleData, "stale-cache", staleFetchedAt));
-    }
-    if (err.httpStatus === 504 || err.name === "TimeoutError") return res.status(504).json({ error: "Timeout: a chamada à API excedeu o limite" });
-    return res.status(500).json({ error: err.message });
+  const staleData      = kvCached?.data || MEM.data || null;
+  const staleFetchedAt = kvCached?.fetchedAt || MEM.fetchedAt || 0;
+  if (staleData) {
+    res.setHeader("X-Cache", "REFRESHING");
+    return res.status(200).json(withMeta(staleData, "stale-cache", staleFetchedAt));
   }
+  return res.status(202).json({ status: "refreshing", ...refreshStatus() });
 };
 
 // Exposto para testes/admin (não usado pelo router)
 module.exports.validateSpreads = validateSpreads;
+module.exports.toSpreadsMap    = toSpreadsMap;
 module.exports.SPREADS_SCHEMA  = SPREADS_SCHEMA;
