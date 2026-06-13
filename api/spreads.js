@@ -144,9 +144,10 @@ function isRateLimited(ip) {
 const BANK_CODES = ["CA", "CTT", "BNKTR", "ABANCA", "BCP", "ACTVO", "BPI", "MNTPO", "SANTR", "NB", "CGD", "UCI", "BNI", "BEST"];
 
 const ANTHROPIC_MODEL      = "claude-opus-4-8";
-const ANTHROPIC_TIMEOUT_MS = 10 * 60 * 1000; // por pedido — Opus + web search demora vários minutos
-const ANTHROPIC_TOTAL_MS   = 15 * 60 * 1000; // tecto global incluindo continuações pause_turn
+const ANTHROPIC_TIMEOUT_MS = 10 * 60 * 1000; // timeout de ligação inicial (SDK)
+const ANTHROPIC_TOTAL_MS   = 20 * 60 * 1000; // tecto global com AbortController — inclui stream + continuações
 const MAX_PAUSE_TURNS      = 6;              // continuações quando stop_reason === "pause_turn"
+const WEB_SEARCH_MAX_USES  = 8;              // pesquisas por chamada — equilibrio velocidade/cobertura
 
 // JSON schema para structured outputs — garante a forma exacta da resposta.
 // Forma: {bancos:[{codigo,...}]} (array, não mapa por código) — um mapa com 14
@@ -298,37 +299,43 @@ async function callAnthropicAPI(apiKey) {
   const client = new Anthropic({ apiKey, timeout: ANTHROPIC_TIMEOUT_MS, maxRetries: 4 });
   const baseParams = {
     model: ANTHROPIC_MODEL,
-    max_tokens: 32000, // o thinking adaptativo conta para o limite — dar folga
+    max_tokens: 16000,
     thinking: { type: "adaptive" },
     system: SYSTEM_PROMPT,
-    tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 15 }],
+    tools: [{ type: "web_search_20260209", name: "web_search", max_uses: WEB_SEARCH_MAX_USES }],
   };
   const messages = [{ role: "user", content: USER_PROMPT }];
 
   let useStructured = true; // fallback sem output_config se a API rejeitar a combinação com web_search
   let response = null;
   let turns = 0;
+  const abort = new AbortController();
+  const abortTimer = setTimeout(() => abort.abort(new Error("timeout global " + ANTHROPIC_TOTAL_MS / 60000 + " min")), ANTHROPIC_TOTAL_MS);
   const t0 = Date.now();
+  try {
   while (turns < MAX_PAUSE_TURNS) {
-    if (Date.now() - t0 > ANTHROPIC_TOTAL_MS) throw new Error("API excedeu o tempo total de " + ANTHROPIC_TOTAL_MS / 60000 + " min");
+    if (abort.signal.aborted) throw abort.signal.reason || new Error("timeout global");
     try {
-      // Streaming evita timeouts de inactividade em pedidos longos; finalMessage() devolve a resposta completa
+      // Streaming evita timeouts de inactividade em pedidos longos; finalMessage() devolve a resposta completa.
+      // O AbortController garante o corte mesmo durante o stream (sem ele .finalMessage() pode correr para sempre).
       response = await client.messages.stream({
         ...baseParams,
         messages,
         ...(useStructured ? { output_config: { format: { type: "json_schema", schema: SPREADS_SCHEMA } } } : {}),
-      }).finalMessage();
+      }, { signal: abort.signal }).finalMessage();
     } catch (err) {
       if (useStructured && err instanceof Anthropic.BadRequestError) {
         console.error("spreads.js: pedido com structured outputs rejeitado (" + String(err?.message || "").slice(0, 200) + ") — a repetir sem output_config");
         useStructured = false;
         continue;
       }
+      if (err?.name === "AbortError" || abort.signal.aborted) throw new Error("timeout global " + ANTHROPIC_TOTAL_MS / 60000 + " min");
       const httpStatus = err instanceof Anthropic.APIConnectionTimeoutError ? 504 : (err?.status || 500);
       throw Object.assign(new Error(err?.message || "Erro API"), { httpStatus });
     }
     turns++;
     console.log("spreads.js: iteração " + turns + " stop_reason=" + response.stop_reason
+      + " elapsed=" + Math.round((Date.now() - t0) / 1000) + "s"
       + " out_tokens=" + (response.usage?.output_tokens ?? "?")
       + (useStructured ? "" : " (sem structured outputs)"));
     if (response.stop_reason === "pause_turn") {
@@ -337,6 +344,9 @@ async function callAnthropicAPI(apiKey) {
       continue;
     }
     break;
+  }
+  } finally {
+    clearTimeout(abortTimer);
   }
 
   if (!response || response.stop_reason === "pause_turn") throw new Error("API não terminou após " + MAX_PAUSE_TURNS + " continuações");
