@@ -281,9 +281,10 @@ function toSpreadsMap(parsed) {
   if (parsed && Array.isArray(parsed.bancos)) {
     const map = {};
     for (const entry of parsed.bancos) {
-      if (entry && typeof entry === "object" && typeof entry.codigo === "string") {
+      if (entry && typeof entry === "object" && entry.codigo != null) {
         const { codigo, ...rest } = entry;
-        map[codigo] = rest;
+        // Normalizar o código (o modelo pode devolver "ca"/" CA ") para casar com BANK_CODES.
+        map[String(codigo).trim().toUpperCase()] = rest;
       }
     }
     return map;
@@ -319,27 +320,56 @@ function validateSpreads(spreads) {
 }
 
 function parseSpreadsText(txt) {
-  // Fallback de parsing quando a resposta não é JSON puro (sem structured outputs)
+  // Fallback de parsing quando a resposta não é JSON puro (sem structured outputs).
   const clean = txt.replace(/```(?:json)?/g, "").trim();
-  const m = clean.match(/\{[\s\S]*\}/);
-  if (!m) throw new Error("Formato inválido: " + txt.slice(0, 60));
-  try { return JSON.parse(m[0]); } catch (_) { throw new Error("JSON inválido: " + m[0].slice(0, 80)); }
+  // Preferir o objecto que contém "bancos" (resposta do schema); senão, o 1.º objecto.
+  const idx = clean.indexOf('"bancos"');
+  const start = idx >= 0 ? clean.lastIndexOf("{", idx) : clean.indexOf("{");
+  if (start < 0) throw new Error("Formato inválido: " + txt.slice(0, 60));
+  const end = clean.lastIndexOf("}");
+  if (end <= start) throw new Error("Formato inválido: " + txt.slice(0, 60));
+  const slice = clean.slice(start, end + 1);
+  try { return JSON.parse(slice); } catch (_) { throw new Error("JSON inválido: " + slice.slice(0, 80)); }
+}
+
+// Devolve um candidato a mapa de spreads se contiver pelo menos um dos códigos.
+function asSpreadsMap(parsed) {
+  const map = toSpreadsMap(parsed);
+  if (map && typeof map === "object" && BANK_CODES.some(code => map[code])) return map;
+  return null;
 }
 
 // Extrai e valida os spreads a partir da mensagem devolvida pelo batch.
+// Com web_fetch/web_search há blocos de texto intermédios (narração entre tools);
+// o JSON do schema é normalmente o ÚLTIMO bloco, mas pode haver texto a seguir —
+// por isso varre-se do último para o primeiro até encontrar um objecto válido.
 function extractSpreads(message) {
   if (!message) throw new Error("Batch sem mensagem");
   if (message.stop_reason === "pause_turn") throw new Error("modelo pausou (pause_turn) — re-tenta a actualização");
   if (message.stop_reason === "refusal") throw new Error("API recusou o pedido");
-  const textBlocks = (message.content || []).filter(b => b.type === "text").map(b => b.text);
-  if (!textBlocks.join("").trim()) throw new Error("Resposta vazia (stop_reason: " + message.stop_reason + ")");
-  // Com web_fetch/web_search há blocos de texto intermédios; o JSON final
-  // (constrangido pelo schema) é o ÚLTIMO bloco de texto.
-  let parsed;
-  try { parsed = JSON.parse(textBlocks[textBlocks.length - 1]); }
-  catch (_) { parsed = parseSpreadsText(textBlocks.join("\n")); }
-  parsed = toSpreadsMap(parsed);
-  return validateSpreads(parsed);
+  const textBlocks = (message.content || []).filter(b => b.type === "text").map(b => b.text).filter(t => t && t.trim());
+  if (!textBlocks.length) throw new Error("Resposta vazia (stop_reason: " + message.stop_reason + ")");
+
+  let parsed = null;
+  for (let i = textBlocks.length - 1; i >= 0 && !parsed; i--) {
+    const raw = textBlocks[i].replace(/```(?:json)?/g, "").trim();
+    for (const fn of [() => JSON.parse(raw), () => parseSpreadsText(textBlocks[i])]) {
+      try { const m = asSpreadsMap(fn()); if (m) { parsed = m; break; } } catch (_) {}
+    }
+  }
+  // Último recurso: juntar todos os blocos e procurar o objecto "bancos".
+  if (!parsed) { try { parsed = asSpreadsMap(parseSpreadsText(textBlocks.join("\n"))); } catch (_) {} }
+
+  if (!parsed) {
+    const preview = textBlocks[textBlocks.length - 1].slice(0, 200);
+    throw new Error("Não encontrei o JSON dos bancos na resposta. Início do último bloco: " + preview);
+  }
+  try {
+    return validateSpreads(parsed);
+  } catch (err) {
+    console.error("spreads.js: validação falhou — chaves=[" + Object.keys(parsed).join(",") + "]");
+    throw err;
+  }
 }
 
 // Parâmetros do pedido Messages, submetidos como uma entrada do batch.
@@ -635,3 +665,4 @@ module.exports.toSpreadsMap    = toSpreadsMap;
 module.exports.SPREADS_SCHEMA  = SPREADS_SCHEMA;
 module.exports.buildRequestParams = buildRequestParams;
 module.exports.BANK_SOURCES     = BANK_SOURCES;
+module.exports.extractSpreads   = extractSpreads;
