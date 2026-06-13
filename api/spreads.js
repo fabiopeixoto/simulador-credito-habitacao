@@ -270,7 +270,7 @@ async function callAnthropicAPI(apiKey) {
   const client = new Anthropic({ apiKey, timeout: ANTHROPIC_TIMEOUT_MS, maxRetries: 1 });
   const baseParams = {
     model: ANTHROPIC_MODEL,
-    max_tokens: 16000,
+    max_tokens: 32000, // o thinking adaptativo conta para o limite — dar folga
     thinking: { type: "adaptive" },
     system: SYSTEM_PROMPT,
     tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 15 }],
@@ -292,6 +292,7 @@ async function callAnthropicAPI(apiKey) {
       }).finalMessage();
     } catch (err) {
       if (useStructured && err instanceof Anthropic.BadRequestError) {
+        console.error("spreads.js: pedido com structured outputs rejeitado (" + String(err?.message || "").slice(0, 200) + ") — a repetir sem output_config");
         useStructured = false;
         continue;
       }
@@ -299,6 +300,9 @@ async function callAnthropicAPI(apiKey) {
       throw Object.assign(new Error(err?.message || "Erro API"), { httpStatus });
     }
     turns++;
+    console.log("spreads.js: iteração " + turns + " stop_reason=" + response.stop_reason
+      + " out_tokens=" + (response.usage?.output_tokens ?? "?")
+      + (useStructured ? "" : " (sem structured outputs)"));
     if (response.stop_reason === "pause_turn") {
       // Loop de tools server-side atingiu o limite de iterações — reenviar para retomar
       messages.push({ role: "assistant", content: response.content });
@@ -310,12 +314,22 @@ async function callAnthropicAPI(apiKey) {
   if (!response || response.stop_reason === "pause_turn") throw new Error("API não terminou após " + MAX_PAUSE_TURNS + " continuações");
   if (response.stop_reason === "refusal") throw new Error("API recusou o pedido");
 
-  const txt = (response.content || []).filter(b => b.type === "text").map(b => b.text).join("");
-  if (!txt.trim()) throw new Error("Resposta vazia da API (stop_reason: " + response.stop_reason + ")");
+  const textBlocks = (response.content || []).filter(b => b.type === "text").map(b => b.text);
+  if (!textBlocks.join("").trim()) throw new Error("Resposta vazia da API (stop_reason: " + response.stop_reason + ")");
 
+  // Com web search há blocos de texto intermédios (narração entre pesquisas);
+  // o JSON final (constrangido pelo schema) é o ÚLTIMO bloco de texto.
   let parsed;
-  try { parsed = JSON.parse(txt); } catch (_) { parsed = parseSpreadsText(txt); }
-  return validateSpreads(parsed);
+  try { parsed = JSON.parse(textBlocks[textBlocks.length - 1]); }
+  catch (_) { parsed = parseSpreadsText(textBlocks.join("\n")); }
+
+  try {
+    return validateSpreads(parsed);
+  } catch (err) {
+    console.error("spreads.js: validação falhou — chaves=[" + Object.keys(parsed || {}).join(",") + "]"
+      + " CA=" + JSON.stringify(parsed?.CA ?? null).slice(0, 300));
+    throw err;
+  }
 }
 
 
