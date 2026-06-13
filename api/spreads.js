@@ -144,8 +144,8 @@ function isRateLimited(ip) {
 const BANK_CODES = ["CA", "CTT", "BNKTR", "ABANCA", "BCP", "ACTVO", "BPI", "MNTPO", "SANTR", "NB", "CGD", "UCI", "BNI", "BEST"];
 
 const ANTHROPIC_MODEL     = "claude-sonnet-4-6"; // extracção, não raciocínio profundo — Sonnet chega e é mais barato/rápido
-const WEB_FETCH_MAX_USES  = 28;                  // ≥1 fetch por preçário (≈25 URLs) + folga
-const WEB_SEARCH_MAX_USES = 6;                   // fallback para bancos sem URL (BEST) ou URLs em 404
+const WEB_FETCH_MAX_USES  = 14;                  // 1 fetch por banco (chamados em paralelo = ~1 iteração); evita pause_turn no batch
+const WEB_SEARCH_MAX_USES = 3;                   // fallback para bancos sem URL (BEST) ou URLs em 404
 const BATCH_KV_KEY        = "spreads:batch:v1";  // estado do batch em curso (persiste a reinícios do contentor)
 const BATCH_KV_TTL        = 26 * 60 * 60;        // 26 h (batches expiram do lado da Anthropic em 29 dias)
 
@@ -156,20 +156,23 @@ const SPREADS_AUTO_APPLY = process.env.SPREADS_AUTO_APPLY === "1";
 // Preçários oficiais por banco (espelho de reference/precarios-pdf/sources.json).
 // O modelo usa web_fetch directo nestes URLs (rápido, fiável, determinístico) e
 // só recorre a web_search quando um banco não tem URL (BEST) ou o URL devolve 404.
+// Um único URL por banco (folheto de taxas de juro §18.1).
+// Comissões (dossier, avaliação, etc.) são estimadas a partir do mesmo folheto ou de
+// bancos comparáveis — evitando um 2.º fetch por banco e reduzindo iterações do batch.
 const BANK_SOURCES = {
-  CA:     ["https://www.creditoagricola.pt/-/media/files/precario/documents-site/taxas-de-juro-_aviso-8-2009-do-bdp/pre-ft-202605.pdf", "https://www.creditoagricola.pt/-/media/files/precario/documents-site/comissoes-e-despesas-_aviso-8-2009-do-bdp/pre-fc-20260501.pdf"],
+  CA:     ["https://www.creditoagricola.pt/-/media/files/precario/documents-site/taxas-de-juro-_aviso-8-2009-do-bdp/pre-ft-202605.pdf"],
   CTT:    ["https://www.bancoctt.pt/application/themes/pdfs/precario.pdf?language_id=1555597541833"],
   BNKTR:  ["https://clientebancario.bportugal.pt/sites/default/files/precario/0269_/0269_PRE_20221231000630.pdf"],
-  ABANCA: ["https://www.abanca.pt/files/documents/folheto-taxa-juro-precario-e3020223.pdf", "https://www.abanca.pt/files/documents/precario-folheto-comissoes-f942c04e.pdf"],
+  ABANCA: ["https://www.abanca.pt/files/documents/folheto-taxa-juro-precario-e3020223.pdf"],
   BCP:    ["https://ind.millenniumbcp.pt/pt/Articles/Documents/precario/SECCAO_18.pdf"],
   ACTVO:  ["https://ind.millenniumbcp.pt/pt/Articles/Documents/precario/SECCAO_18.pdf"],
-  BPI:    ["https://www.bancobpi.pt/contentservice/getContent?documentName=PR_WCS01_UCM01004994", "https://www.bancobpi.pt/contentservice/getContent?documentName=PR_WCS01_UCM01004993"],
-  MNTPO:  ["https://www.bancomontepio.pt/content/dam/montepio/pdf/geral/precario/folheto-taxas-juro/folheto-taxas-juro.pdf", "https://www.bancomontepio.pt/content/dam/montepio/pdf/geral/precario/folheto-comissoes-despesas/folheto-comissoes-despesas.pdf"],
-  SANTR:  ["https://www.santander.pt/pdfs/particulares/credito-habitacao/CH_Informacao_Pre-Contratual_Geral.pdf", "https://www.santander.pt/pdfs/precario-banco/folheto-taxas-juro/outros-clientes/20-operacoes-credito/20_precariofolhetotaxasjuro_oc_opscredito.pdf"],
-  NB:     ["https://www.novobanco.pt/content/dam/novobancopublicsites/docs/pdfs/precario/particulares/PRE-FT.pdf.coredownload.inline.pdf", "https://www.novobanco.pt/content/dam/novobancopublicsites/docs/pdfs/precario/particulares/PRE-FC.pdf.coredownload.inline.pdf"],
-  CGD:    ["https://www.cgd.pt/Precario/Documents/18.pdf", "https://www.cgd.pt/Precario/Documents/10.pdf"],
-  UCI:    ["https://uci.pt/-/media/Files/Portugal/precario/PRE-FT-202605.pdf", "https://uci.pt/-/media/Files/Portugal/precario/PRE-FC-20260301.pdf"],
-  BNI:    ["https://bnieuropa.pt/wp-content/themes/responsive/pdf/precario/taxas-juro-particulares-credito-habitacao-e-contratos-conexos.pdf", "https://bnieuropa.pt/wp-content/themes/responsive/pdf/precario/particulares-credito-habitacao-e-contratos-conexos.pdf"],
+  BPI:    ["https://www.bancobpi.pt/contentservice/getContent?documentName=PR_WCS01_UCM01004994"],
+  MNTPO:  ["https://www.bancomontepio.pt/content/dam/montepio/pdf/geral/precario/folheto-taxas-juro/folheto-taxas-juro.pdf"],
+  SANTR:  ["https://www.santander.pt/pdfs/particulares/credito-habitacao/CH_Informacao_Pre-Contratual_Geral.pdf"],
+  NB:     ["https://www.novobanco.pt/content/dam/novobancopublicsites/docs/pdfs/precario/particulares/PRE-FT.pdf.coredownload.inline.pdf"],
+  CGD:    ["https://www.cgd.pt/Precario/Documents/18.pdf"],
+  UCI:    ["https://uci.pt/-/media/Files/Portugal/precario/PRE-FT-202605.pdf"],
+  BNI:    ["https://bnieuropa.pt/wp-content/themes/responsive/pdf/precario/taxas-juro-particulares-credito-habitacao-e-contratos-conexos.pdf"],
   BEST:   [], // sem preçário directo no índice — usar web_search
 };
 
@@ -252,10 +255,11 @@ Regras de apuramento:
 - Os valores "sem produtos" (sSem, mSem, fSem, jsSem) são as condições sem vendas associadas facultativas, por isso ≥ aos valores "com produtos".
 - Quando não há campanha promocional: promoPeriodo = 0 e promoSpread = null.
 - "Com produtos" assume o pacote típico exigido (domiciliação de ordenado, seguros no banco, cartões).
-- Para cada banco, usa PRIMEIRO a tool web_fetch nos URLs oficiais indicados na mensagem (são os folhetos de preçário do Banco de Portugal — taxas §18.1 e comissões). Lê o PDF e extrai os valores.
-- Se um URL devolver 404, HTML/JS em vez do PDF, ou não cobrir o campo, usa web_search para a página de crédito habitação ou FINE do banco. Para o BEST (sem URL indicado) usa sempre web_search.
+- IMPORTANTE: chama TODOS os web_fetch numa única resposta (em paralelo), um por banco. Não faças web_fetch sequencialmente banco a banco — isso esgota o número de iterações permitido e causa timeout.
+- Para cada banco, usa a tool web_fetch no URL oficial indicado na mensagem (folheto de preçário §18.1 — taxas de juro). Extrai spreads variáveis, TAN mista, TAN fixa, crédito jovem e comissões presentes no mesmo documento.
+- Se um URL devolver 404 ou HTML em vez do PDF, usa web_search para a página de crédito habitação do banco. Para o BEST (sem URL indicado) usa sempre web_search. Usa no máximo 3 pesquisas no total.
 - Indica o mês/ano da fonte em contaNota quando confirmares o valor (ex.: "Preçário mai.2026").
-- Quando não encontrares um valor concreto, usa uma estimativa razoável com base em bancos comparáveis e escreve "Estimativa" em contaNota (e "(est.)" em insV/insM se a seguradora for desconhecida).
+- Quando não encontrares um valor concreto (ex.: comissão exacta de dossier), usa uma estimativa razoável com base em bancos comparáveis e escreve "Estimativa" em contaNota (e "(est.)" em insV/insM se a seguradora for desconhecida).
 - Valores monetários em EUR; spreads e TANs em pontos percentuais (ex.: 0.70 = 0,70%).
 
 Responde apenas com o objecto JSON pedido — {"bancos":[...]} com exactamente 14 entradas, cada uma com o campo "codigo" — sem texto adicional.`;
@@ -265,7 +269,7 @@ function buildUserPrompt() {
     const urls = BANK_SOURCES[code] || [];
     return `- ${code}: ${urls.length ? urls.join(" | ") : "(sem URL — usa web_search)"}`;
   }).join("\n");
-  return `Apura as condições actuais de crédito habitação HPP para os 14 bancos, no formato JSON definido.\n\nPreçários oficiais a consultar com web_fetch (taxas §18.1 + comissões):\n${linhas}`;
+  return `Apura as condições actuais de crédito habitação HPP para os 14 bancos, no formato JSON definido.\n\nChama TODOS os web_fetch em paralelo (uma única resposta) — não sequencialmente.\n\nPreçários oficiais a consultar (folheto §18.1 taxas de juro):\n${linhas}`;
 }
 
 // ── Validação da resposta antes de cachear/servir
