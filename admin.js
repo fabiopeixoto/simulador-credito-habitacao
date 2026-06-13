@@ -266,7 +266,7 @@ async function refreshSpreadsAI() {
   const aiEl = document.getElementById('aiStatus');
   btn.disabled = true;
   btn.textContent = '⏳ A actualizar...';
-  aiEl.textContent = 'A submeter pedido à Anthropic (Batch API)...';
+  aiEl.textContent = 'A buscar preçários e a chamar Anthropic AI...';
   aiEl.className = '';
   document.getElementById('aiPending').innerHTML = '';
   try {
@@ -277,12 +277,9 @@ async function refreshSpreadsAI() {
     const data = await r.json().catch(() => ({}));
     if (!r.ok && r.status !== 202) throw new Error(data.error || 'HTTP ' + r.status);
 
-    // O modelo corre como job assíncrono (Batch API): tipicamente alguns minutos.
-    // O id do batch persiste no servidor — fazer polling do estado via GET /api/spreads.
-    aiEl.textContent = '⏳ Pesquisa em curso (Batch API — normalmente alguns minutos)...';
-    // Margem acima do tecto do servidor (ANTHROPIC_TOTAL_MS = 20 min) — caso
-    // contrário o admin desiste enquanto o refresh ainda corre e termina com sucesso.
-    const deadline = Date.now() + 22 * 60 * 1000;
+    // O refresh corre em background no servidor (~60-120 s) — polling via GET /api/spreads.
+    aiEl.textContent = '⏳ Actualização em curso (PDFs + Anthropic AI — ~1-2 min)...';
+    const deadline = Date.now() + 5 * 60 * 1000; // 5 min é mais do que suficiente
     let st = null;
     while (Date.now() < deadline) {
       await new Promise(s => setTimeout(s, 5000));

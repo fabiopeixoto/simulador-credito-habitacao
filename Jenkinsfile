@@ -6,6 +6,7 @@ pipeline {
 
   triggers {
     githubPush()
+    cron('H 3 * * 1') // Refresh semanal de spreads — segunda-feira ~3h UTC
   }
 
   environment {
@@ -23,6 +24,36 @@ pipeline {
       steps {
         // Validação sem `npm run`: só precisa de `node` + script (evita falhas de PATH/npm no Docker agent).
         sh 'sh scripts/lint.sh'
+      }
+    }
+
+    stage('Actualizar Spreads') {
+      // Só corre quando disparado pelo cron (não em cada push).
+      // Chama o endpoint de refresh da app já em execução e aguarda até 3 min.
+      when { triggeredBy 'TimerTrigger' }
+      agent any
+      steps {
+        sh '''
+          APP_URL="http://localhost:3999"
+          echo "A submeter actualização de spreads..."
+          curl -sf -X POST "${APP_URL}/api/spreads" \
+            -H "x-admin-token: ${ADMIN_TOKEN}" \
+            --max-time 15 || echo "Refresh iniciado (resposta pode ter excedido timeout)"
+
+          echo "A aguardar conclusão do refresh (máx 3 min)..."
+          for i in $(seq 1 36); do
+            sleep 5
+            RUNNING=$(curl -sf "${APP_URL}/api/spreads" --max-time 5 \
+              | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('running',''))" 2>/dev/null)
+            [ "$RUNNING" = "False" ] || [ "$RUNNING" = "false" ] && break
+          done
+
+          echo "A aprovar spreads automaticamente..."
+          curl -sf -X POST "${APP_URL}/api/spreads" \
+            -H "x-admin-token: ${ADMIN_TOKEN}" \
+            -H "x-spreads-action: approve" \
+            --max-time 10 || echo "Aprovação falhou (pode não haver dados pendentes)"
+        '''
       }
     }
 
