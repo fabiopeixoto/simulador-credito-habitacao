@@ -279,7 +279,9 @@ async function refreshSpreadsAI() {
     // O refresh corre em background no servidor (vários minutos com pesquisa web) —
     // o POST responde já; fazer polling do estado via GET /api/spreads.
     aiEl.textContent = '⏳ Actualização em curso (pode demorar 5–10 min)...';
-    const deadline = Date.now() + 16 * 60 * 1000;
+    // Margem acima do tecto do servidor (ANTHROPIC_TOTAL_MS = 20 min) — caso
+    // contrário o admin desiste enquanto o refresh ainda corre e termina com sucesso.
+    const deadline = Date.now() + 22 * 60 * 1000;
     let st = null;
     while (Date.now() < deadline) {
       await new Promise(s => setTimeout(s, 5000));
@@ -289,7 +291,13 @@ async function refreshSpreadsAI() {
       const mins = Math.floor((Date.now() - (st?.startedAt ? Date.parse(st.startedAt) : Date.now())) / 60000);
       aiEl.textContent = `⏳ Actualização em curso há ${mins} min...`;
     }
-    if (!st || st.running) throw new Error('Refresh ainda em curso — verifica mais tarde');
+    if (!st || st.running) {
+      // O refresh continua no servidor e os dados ficam em cache quando terminar —
+      // não se perdeu nada; basta recarregar a página daqui a uns minutos.
+      aiEl.textContent = '⏳ Ainda a correr no servidor — recarrega a página daqui a uns minutos para ver o resultado.';
+      aiEl.className = '';
+      return;
+    }
     if (st.error) throw new Error(st.error);
     const ts = st.updatedAt ? new Date(st.updatedAt).toLocaleString('pt-PT') : '';
     aiEl.textContent = `✓ Actualizado${ts ? ' · ' + ts : ''}`;
