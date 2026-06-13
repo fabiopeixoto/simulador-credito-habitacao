@@ -149,23 +149,34 @@ const ANTHROPIC_TOTAL_MS   = 15 * 60 * 1000; // tecto global incluindo continua�
 const MAX_PAUSE_TURNS      = 6;              // continuações quando stop_reason === "pause_turn"
 
 // JSON schema para structured outputs — garante a forma exacta da resposta.
+// Forma: {bancos:[{codigo,...}]} (array, não mapa por código) — um mapa com 14
+// chaves obrigatórias × 22 campos é rejeitado pela API com "Schema is too
+// complex for compilation" quando combinado com web_search.
 // Nota: structured outputs não suporta minimum/maximum; gamas numéricas em validateSpreads().
 const SPREADS_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: BANK_CODES,
-  properties: Object.fromEntries(BANK_CODES.map(c => [c, { $ref: "#/$defs/bank" }])),
+  required: ["bancos"],
+  properties: {
+    bancos: {
+      type: "array",
+      description: "Exactamente 14 entradas, uma por banco (campo codigo)",
+      items: { $ref: "#/$defs/bank" },
+    },
+  },
   $defs: {
     bank: {
       type: "object",
       additionalProperties: false,
       required: [
+        "codigo",
         "sCom", "sSem", "mCom", "mSem", "fCom", "fSem", "jsCom", "jsSem",
         "promoPeriodo", "promoSpread", "dossier", "avaliacao", "contaMes",
         "capMin", "capMax", "vRef", "mAno", "insV", "insM", "contaNota",
         "minutas", "jovemIsenta",
       ],
       properties: {
+        codigo:       { type: "string", enum: BANK_CODES, description: "Código do banco" },
         sCom:         { type: "number", description: "Spread da taxa variável COM produtos associados, contratual fora do período promocional (pontos percentuais)" },
         sSem:         { type: "number", description: "Spread da taxa variável SEM produtos associados (pontos percentuais); ≥ sCom" },
         mCom:         { type: "number", description: "TAN do período fixo da taxa mista COM produtos (%)" },
@@ -220,7 +231,7 @@ Regras de apuramento:
 - Quando não encontrares um valor concreto, usa uma estimativa razoável com base em bancos comparáveis e escreve "Estimativa" em contaNota (e "(est.)" em insV/insM se a seguradora for desconhecida).
 - Valores monetários em EUR; spreads e TANs em pontos percentuais (ex.: 0.70 = 0,70%).
 
-Responde apenas com o objecto JSON pedido, sem texto adicional.`;
+Responde apenas com o objecto JSON pedido — {"bancos":[...]} com exactamente 14 entradas, cada uma com o campo "codigo" — sem texto adicional.`;
 
 const USER_PROMPT = "Pesquisa e devolve as condições actuais de crédito habitação HPP para os 14 bancos indicados, no formato JSON definido.";
 
@@ -229,6 +240,22 @@ function assertNum(bank, field, v, min, max) {
   if (typeof v !== "number" || !Number.isFinite(v) || v < min || v > max) {
     throw new Error(`Spreads inválidos: ${bank}.${field}=${v} (esperado ${min}–${max})`);
   }
+}
+
+// Converte a forma do schema ({bancos:[{codigo,...}]}) num mapa por código;
+// aceita também o mapa directo (fallback sem structured outputs).
+function toSpreadsMap(parsed) {
+  if (parsed && Array.isArray(parsed.bancos)) {
+    const map = {};
+    for (const entry of parsed.bancos) {
+      if (entry && typeof entry === "object" && typeof entry.codigo === "string") {
+        const { codigo, ...rest } = entry;
+        map[codigo] = rest;
+      }
+    }
+    return map;
+  }
+  return parsed;
 }
 
 function validateSpreads(spreads) {
@@ -322,6 +349,7 @@ async function callAnthropicAPI(apiKey) {
   let parsed;
   try { parsed = JSON.parse(textBlocks[textBlocks.length - 1]); }
   catch (_) { parsed = parseSpreadsText(textBlocks.join("\n")); }
+  parsed = toSpreadsMap(parsed);
 
   try {
     return validateSpreads(parsed);
@@ -513,4 +541,5 @@ module.exports = async function handler(req, res) {
 
 // Exposto para testes/admin (não usado pelo router)
 module.exports.validateSpreads = validateSpreads;
+module.exports.toSpreadsMap    = toSpreadsMap;
 module.exports.SPREADS_SCHEMA  = SPREADS_SCHEMA;
