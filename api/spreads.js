@@ -1,7 +1,8 @@
-const path  = require("path");
-const https = require("https");
-const http  = require("http");
+const path    = require("path");
+const https   = require("https");
+const http    = require("http");
 const { URL: NodeURL } = require("url");
+const pdfParse = require("pdf-parse");
 const Anthropic = require("@anthropic-ai/sdk");
 const { openSqliteDb } = require(path.join(__dirname, "..", "lib", "open-sqlite.js"));
 const { fetchEuribor } = require("./euribor.js");
@@ -326,48 +327,43 @@ async function fetchBankPdfs() {
   return Object.fromEntries(results);
 }
 
-const DOC_LABELS = ["Taxas de juro §18.1", "Comissões §18.2"];
-const DOC_MAX    = 20; // limite da API Anthropic para document blocks por mensagem
+// Extrai texto de um Buffer PDF. Devolve string ou null se falhar.
+async function extractPdfText(buf) {
+  if (!buf || !buf.length) return null;
+  try {
+    const data = await pdfParse(buf);
+    const txt = (data.text || "").trim();
+    return txt.length > 50 ? txt : null;
+  } catch (_) {
+    return null;
+  }
+}
 
-// Constrói o array `messages` com os PDFs como document blocks.
-// Dois passes: 1.º taxas (prioridade), 2.º comissões até atingir DOC_MAX.
-function buildMessages(pdfMap) {
+// Constrói o array `messages` com o texto dos PDFs como blocos de texto.
+// Evita qualquer limite de document blocks da API — o texto é enviado inline.
+async function buildMessages(pdfMap) {
   const content = [];
-  let docCount = 0;
 
-  // Passo 1 — taxas §18.1 (um por banco, todos)
   for (const code of BANK_CODES) {
-    const buf = (pdfMap[code] || [])[0];
-    if (buf && buf.length > 0 && docCount < DOC_MAX) {
+    const bufs = pdfMap[code] || [];
+    const labels = ["Taxas §18.1", "Comissões §18.2"];
+    const parts = [];
+    for (let i = 0; i < bufs.length; i++) {
+      const txt = await extractPdfText(bufs[i]);
+      if (txt) parts.push(`=== ${labels[i] || "Preçário"} ===\n${txt}`);
+    }
+    if (parts.length) {
       content.push({
-        type: "document",
-        source: { type: "base64", media_type: "application/pdf", data: buf.toString("base64") },
-        title: `${code} — ${BANK_NAMES[code]} — ${DOC_LABELS[0]}`,
-        context: "Folheto de preçário para crédito habitação HPP",
+        type: "text",
+        text: `### ${code} — ${BANK_NAMES[code]}\n\n${parts.join("\n\n")}`,
       });
-      docCount++;
     }
   }
 
-  // Passo 2 — comissões §18.2 (quando existem e há espaço)
-  for (const code of BANK_CODES) {
-    if (docCount >= DOC_MAX) break;
-    const buf = (pdfMap[code] || [])[1];
-    if (buf && buf.length > 0) {
-      content.push({
-        type: "document",
-        source: { type: "base64", media_type: "application/pdf", data: buf.toString("base64") },
-        title: `${code} — ${BANK_NAMES[code]} — ${DOC_LABELS[1]}`,
-        context: "Folheto de preçário para crédito habitação HPP",
-      });
-      docCount++;
-    }
-  }
-
-  const missing = BANK_CODES.filter((c) => !(pdfMap[c] || []).length);
-  let userText = "Extrai as condições actuais de crédito habitação HPP para os 14 bancos a partir dos documentos acima, no formato JSON definido.";
+  const missing = BANK_CODES.filter((c) => !(pdfMap[c] || []).length || !content.find(b => b.text?.startsWith(`### ${c} `)));
+  let userText = "Extrai as condições actuais de crédito habitação HPP para os 14 bancos a partir dos preçários acima, no formato JSON definido.";
   if (missing.length) {
-    userText += `\n\nBancos sem PDF disponível — estima com base em bancos comparáveis: ${missing.join(", ")}.`;
+    userText += `\n\nBancos sem preçário disponível — estima com base em bancos comparáveis: ${missing.join(", ")}.`;
   }
   content.push({ type: "text", text: userText });
   return [{ role: "user", content }];
@@ -549,7 +545,7 @@ function startRefresh(apiKey, kvSlot, today) {
         max_tokens:    32000,
         output_config: { effort: "medium", format: { type: "json_schema", schema: SPREADS_SCHEMA } },
         system:        SYSTEM_PROMPT,
-        messages:      buildMessages(pdfMap),
+        messages:      await buildMessages(pdfMap),
       });
 
       const spreads = extractSpreads(message);
