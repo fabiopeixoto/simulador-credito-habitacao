@@ -144,8 +144,8 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (pathname === "/api/spreads") {
-      if (req.method !== "POST") {
-        res.writeHead(405, { Allow: "POST", "Content-Type": "application/json; charset=utf-8" });
+      if (!["GET", "POST"].includes(req.method)) {
+        res.writeHead(405, { Allow: "GET, POST", "Content-Type": "application/json; charset=utf-8" });
         return res.end(JSON.stringify({ error: "Método não suportado" }));
       }
       return runApiHandler(req, res, requestUrl, spreadsHandler);

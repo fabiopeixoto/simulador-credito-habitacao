@@ -273,12 +273,26 @@ async function refreshSpreadsAI() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
     });
-    const data = await r.json();
-    if (!r.ok) throw new Error(data.error || 'HTTP ' + r.status);
-    const nBanks = data.spreads ? Object.keys(data.spreads).length : '?';
-    const src = data.meta?.source || 'fresh';
-    const ts = data.meta?.updatedAt ? new Date(data.meta.updatedAt).toLocaleString('pt-PT') : '';
-    aiEl.textContent = `✓ ${nBanks} bancos · ${src}${ts ? ' · ' + ts : ''}`;
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok && r.status !== 202) throw new Error(data.error || 'HTTP ' + r.status);
+
+    // O refresh corre em background no servidor (1–3 min com pesquisa web) —
+    // o POST responde já; fazer polling do estado via GET /api/spreads.
+    aiEl.textContent = '⏳ Actualização em curso (pode demorar 2–3 min)...';
+    const deadline = Date.now() + 8 * 60 * 1000;
+    let st = null;
+    while (Date.now() < deadline) {
+      await new Promise(s => setTimeout(s, 5000));
+      const sr = await fetch('/api/spreads').catch(() => null);
+      st = sr ? await sr.json().catch(() => null) : null;
+      if (st && !st.running) break;
+      const mins = Math.floor((Date.now() - (st?.startedAt ? Date.parse(st.startedAt) : Date.now())) / 60000);
+      aiEl.textContent = `⏳ Actualização em curso há ${mins} min...`;
+    }
+    if (!st || st.running) throw new Error('Refresh ainda em curso — verifica mais tarde');
+    if (st.error) throw new Error(st.error);
+    const ts = st.updatedAt ? new Date(st.updatedAt).toLocaleString('pt-PT') : '';
+    aiEl.textContent = `✓ Actualizado${ts ? ' · ' + ts : ''}`;
     aiEl.className = 'ok';
     // Recarregar lista de bancos para mostrar dados actualizados
     await loadBanks();

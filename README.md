@@ -140,7 +140,9 @@ Cache em memória + persistência em `banks.sqlite` (`kv_store`) com TTL 6 h. Ap
 
 ### `POST /api/spreads`
 
-Actualização massiva via **Anthropic** (Claude Opus 4.8 com pesquisa web dos preçários oficiais e resposta validada por JSON schema) + Euribor BCE. A chamada ao modelo pode demorar 1–3 minutos.
+Actualização massiva via **Anthropic** (Claude Opus 4.8 com pesquisa web dos preçários oficiais e resposta validada por JSON schema) + Euribor BCE.
+
+A chamada ao modelo demora 1–3 minutos, por isso corre **em background**: o `POST` responde de imediato (dados em cache com `X-Cache: REFRESHING`, ou `202 {status:"refreshing"}` se não houver cache) e o estado consulta-se via **`GET /api/spreads`** (`{running, startedAt, finishedAt, error, updatedAt}`) — é o que o painel admin usa para polling.
 
 - **Com `x-admin-token` válido**: ignora cache e limites diários (uso administrativo / Jenkins).
 - **Sem token**: **rate limit** por IP (~20 pedidos/h) e **limite global** ~2 chamadas "frescas" ao modelo por dia por instância (com cache SQLite ~25 h e cache em memória). Serve dados em cache quando excede limites.

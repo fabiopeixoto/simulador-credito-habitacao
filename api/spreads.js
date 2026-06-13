@@ -315,6 +315,79 @@ async function callAnthropicAPI(apiKey) {
 }
 
 
+// ── Refresh em background ─────────────────────────────────────────────────
+// O pedido HTTP não fica aberto durante a chamada à Anthropic (1–3 min com
+// web search) — proxies à frente do Node cortam pedidos longos e devolvem
+// páginas HTML de erro. O POST dispara o refresh e responde já; o estado
+// consulta-se via GET /api/spreads.
+const REFRESH = { running: false, startedAt: 0, finishedAt: 0, error: null };
+
+function refreshStatus() {
+  return {
+    running:    REFRESH.running,
+    startedAt:  REFRESH.startedAt  ? new Date(REFRESH.startedAt).toISOString()  : null,
+    finishedAt: REFRESH.finishedAt ? new Date(REFRESH.finishedAt).toISOString() : null,
+    error:      REFRESH.error,
+    updatedAt:  MEM.fetchedAt ? new Date(MEM.fetchedAt).toISOString() : null,
+  };
+}
+
+function startRefresh(apiKey, kvSlot, today) {
+  if (REFRESH.running) return false;
+  REFRESH.running    = true;
+  REFRESH.startedAt  = Date.now();
+  REFRESH.finishedAt = 0;
+  REFRESH.error      = null;
+
+  (async () => {
+    const [eurResult, spreadsResult] = await Promise.allSettled([
+      fetchEuribor(),
+      callAnthropicAPI(apiKey),
+    ]);
+
+    const eur      = eurResult.status === "fulfilled" ? eurResult.value.eur      : null;
+    const eurLabel = eurResult.status === "fulfilled" ? eurResult.value.eurLabel : "";
+
+    // Persistir Euribor em banks.sqlite para ser servido via GET /api/banks
+    if (eur && getBanksModule() && getBanksModule().setEuribor) {
+      try { getBanksModule().setEuribor(eur, eurLabel); } catch (e) { console.error("spreads.js: setEuribor failed:", e.message); }
+    }
+
+    if (spreadsResult.status === "rejected") {
+      REFRESH.error = spreadsResult.reason?.message || "Erro API";
+      console.error("spreads.js: refresh falhou:", REFRESH.error);
+      return;
+    }
+
+    const freshData = { spreads: spreadsResult.value, eur, eurLabel };
+    const fetchedAt = Date.now();
+
+    // Actualizar L1 (in-memory)
+    MEM.data       = freshData;
+    MEM.fetchedAt  = fetchedAt;
+    MEM.dayKey     = today;
+    MEM.callsToday = kvSlot !== null ? Number(kvSlot) : MEM.callsToday + 1;
+
+    // Opcional: persistir na SQLite do simulador (desactivado por defeito — evita sobrescrever dados auditados)
+    if (PERSIST_ANTHROPIC_SPREADS_TO_SQLITE && getBanksModule() && getBanksModule().bulkInsertSpreads && spreadsResult.value) {
+      try { getBanksModule().bulkInsertSpreads(spreadsResult.value, "anthropic"); } catch (e) { console.error("spreads.js: bulkInsertSpreads failed:", e.message); }
+    }
+
+    // Actualizar L2 (KV) — fire-and-forget
+    kvSet(KV_CACHE_KEY, { data: freshData, fetchedAt }, KV_CACHE_TTL).catch(() => {});
+    // kvIncr já foi chamado atomicamente antes de startRefresh (se KV disponível); só repetir em fallback
+    if (kvSlot === null) kvIncr(KV_CALLS_PFX + today, KV_CALLS_TTL).catch(() => {});
+  })().catch((err) => {
+    REFRESH.error = err?.message || String(err);
+    console.error("spreads.js: refresh falhou:", REFRESH.error);
+  }).finally(() => {
+    REFRESH.running    = false;
+    REFRESH.finishedAt = Date.now();
+  });
+
+  return true;
+}
+
 function withMeta(payload, source, fetchedAt) {
   return {
     ...payload,
@@ -327,6 +400,8 @@ function withMeta(payload, source, fetchedAt) {
 }
 
 module.exports = async function handler(req, res) {
+  // GET — estado do refresh em background (para polling do admin)
+  if (req.method === "GET") return res.status(200).json(refreshStatus());
   if (req.method !== "POST") return res.status(405).json({ error: "Método não suportado" });
 
   // Admin override — bypassa rate limits e cache (token válido = acesso irrestrito)
@@ -404,67 +479,18 @@ module.exports = async function handler(req, res) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(503).json({ error: "ANTHROPIC_API_KEY não configurada" });
 
-  // ── 4. Chamar APIs (Anthropic + BCE)
-  try {
-    const [eurResult, spreadsResult] = await Promise.allSettled([
-      fetchEuribor(),
-      callAnthropicAPI(apiKey),
-    ]);
+  // ── 4. Disparar refresh em background (Anthropic + BCE) e responder de imediato
+  const started = startRefresh(apiKey, kvSlot, today);
+  // Já havia um refresh em curso — devolver o slot reservado em ── 3
+  if (!started && kvSlot !== null) kvDecr(KV_CALLS_PFX + today).catch(() => {});
 
-    const eur      = eurResult.status === "fulfilled" ? eurResult.value.eur      : null;
-    const eurLabel = eurResult.status === "fulfilled" ? eurResult.value.eurLabel : "";
-
-    // Persistir Euribor em banks.sqlite para ser servido via GET /api/banks
-    if (eur && getBanksModule() && getBanksModule().setEuribor) {
-      try { getBanksModule().setEuribor(eur, eurLabel); } catch (e) { console.error("spreads.js: setEuribor failed:", e.message); }
-    }
-
-    const staleData = kvCached?.data || MEM.data || null;
-    const staleFetchedAt = kvCached?.fetchedAt || MEM.fetchedAt || 0;
-
-    if (spreadsResult.status === "rejected") {
-      if (staleData) {
-        res.setHeader("X-Cache", "STALE");
-        return res.status(200).json(withMeta(eur ? { ...staleData, eur, eurLabel } : staleData, "stale-cache", staleFetchedAt));
-      }
-      const err = spreadsResult.reason;
-      return res.status(err.httpStatus || 500).json({ error: err.message });
-    }
-
-    const freshData  = { spreads: spreadsResult.value, eur, eurLabel };
-    const fetchedAt  = Date.now();
-
-    // Actualizar L1 (in-memory)
-    MEM.data       = freshData;
-    MEM.fetchedAt  = fetchedAt;
-    MEM.dayKey     = today;
-    MEM.callsToday = kvSlot !== null ? Number(kvSlot) : MEM.callsToday + 1;
-
-    // Opcional: persistir na SQLite do simulador (desactivado por defeito — evita sobrescrever dados auditados)
-    if (PERSIST_ANTHROPIC_SPREADS_TO_SQLITE && getBanksModule() && getBanksModule().bulkInsertSpreads && spreadsResult.value) {
-      try { getBanksModule().bulkInsertSpreads(spreadsResult.value, "anthropic"); } catch (e) { console.error("spreads.js: bulkInsertSpreads failed:", e.message); }
-    }
-
-    // Actualizar L2 (KV) — fire-and-forget, não bloqueia a resposta
-    kvSet(KV_CACHE_KEY, { data: freshData, fetchedAt }, KV_CACHE_TTL).catch(() => {});
-    // kvIncr já foi chamado atomicamente em ── 3 (se KV disponível); só repetir em fallback
-    if (kvSlot === null) kvIncr(KV_CALLS_PFX + today, KV_CALLS_TTL).catch(() => {});
-
-    res.setHeader("X-Cache",           "MISS");
-    res.setHeader("X-Calls-Today",     MEM.callsToday + "/" + MAX_CALLS_PER_DAY);
-    res.setHeader("X-Data-Updated-At", new Date(fetchedAt).toISOString());
-    return res.status(200).json(withMeta(freshData, "fresh", fetchedAt));
-
-  } catch (err) {
-    const staleData      = kvCached?.data || MEM.data || null;
-    const staleFetchedAt = kvCached?.fetchedAt || MEM.fetchedAt || 0;
-    if (staleData) {
-      res.setHeader("X-Cache", "STALE");
-      return res.status(200).json(withMeta(staleData, "stale-cache", staleFetchedAt));
-    }
-    if (err.httpStatus === 504 || err.name === "TimeoutError") return res.status(504).json({ error: "Timeout: a chamada à API excedeu o limite" });
-    return res.status(500).json({ error: err.message });
+  const staleData      = kvCached?.data || MEM.data || null;
+  const staleFetchedAt = kvCached?.fetchedAt || MEM.fetchedAt || 0;
+  if (staleData) {
+    res.setHeader("X-Cache", "REFRESHING");
+    return res.status(200).json(withMeta(staleData, "stale-cache", staleFetchedAt));
   }
+  return res.status(202).json({ status: "refreshing", ...refreshStatus() });
 };
 
 // Exposto para testes/admin (não usado pelo router)
