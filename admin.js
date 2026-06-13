@@ -266,8 +266,9 @@ async function refreshSpreadsAI() {
   const aiEl = document.getElementById('aiStatus');
   btn.disabled = true;
   btn.textContent = '⏳ A actualizar...';
-  aiEl.textContent = 'A chamar Anthropic + BCE...';
+  aiEl.textContent = 'A submeter pedido à Anthropic (Batch API)...';
   aiEl.className = '';
+  document.getElementById('aiPending').innerHTML = '';
   try {
     const r = await fetch('/api/spreads', {
       method: 'POST',
@@ -276,9 +277,9 @@ async function refreshSpreadsAI() {
     const data = await r.json().catch(() => ({}));
     if (!r.ok && r.status !== 202) throw new Error(data.error || 'HTTP ' + r.status);
 
-    // O refresh corre em background no servidor (vários minutos com pesquisa web) —
-    // o POST responde já; fazer polling do estado via GET /api/spreads.
-    aiEl.textContent = '⏳ Actualização em curso (pode demorar 5–10 min)...';
+    // O modelo corre como job assíncrono (Batch API): tipicamente alguns minutos.
+    // O id do batch persiste no servidor — fazer polling do estado via GET /api/spreads.
+    aiEl.textContent = '⏳ Pesquisa em curso (Batch API — normalmente alguns minutos)...';
     // Margem acima do tecto do servidor (ANTHROPIC_TOTAL_MS = 20 min) — caso
     // contrário o admin desiste enquanto o refresh ainda corre e termina com sucesso.
     const deadline = Date.now() + 22 * 60 * 1000;
@@ -299,11 +300,18 @@ async function refreshSpreadsAI() {
       return;
     }
     if (st.error) throw new Error(st.error);
-    const ts = st.updatedAt ? new Date(st.updatedAt).toLocaleString('pt-PT') : '';
-    aiEl.textContent = `✓ Actualizado${ts ? ' · ' + ts : ''}`;
-    aiEl.className = 'ok';
-    // Recarregar lista de bancos para mostrar dados actualizados
-    await loadBanks();
+    if (st.pending) {
+      // Resultado da AI fica em revisão — o admin aprova antes de ir a "live".
+      aiEl.textContent = `Pesquisa concluída — ${st.pending.bancos} bancos a aguardar revisão.`;
+      aiEl.className = 'ok';
+      renderPending(st.pending);
+    } else {
+      // Auto-aplicado (SPREADS_AUTO_APPLY=1) ou sem dados pendentes.
+      const ts = st.updatedAt ? new Date(st.updatedAt).toLocaleString('pt-PT') : '';
+      aiEl.textContent = `✓ Actualizado${ts ? ' · ' + ts : ''}`;
+      aiEl.className = 'ok';
+      await loadBanks();
+    }
   } catch (e) {
     aiEl.textContent = 'Erro: ' + e.message.slice(0, 80);
     aiEl.className = 'error';
@@ -311,6 +319,82 @@ async function refreshSpreadsAI() {
     btn.disabled = false;
     btn.textContent = '🤖 Actualizar Agora';
   }
+}
+
+// Mostra os dados PENDENTES (devolvidos pela AI) com botões aprovar/rejeitar.
+function renderPending(pending) {
+  const el = document.getElementById('aiPending');
+  if (!el) return;
+  const ts = pending.fetchedAt ? new Date(pending.fetchedAt).toLocaleString('pt-PT') : '';
+  const codes = Object.keys(pending.spreads || {});
+  const rows = codes.map(c => {
+    const b = pending.spreads[c] || {};
+    return `<tr><td>${escapeHtml(c)}</td><td>${b.sCom}</td><td>${b.sSem}</td><td>${b.dossier}</td>`
+      + `<td>${b.avaliacao}</td><td style="color:var(--muted)">${escapeHtml((b.contaNota || '').slice(0, 32))}</td></tr>`;
+  }).join('');
+  el.innerHTML =
+    `<div style="margin-top:12px;padding:12px;border:1px solid rgba(251,191,36,0.4);border-radius:8px;background:rgba(251,191,36,0.08)">`
+    + `<p style="margin:0 0 8px;font-weight:600">🕵️ Revisão pendente — ${codes.length} bancos${ts ? ' · ' + ts : ''}</p>`
+    + `<p style="margin:0 0 10px;font-size:12px;color:var(--muted)">Dados obtidos pela AI. Confirma antes de publicar — só ao aprovar é que substituem os dados servidos.</p>`
+    + `<div class="stats-admin-7d" style="max-height:280px;overflow:auto"><table><thead><tr>`
+    + `<th>Banco</th><th>Spread c/</th><th>Spread s/</th><th>Dossier</th><th>Aval.</th><th>Nota</th>`
+    + `</tr></thead><tbody>${rows}</tbody></table></div>`
+    + `<div class="comments-admin-toolbar" style="margin-top:10px">`
+    + `<button type="button" class="btn-ai" onclick="approvePendingSpreads()">✓ Aprovar e publicar</button>`
+    + `<button type="button" class="btn-sm btn-history" onclick="rejectPendingSpreads()">✗ Rejeitar</button>`
+    + `</div></div>`;
+}
+
+async function approvePendingSpreads() {
+  const token = getToken();
+  if (!token) { setStatus('Introduz o Admin Token primeiro', 'error'); return; }
+  const aiEl = document.getElementById('aiStatus');
+  try {
+    const r = await fetch('/api/spreads', { method: 'POST', headers: { 'x-admin-token': token, 'x-spreads-action': 'approve' } });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok || !data.applied) throw new Error(data.error || 'Nada para aprovar');
+    document.getElementById('aiPending').innerHTML = '';
+    const ts = data.updatedAt ? new Date(data.updatedAt).toLocaleString('pt-PT') : '';
+    aiEl.textContent = `✓ Publicado${ts ? ' · ' + ts : ''}`;
+    aiEl.className = 'ok';
+    await loadBanks();
+  } catch (e) {
+    aiEl.textContent = 'Erro ao aprovar: ' + e.message.slice(0, 80);
+    aiEl.className = 'error';
+  }
+}
+
+async function rejectPendingSpreads() {
+  const token = getToken();
+  if (!token) { setStatus('Introduz o Admin Token primeiro', 'error'); return; }
+  const aiEl = document.getElementById('aiStatus');
+  try {
+    const r = await fetch('/api/spreads', { method: 'POST', headers: { 'x-admin-token': token, 'x-spreads-action': 'reject' } });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    document.getElementById('aiPending').innerHTML = '';
+    aiEl.textContent = 'Resultado rejeitado — dados servidos inalterados.';
+    aiEl.className = '';
+  } catch (e) {
+    aiEl.textContent = 'Erro ao rejeitar: ' + e.message.slice(0, 80);
+    aiEl.className = 'error';
+  }
+}
+
+// Ao carregar a página, verifica se há um batch em curso ou dados pendentes
+// (o GET também faz avançar o batch do lado do servidor).
+async function checkPendingSpreads() {
+  const aiEl = document.getElementById('aiStatus');
+  try {
+    const sr = await fetch('/api/spreads').catch(() => null);
+    const st = sr ? await sr.json().catch(() => null) : null;
+    if (!st) return;
+    if (st.pending) {
+      if (aiEl) { aiEl.textContent = `🕵️ ${st.pending.bancos} bancos a aguardar revisão.`; aiEl.className = 'ok'; }
+      renderPending(st.pending);
+    } else if (st.running) {
+      if (aiEl) { aiEl.textContent = '⏳ Pesquisa em curso (Batch API) — recarrega para ver o resultado.'; aiEl.className = ''; }
+    }
+  } catch (_) {}
 }
 
 async function loadBanks() {
@@ -346,6 +430,7 @@ async function loadBanks() {
     setStatus(banks.length + ' bancos carregados', 'ok');
     await loadStatsAdmin();
     await loadCommentsAdmin();
+    await checkPendingSpreads();
   } catch (e) {
     setStatus('Erro: ' + e.message, 'error');
     setAdminUnlocked(false);
