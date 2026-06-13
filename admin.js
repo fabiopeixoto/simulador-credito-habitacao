@@ -277,9 +277,9 @@ async function refreshSpreadsAI() {
     const data = await r.json().catch(() => ({}));
     if (!r.ok && r.status !== 202) throw new Error(data.error || 'HTTP ' + r.status);
 
-    // O refresh corre em background no servidor (~60-120 s) — polling via GET /api/spreads.
-    aiEl.textContent = '⏳ Actualização em curso (PDFs + Anthropic AI — ~1-2 min)...';
-    const deadline = Date.now() + 5 * 60 * 1000; // 5 min é mais do que suficiente
+    // O refresh corre em background no servidor (~2-5 min) — polling via GET /api/spreads.
+    aiEl.textContent = '⏳ Actualização em curso (PDFs + Anthropic AI — ~2-5 min)...';
+    const deadline = Date.now() + 13 * 60 * 1000; // 13 min = SDK timeout (180s) × 4 iterações máx.
     let st = null;
     while (Date.now() < deadline) {
       await new Promise(s => setTimeout(s, 5000));
@@ -290,10 +290,9 @@ async function refreshSpreadsAI() {
       aiEl.textContent = `⏳ Actualização em curso há ${mins} min...`;
     }
     if (!st || st.running) {
-      // O refresh continua no servidor e os dados ficam em cache quando terminar —
-      // não se perdeu nada; basta recarregar a página daqui a uns minutos.
-      aiEl.textContent = '⏳ Ainda a correr no servidor — recarrega a página daqui a uns minutos para ver o resultado.';
+      aiEl.textContent = '⏳ Ainda a correr — o resultado aparece aqui quando terminar.';
       aiEl.className = '';
+      if (st?.running) pollRefreshStatus(st); // continua a monitorizar em background
       return;
     }
     if (st.error) throw new Error(st.error);
@@ -377,8 +376,7 @@ async function rejectPendingSpreads() {
   }
 }
 
-// Ao carregar a página, verifica se há um batch em curso ou dados pendentes
-// (o GET também faz avançar o batch do lado do servidor).
+// Ao carregar a página, verifica se há um refresh em curso ou dados pendentes.
 async function checkPendingSpreads() {
   const aiEl = document.getElementById('aiStatus');
   try {
@@ -389,9 +387,39 @@ async function checkPendingSpreads() {
       if (aiEl) { aiEl.textContent = `🕵️ ${st.pending.bancos} bancos a aguardar revisão.`; aiEl.className = 'ok'; }
       renderPending(st.pending);
     } else if (st.running) {
-      if (aiEl) { aiEl.textContent = '⏳ Pesquisa em curso (Batch API) — recarrega para ver o resultado.'; aiEl.className = ''; }
+      if (aiEl) { aiEl.textContent = '⏳ Pesquisa em curso — a aguardar resultado...'; aiEl.className = ''; }
+      pollRefreshStatus(st); // retoma monitorização em background sem bloquear o loadBanks
     }
   } catch (_) {}
+}
+
+// Polling em background — actualiza o aiStatus até o refresh terminar.
+// Usado tanto por refreshSpreadsAI (após deadline) como por checkPendingSpreads (após reload).
+async function pollRefreshStatus(initialSt) {
+  const aiEl = document.getElementById('aiStatus');
+  const deadline = Date.now() + 13 * 60 * 1000;
+  let s = initialSt;
+  while (Date.now() < deadline && s?.running) {
+    await new Promise(r => setTimeout(r, 10000));
+    const sr = await fetch('/api/spreads').catch(() => null);
+    s = sr ? await sr.json().catch(() => null) : null;
+    if (s?.running && aiEl) {
+      const mins = Math.floor((Date.now() - (s.startedAt ? Date.parse(s.startedAt) : Date.now())) / 60000);
+      aiEl.textContent = `⏳ Actualização em curso há ${mins} min...`;
+    }
+  }
+  if (!s || s.running) {
+    if (aiEl) { aiEl.textContent = '⏳ Ainda a correr — recarrega para ver o resultado.'; aiEl.className = ''; }
+    return;
+  }
+  if (s.error) { if (aiEl) { aiEl.textContent = 'Erro: ' + s.error.slice(0, 80); aiEl.className = 'error'; } return; }
+  if (s.pending) {
+    if (aiEl) { aiEl.textContent = `Pesquisa concluída — ${s.pending.bancos} bancos a aguardar revisão.`; aiEl.className = 'ok'; }
+    renderPending(s.pending);
+  } else {
+    const ts = s.updatedAt ? new Date(s.updatedAt).toLocaleString('pt-PT') : '';
+    if (aiEl) { aiEl.textContent = `✓ Actualizado${ts ? ' · ' + ts : ''}`; aiEl.className = 'ok'; }
+  }
 }
 
 async function loadBanks() {

@@ -140,7 +140,7 @@ Cache em memória + persistência em `banks.sqlite` (`kv_store`) com TTL 6 h. Ap
 
 ### `POST /api/spreads`
 
-Actualização massiva via **Anthropic** (Claude Opus 4.8 com `web_fetch` directo aos preçários oficiais — fetches em paralelo, um por banco — resposta validada por JSON schema) + Euribor BCE.
+Actualização massiva via **Anthropic** (Claude Sonnet 4.6 com `web_fetch` directo aos preçários oficiais — fetches em paralelo, um por banco — resposta validada por JSON schema) + Euribor BCE.
 
 A chamada corre em background (Messages API, ~1–3 min com web_fetch + thinking adaptativo). Fluxo:
 
