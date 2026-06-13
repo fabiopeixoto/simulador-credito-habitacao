@@ -38,8 +38,6 @@ const KV_CALLS_PFX   = "spreads:calls:";   // + "YYYY-MM-DD"
 const KV_CACHE_TTL   = 25 * 60 * 60;       // 25 h (segundos)
 const KV_CALLS_TTL   = 49 * 60 * 60;       // 49 h
 
-/** Por defeito não gravar respostas LLM na SQLite do simulador (`banks.sqlite`); os spreads servidos vêm de SEED_SPREADS + reconcile + POST /api/banks. Para persistir saídas Anthropic na BD: ANTHROPIC_PERSIST_SPREADS=1 */
-const PERSIST_ANTHROPIC_SPREADS_TO_SQLITE = process.env.ANTHROPIC_PERSIST_SPREADS === "1";
 
 async function kvGet(key) {
   if (!sqliteDb) return null;
@@ -485,7 +483,8 @@ function refreshStatus() {
   };
 }
 
-// Promove os dados PENDENTES para "live" (L1 + L2 + opcionalmente SQLite).
+// Promove os dados PENDENTES para "live" (L1 + L2 + banks.sqlite).
+// A aprovação explícita pelo admin (ou auto-apply) implica sempre persistência.
 function applyPending(today, kvSlot) {
   if (!PENDING) return false;
   const freshData = { spreads: PENDING.spreads, eur: PENDING.eur, eurLabel: PENDING.eurLabel };
@@ -494,8 +493,10 @@ function applyPending(today, kvSlot) {
   MEM.fetchedAt  = fetchedAt;
   MEM.dayKey     = today;
   MEM.callsToday = kvSlot != null ? Number(kvSlot) : MEM.callsToday + 1;
-  if (PERSIST_ANTHROPIC_SPREADS_TO_SQLITE && getBanksModule() && getBanksModule().bulkInsertSpreads) {
-    try { getBanksModule().bulkInsertSpreads(freshData.spreads, "anthropic"); } catch (e) { console.error("spreads.js: bulkInsertSpreads failed:", e.message); }
+  const banksModule = getBanksModule();
+  if (banksModule?.bulkInsertSpreads) {
+    try { banksModule.bulkInsertSpreads(freshData.spreads, "anthropic"); }
+    catch (e) { console.error("spreads.js: bulkInsertSpreads failed:", e.message); }
   }
   kvSet(KV_CACHE_KEY, { data: freshData, fetchedAt }, KV_CACHE_TTL).catch(() => {});
   PENDING = null;

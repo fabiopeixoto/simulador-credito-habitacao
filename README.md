@@ -154,9 +154,9 @@ A chamada ao modelo corre na **Batch API** (assíncrona, ~50% mais barata, sem t
 - **Com `x-admin-token` válido**: ignora cache e limites diários (uso administrativo / Jenkins).
 - **Sem token**: **rate limit** por IP (~20 pedidos/h) e **limite global** ~2 submissões por dia por instância (cache SQLite ~25 h + cache em memória). Serve dados em cache quando excede limites.
 
-Persistência: ao aprovar grava spreads em `banks.sqlite` via `bulkInsertSpreads` (só se `ANTHROPIC_PERSIST_SPREADS=1`); Euribor em cache (`banks.js`).
+Persistência: ao aprovar grava spreads em `banks.sqlite` via `bulkInsertSpreads` (sempre — aprovação implica publicação); Euribor em cache (`banks.js`).
 
-Variável obrigatória no servidor: **`ANTHROPIC_API_KEY`**. Opcionais: **`SPREADS_AUTO_APPLY`**, **`ANTHROPIC_PERSIST_SPREADS`**.
+Variável obrigatória no servidor: **`ANTHROPIC_API_KEY`**. Opcional: **`SPREADS_AUTO_APPLY`**.
 
 ---
 
@@ -200,7 +200,6 @@ Requer **`x-admin-token`**. Devolve:
 | `ANTHROPIC_API_KEY` | Activa `POST /api/spreads` (Batch API + web_fetch) |
 | `ADMIN_TOKEN` | Admin: `GET /api/stats`, `POST/DELETE /api/banks`, `DELETE /api/comments`, aprovar/rejeitar e bypass de limites em `POST /api/spreads` |
 | `SPREADS_AUTO_APPLY` | `=1` publica o resultado da AI sem revisão (por defeito fica pendente) |
-| `ANTHROPIC_PERSIST_SPREADS` | `=1` grava spreads aprovados em `banks.sqlite` (por defeito não persiste) |
 | `DEBUG_SECRET` | Endpoint de diagnóstico dos comentários |
 
 ---
