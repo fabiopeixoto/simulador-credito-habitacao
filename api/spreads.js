@@ -143,11 +143,35 @@ function isRateLimited(ip) {
 // ── Anthropic API ─────────────────────────────────────────────────────────
 const BANK_CODES = ["CA", "CTT", "BNKTR", "ABANCA", "BCP", "ACTVO", "BPI", "MNTPO", "SANTR", "NB", "CGD", "UCI", "BNI", "BEST"];
 
-const ANTHROPIC_MODEL      = "claude-opus-4-8";
-const ANTHROPIC_TIMEOUT_MS = 10 * 60 * 1000; // timeout de ligação inicial (SDK)
-const ANTHROPIC_TOTAL_MS   = 20 * 60 * 1000; // tecto global com AbortController — inclui stream + continuações
-const MAX_PAUSE_TURNS      = 6;              // continuações quando stop_reason === "pause_turn"
-const WEB_SEARCH_MAX_USES  = 8;              // pesquisas por chamada — equilibrio velocidade/cobertura
+const ANTHROPIC_MODEL     = "claude-sonnet-4-6"; // extracção, não raciocínio profundo — Sonnet chega e é mais barato/rápido
+const WEB_FETCH_MAX_USES  = 28;                  // ≥1 fetch por preçário (≈25 URLs) + folga
+const WEB_SEARCH_MAX_USES = 6;                   // fallback para bancos sem URL (BEST) ou URLs em 404
+const BATCH_KV_KEY        = "spreads:batch:v1";  // estado do batch em curso (persiste a reinícios do contentor)
+const BATCH_KV_TTL        = 26 * 60 * 60;        // 26 h (batches expiram do lado da Anthropic em 29 dias)
+
+// Auto-aplicar o resultado da AI sem revisão no admin (compatibilidade com o fluxo antigo).
+// Por defeito o resultado fica PENDENTE e só vai a "live" depois de aprovação no painel admin.
+const SPREADS_AUTO_APPLY = process.env.SPREADS_AUTO_APPLY === "1";
+
+// Preçários oficiais por banco (espelho de reference/precarios-pdf/sources.json).
+// O modelo usa web_fetch directo nestes URLs (rápido, fiável, determinístico) e
+// só recorre a web_search quando um banco não tem URL (BEST) ou o URL devolve 404.
+const BANK_SOURCES = {
+  CA:     ["https://www.creditoagricola.pt/-/media/files/precario/documents-site/taxas-de-juro-_aviso-8-2009-do-bdp/pre-ft-202605.pdf", "https://www.creditoagricola.pt/-/media/files/precario/documents-site/comissoes-e-despesas-_aviso-8-2009-do-bdp/pre-fc-20260501.pdf"],
+  CTT:    ["https://www.bancoctt.pt/application/themes/pdfs/precario.pdf?language_id=1555597541833"],
+  BNKTR:  ["https://clientebancario.bportugal.pt/sites/default/files/precario/0269_/0269_PRE_20221231000630.pdf"],
+  ABANCA: ["https://www.abanca.pt/files/documents/folheto-taxa-juro-precario-e3020223.pdf", "https://www.abanca.pt/files/documents/precario-folheto-comissoes-f942c04e.pdf"],
+  BCP:    ["https://ind.millenniumbcp.pt/pt/Articles/Documents/precario/SECCAO_18.pdf"],
+  ACTVO:  ["https://ind.millenniumbcp.pt/pt/Articles/Documents/precario/SECCAO_18.pdf"],
+  BPI:    ["https://www.bancobpi.pt/contentservice/getContent?documentName=PR_WCS01_UCM01004994", "https://www.bancobpi.pt/contentservice/getContent?documentName=PR_WCS01_UCM01004993"],
+  MNTPO:  ["https://www.bancomontepio.pt/content/dam/montepio/pdf/geral/precario/folheto-taxas-juro/folheto-taxas-juro.pdf", "https://www.bancomontepio.pt/content/dam/montepio/pdf/geral/precario/folheto-comissoes-despesas/folheto-comissoes-despesas.pdf"],
+  SANTR:  ["https://www.santander.pt/pdfs/particulares/credito-habitacao/CH_Informacao_Pre-Contratual_Geral.pdf", "https://www.santander.pt/pdfs/precario-banco/folheto-taxas-juro/outros-clientes/20-operacoes-credito/20_precariofolhetotaxasjuro_oc_opscredito.pdf"],
+  NB:     ["https://www.novobanco.pt/content/dam/novobancopublicsites/docs/pdfs/precario/particulares/PRE-FT.pdf.coredownload.inline.pdf", "https://www.novobanco.pt/content/dam/novobancopublicsites/docs/pdfs/precario/particulares/PRE-FC.pdf.coredownload.inline.pdf"],
+  CGD:    ["https://www.cgd.pt/Precario/Documents/18.pdf", "https://www.cgd.pt/Precario/Documents/10.pdf"],
+  UCI:    ["https://uci.pt/-/media/Files/Portugal/precario/PRE-FT-202605.pdf", "https://uci.pt/-/media/Files/Portugal/precario/PRE-FC-20260301.pdf"],
+  BNI:    ["https://bnieuropa.pt/wp-content/themes/responsive/pdf/precario/taxas-juro-particulares-credito-habitacao-e-contratos-conexos.pdf", "https://bnieuropa.pt/wp-content/themes/responsive/pdf/precario/particulares-credito-habitacao-e-contratos-conexos.pdf"],
+  BEST:   [], // sem preçário directo no índice — usar web_search
+};
 
 // JSON schema para structured outputs — garante a forma exacta da resposta.
 // Forma: {bancos:[{codigo,...}]} (array, não mapa por código) — um mapa com 14
@@ -228,13 +252,21 @@ Regras de apuramento:
 - Os valores "sem produtos" (sSem, mSem, fSem, jsSem) são as condições sem vendas associadas facultativas, por isso ≥ aos valores "com produtos".
 - Quando não há campanha promocional: promoPeriodo = 0 e promoSpread = null.
 - "Com produtos" assume o pacote típico exigido (domiciliação de ordenado, seguros no banco, cartões).
-- Pesquisa primeiro os preçários oficiais (documento "Preçário" exigido pelo Banco de Portugal, páginas de crédito habitação dos bancos, simuladores oficiais). Prefere fontes com data recente e indica o mês/ano da fonte em contaNota quando confirmares o valor (ex.: "Preçário jun.2026").
+- Para cada banco, usa PRIMEIRO a tool web_fetch nos URLs oficiais indicados na mensagem (são os folhetos de preçário do Banco de Portugal — taxas §18.1 e comissões). Lê o PDF e extrai os valores.
+- Se um URL devolver 404, HTML/JS em vez do PDF, ou não cobrir o campo, usa web_search para a página de crédito habitação ou FINE do banco. Para o BEST (sem URL indicado) usa sempre web_search.
+- Indica o mês/ano da fonte em contaNota quando confirmares o valor (ex.: "Preçário mai.2026").
 - Quando não encontrares um valor concreto, usa uma estimativa razoável com base em bancos comparáveis e escreve "Estimativa" em contaNota (e "(est.)" em insV/insM se a seguradora for desconhecida).
 - Valores monetários em EUR; spreads e TANs em pontos percentuais (ex.: 0.70 = 0,70%).
 
 Responde apenas com o objecto JSON pedido — {"bancos":[...]} com exactamente 14 entradas, cada uma com o campo "codigo" — sem texto adicional.`;
 
-const USER_PROMPT = "Pesquisa e devolve as condições actuais de crédito habitação HPP para os 14 bancos indicados, no formato JSON definido.";
+function buildUserPrompt() {
+  const linhas = BANK_CODES.map((code) => {
+    const urls = BANK_SOURCES[code] || [];
+    return `- ${code}: ${urls.length ? urls.join(" | ") : "(sem URL — usa web_search)"}`;
+  }).join("\n");
+  return `Apura as condições actuais de crédito habitação HPP para os 14 bancos, no formato JSON definido.\n\nPreçários oficiais a consultar com web_fetch (taxas §18.1 + comissões):\n${linhas}`;
+}
 
 // ── Validação da resposta antes de cachear/servir
 function assertNum(bank, field, v, min, max) {
@@ -294,90 +326,47 @@ function parseSpreadsText(txt) {
   try { return JSON.parse(m[0]); } catch (_) { throw new Error("JSON inválido: " + m[0].slice(0, 80)); }
 }
 
-async function callAnthropicAPI(apiKey) {
-  // maxRetries: o SDK repete 408/409/429/5xx (inclui 529 overloaded) com backoff exponencial
-  const client = new Anthropic({ apiKey, timeout: ANTHROPIC_TIMEOUT_MS, maxRetries: 4 });
-  const baseParams = {
-    model: ANTHROPIC_MODEL,
-    max_tokens: 16000,
-    thinking: { type: "adaptive" },
-    system: SYSTEM_PROMPT,
-    tools: [{ type: "web_search_20260209", name: "web_search", max_uses: WEB_SEARCH_MAX_USES }],
-  };
-  const messages = [{ role: "user", content: USER_PROMPT }];
-
-  let useStructured = true; // fallback sem output_config se a API rejeitar a combinação com web_search
-  let response = null;
-  let turns = 0;
-  const abort = new AbortController();
-  const abortTimer = setTimeout(() => abort.abort(new Error("timeout global " + ANTHROPIC_TOTAL_MS / 60000 + " min")), ANTHROPIC_TOTAL_MS);
-  const t0 = Date.now();
-  try {
-  while (turns < MAX_PAUSE_TURNS) {
-    if (abort.signal.aborted) throw abort.signal.reason || new Error("timeout global");
-    try {
-      // Streaming evita timeouts de inactividade em pedidos longos; finalMessage() devolve a resposta completa.
-      // O AbortController garante o corte mesmo durante o stream (sem ele .finalMessage() pode correr para sempre).
-      response = await client.messages.stream({
-        ...baseParams,
-        messages,
-        ...(useStructured ? { output_config: { format: { type: "json_schema", schema: SPREADS_SCHEMA } } } : {}),
-      }, { signal: abort.signal }).finalMessage();
-    } catch (err) {
-      if (useStructured && err instanceof Anthropic.BadRequestError) {
-        console.error("spreads.js: pedido com structured outputs rejeitado (" + String(err?.message || "").slice(0, 200) + ") — a repetir sem output_config");
-        useStructured = false;
-        continue;
-      }
-      if (err?.name === "AbortError" || abort.signal.aborted) throw new Error("timeout global " + ANTHROPIC_TOTAL_MS / 60000 + " min");
-      const httpStatus = err instanceof Anthropic.APIConnectionTimeoutError ? 504 : (err?.status || 500);
-      throw Object.assign(new Error(err?.message || "Erro API"), { httpStatus });
-    }
-    turns++;
-    console.log("spreads.js: iteração " + turns + " stop_reason=" + response.stop_reason
-      + " elapsed=" + Math.round((Date.now() - t0) / 1000) + "s"
-      + " out_tokens=" + (response.usage?.output_tokens ?? "?")
-      + (useStructured ? "" : " (sem structured outputs)"));
-    if (response.stop_reason === "pause_turn") {
-      // Loop de tools server-side atingiu o limite de iterações — reenviar para retomar
-      messages.push({ role: "assistant", content: response.content });
-      continue;
-    }
-    break;
-  }
-  } finally {
-    clearTimeout(abortTimer);
-  }
-
-  if (!response || response.stop_reason === "pause_turn") throw new Error("API não terminou após " + MAX_PAUSE_TURNS + " continuações");
-  if (response.stop_reason === "refusal") throw new Error("API recusou o pedido");
-
-  const textBlocks = (response.content || []).filter(b => b.type === "text").map(b => b.text);
-  if (!textBlocks.join("").trim()) throw new Error("Resposta vazia da API (stop_reason: " + response.stop_reason + ")");
-
-  // Com web search há blocos de texto intermédios (narração entre pesquisas);
-  // o JSON final (constrangido pelo schema) é o ÚLTIMO bloco de texto.
+// Extrai e valida os spreads a partir da mensagem devolvida pelo batch.
+function extractSpreads(message) {
+  if (!message) throw new Error("Batch sem mensagem");
+  if (message.stop_reason === "pause_turn") throw new Error("modelo pausou (pause_turn) — re-tenta a actualização");
+  if (message.stop_reason === "refusal") throw new Error("API recusou o pedido");
+  const textBlocks = (message.content || []).filter(b => b.type === "text").map(b => b.text);
+  if (!textBlocks.join("").trim()) throw new Error("Resposta vazia (stop_reason: " + message.stop_reason + ")");
+  // Com web_fetch/web_search há blocos de texto intermédios; o JSON final
+  // (constrangido pelo schema) é o ÚLTIMO bloco de texto.
   let parsed;
   try { parsed = JSON.parse(textBlocks[textBlocks.length - 1]); }
   catch (_) { parsed = parseSpreadsText(textBlocks.join("\n")); }
   parsed = toSpreadsMap(parsed);
-
-  try {
-    return validateSpreads(parsed);
-  } catch (err) {
-    console.error("spreads.js: validação falhou — chaves=[" + Object.keys(parsed || {}).join(",") + "]"
-      + " CA=" + JSON.stringify(parsed?.CA ?? null).slice(0, 300));
-    throw err;
-  }
+  return validateSpreads(parsed);
 }
 
+// Parâmetros do pedido Messages, submetidos como uma entrada do batch.
+function buildRequestParams() {
+  return {
+    model: ANTHROPIC_MODEL,
+    max_tokens: 16000,
+    thinking: { type: "adaptive" },
+    output_config: { effort: "medium", format: { type: "json_schema", schema: SPREADS_SCHEMA } },
+    system: SYSTEM_PROMPT,
+    tools: [
+      { type: "web_fetch_20260209",  name: "web_fetch",  max_uses: WEB_FETCH_MAX_USES },
+      { type: "web_search_20260209", name: "web_search", max_uses: WEB_SEARCH_MAX_USES },
+    ],
+    messages: [{ role: "user", content: buildUserPrompt() }],
+  };
+}
 
-// ── Refresh em background ─────────────────────────────────────────────────
-// O pedido HTTP não fica aberto durante a chamada à Anthropic (1–3 min com
-// web search) — proxies à frente do Node cortam pedidos longos e devolvem
-// páginas HTML de erro. O POST dispara o refresh e responde já; o estado
-// consulta-se via GET /api/spreads.
-const REFRESH = { running: false, startedAt: 0, finishedAt: 0, error: null };
+// ── Refresh via Batch API ──────────────────────────────────────────────────
+// A chamada ao modelo (Sonnet + web_fetch dos preçários) corre como um job
+// assíncrono na Anthropic (Batch API): 50% mais barato, sem timeouts/overload
+// do lado do cliente, e o resultado fica disponível 29 dias. O id do batch é
+// guardado em KV, por isso o polling resiste a reinícios do contentor (o
+// problema "parou" desaparece). O resultado fica PENDENTE até aprovação no
+// admin (ou auto-aplicado se SPREADS_AUTO_APPLY=1).
+const REFRESH = { running: false, startedAt: 0, finishedAt: 0, error: null, batchId: null, _polling: false, _kvSlot: null, _today: "" };
+let PENDING = null; // { spreads, eur, eurLabel, fetchedAt }
 
 function refreshStatus() {
   return {
@@ -385,64 +374,130 @@ function refreshStatus() {
     startedAt:  REFRESH.startedAt  ? new Date(REFRESH.startedAt).toISOString()  : null,
     finishedAt: REFRESH.finishedAt ? new Date(REFRESH.finishedAt).toISOString() : null,
     error:      REFRESH.error,
+    batchId:    REFRESH.batchId || null,
     updatedAt:  MEM.fetchedAt ? new Date(MEM.fetchedAt).toISOString() : null,
+    pending:    PENDING ? {
+      bancos:    Object.keys(PENDING.spreads).length,
+      fetchedAt: new Date(PENDING.fetchedAt).toISOString(),
+      eurLabel:  PENDING.eurLabel || "",
+      spreads:   PENDING.spreads,
+    } : null,
   };
 }
 
-function startRefresh(apiKey, kvSlot, today) {
+// Promove os dados PENDENTES para "live" (L1 + L2 + opcionalmente SQLite).
+function applyPending(today, kvSlot) {
+  if (!PENDING) return false;
+  const freshData = { spreads: PENDING.spreads, eur: PENDING.eur, eurLabel: PENDING.eurLabel };
+  const fetchedAt = PENDING.fetchedAt || Date.now();
+  MEM.data       = freshData;
+  MEM.fetchedAt  = fetchedAt;
+  MEM.dayKey     = today;
+  MEM.callsToday = kvSlot != null ? Number(kvSlot) : MEM.callsToday + 1;
+  if (PERSIST_ANTHROPIC_SPREADS_TO_SQLITE && getBanksModule() && getBanksModule().bulkInsertSpreads) {
+    try { getBanksModule().bulkInsertSpreads(freshData.spreads, "anthropic"); } catch (e) { console.error("spreads.js: bulkInsertSpreads failed:", e.message); }
+  }
+  kvSet(KV_CACHE_KEY, { data: freshData, fetchedAt }, KV_CACHE_TTL).catch(() => {});
+  PENDING = null;
+  return true;
+}
+
+// Submete o batch e guarda o estado (memória + KV). Awaitable — a criação do
+// batch é rápida (só submete), por isso o POST não fica bloqueado.
+async function startBatchRefresh(apiKey, kvSlot, today) {
   if (REFRESH.running) return false;
   REFRESH.running    = true;
   REFRESH.startedAt  = Date.now();
   REFRESH.finishedAt = 0;
   REFRESH.error      = null;
+  REFRESH._kvSlot    = kvSlot;
+  REFRESH._today     = today;
+  try {
+    const client = new Anthropic({ apiKey, maxRetries: 4 });
+    const batch = await client.messages.batches.create({
+      requests: [{ custom_id: "spreads", params: buildRequestParams() }],
+    });
+    REFRESH.batchId = batch.id;
+    await kvSet(BATCH_KV_KEY, { batchId: batch.id, startedAt: REFRESH.startedAt, kvSlot, today }, BATCH_KV_TTL).catch(() => {});
+    console.log("spreads.js: batch submetido", batch.id);
+    return true;
+  } catch (e) {
+    REFRESH.running    = false;
+    REFRESH.finishedAt = Date.now();
+    REFRESH.error      = e?.message || "Erro ao submeter batch";
+    console.error("spreads.js: falha ao submeter batch:", REFRESH.error);
+    return false;
+  }
+}
 
-  (async () => {
-    const [eurResult, spreadsResult] = await Promise.allSettled([
-      fetchEuribor(),
-      callAnthropicAPI(apiKey),
-    ]);
+// Reidrata o estado do batch a partir do KV (após reinício do contentor).
+async function hydrateBatchState() {
+  if (REFRESH.batchId || REFRESH.running) return;
+  const saved = await kvGet(BATCH_KV_KEY);
+  if (saved && saved.batchId) {
+    REFRESH.batchId   = saved.batchId;
+    REFRESH.startedAt = saved.startedAt || Date.now();
+    REFRESH.running   = true;
+    REFRESH._kvSlot   = saved.kvSlot ?? null;
+    REFRESH._today    = saved.today || utcDayKey();
+  }
+}
 
-    const eur      = eurResult.status === "fulfilled" ? eurResult.value.eur      : null;
-    const eurLabel = eurResult.status === "fulfilled" ? eurResult.value.eurLabel : "";
+// Verifica o batch uma vez (chamado a partir do GET de polling do admin).
+// Em "ended": extrai/valida → fica PENDENTE (ou auto-aplica). Resiste a
+// reinícios porque o id está em KV.
+async function pollBatchOnce(apiKey) {
+  await hydrateBatchState();
+  if (!REFRESH.batchId || REFRESH._polling) return;
+  REFRESH._polling = true;
+  try {
+    const client = new Anthropic({ apiKey, maxRetries: 4 });
+    const batch = await client.messages.batches.retrieve(REFRESH.batchId);
+    if (batch.processing_status !== "ended") return;
 
-    // Persistir Euribor em banks.sqlite para ser servido via GET /api/banks
+    let spreads = null, err = null;
+    for await (const r of await client.messages.batches.results(REFRESH.batchId)) {
+      if (r.custom_id !== "spreads") continue;
+      if (r.result.type === "succeeded") {
+        try { spreads = extractSpreads(r.result.message); }
+        catch (e) {
+          err = e.message;
+          console.error("spreads.js: validação do batch falhou:", err);
+        }
+      } else if (r.result.type === "errored") {
+        err = "batch errored: " + (r.result.error?.error?.message || r.result.error?.type || "?");
+      } else {
+        err = "batch " + r.result.type;
+      }
+    }
+
+    // Batch terminou — limpar estado em curso
+    const kvSlot = REFRESH._kvSlot;
+    const today  = REFRESH._today || utcDayKey();
+    REFRESH.batchId    = null;
+    REFRESH.running    = false;
+    REFRESH.finishedAt = Date.now();
+    await kvSet(BATCH_KV_KEY, null, 1).catch(() => {});
+
+    if (!spreads) { REFRESH.error = err || "Erro desconhecido no batch"; return; }
+    REFRESH.error = null;
+
+    // Euribor (rápido) — actualizar também a cache do BCE
+    let eur = null, eurLabel = "";
+    try { const e = await fetchEuribor(); eur = e.eur; eurLabel = e.eurLabel; }
+    catch (e) { console.error("spreads.js: fetchEuribor falhou:", e.message); }
     if (eur && getBanksModule() && getBanksModule().setEuribor) {
       try { getBanksModule().setEuribor(eur, eurLabel); } catch (e) { console.error("spreads.js: setEuribor failed:", e.message); }
     }
 
-    if (spreadsResult.status === "rejected") {
-      REFRESH.error = spreadsResult.reason?.message || "Erro API";
-      console.error("spreads.js: refresh falhou:", REFRESH.error);
-      return;
-    }
-
-    const freshData = { spreads: spreadsResult.value, eur, eurLabel };
-    const fetchedAt = Date.now();
-
-    // Actualizar L1 (in-memory)
-    MEM.data       = freshData;
-    MEM.fetchedAt  = fetchedAt;
-    MEM.dayKey     = today;
-    MEM.callsToday = kvSlot !== null ? Number(kvSlot) : MEM.callsToday + 1;
-
-    // Opcional: persistir na SQLite do simulador (desactivado por defeito — evita sobrescrever dados auditados)
-    if (PERSIST_ANTHROPIC_SPREADS_TO_SQLITE && getBanksModule() && getBanksModule().bulkInsertSpreads && spreadsResult.value) {
-      try { getBanksModule().bulkInsertSpreads(spreadsResult.value, "anthropic"); } catch (e) { console.error("spreads.js: bulkInsertSpreads failed:", e.message); }
-    }
-
-    // Actualizar L2 (KV) — fire-and-forget
-    kvSet(KV_CACHE_KEY, { data: freshData, fetchedAt }, KV_CACHE_TTL).catch(() => {});
-    // kvIncr já foi chamado atomicamente antes de startRefresh (se KV disponível); só repetir em fallback
-    if (kvSlot === null) kvIncr(KV_CALLS_PFX + today, KV_CALLS_TTL).catch(() => {});
-  })().catch((err) => {
-    REFRESH.error = err?.message || String(err);
-    console.error("spreads.js: refresh falhou:", REFRESH.error);
-  }).finally(() => {
-    REFRESH.running    = false;
-    REFRESH.finishedAt = Date.now();
-  });
-
-  return true;
+    PENDING = { spreads, eur, eurLabel, fetchedAt: Date.now() };
+    if (SPREADS_AUTO_APPLY) applyPending(today, kvSlot);
+  } catch (e) {
+    // Erro transitório ao consultar o batch — deixar em curso, tentar no próximo poll
+    console.error("spreads.js: pollBatch erro transitório:", e?.message);
+  } finally {
+    REFRESH._polling = false;
+  }
 }
 
 function withMeta(payload, source, fetchedAt) {
@@ -457,14 +512,32 @@ function withMeta(payload, source, fetchedAt) {
 }
 
 module.exports = async function handler(req, res) {
-  // GET — estado do refresh em background (para polling do admin)
-  if (req.method === "GET") return res.status(200).json(refreshStatus());
+  const apiKeyEnv = process.env.ANTHROPIC_API_KEY;
+
+  // GET — estado do refresh (polling do admin). Também faz avançar o batch:
+  // consulta o estado do job e, quando termina, valida e fica PENDENTE.
+  if (req.method === "GET") {
+    if (apiKeyEnv) { try { await pollBatchOnce(apiKeyEnv); } catch (_) {} }
+    return res.status(200).json(refreshStatus());
+  }
   if (req.method !== "POST") return res.status(405).json({ error: "Método não suportado" });
 
   // Admin override — bypassa rate limits e cache (token válido = acesso irrestrito)
   const adminToken = process.env.ADMIN_TOKEN;
   const reqToken   = req.headers["x-admin-token"] || "";
   const isAdmin    = !!(adminToken && reqToken === adminToken);
+
+  // Aprovação / rejeição dos dados PENDENTES (admin, via header x-spreads-action)
+  const action = String(req.headers["x-spreads-action"] || "").toLowerCase();
+  if (action === "approve" || action === "reject") {
+    if (!isAdmin) return res.status(403).json({ error: "Requer x-admin-token" });
+    if (action === "approve") {
+      const applied = applyPending(utcDayKey(), null);
+      return res.status(applied ? 200 : 409).json({ applied, ...refreshStatus() });
+    }
+    PENDING = null;
+    return res.status(200).json({ rejected: true, ...refreshStatus() });
+  }
 
   // Variáveis partilhadas entre o bloco de limites e o bloco de API
   const today    = utcDayKey();
@@ -533,13 +606,19 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = apiKeyEnv;
   if (!apiKey) return res.status(503).json({ error: "ANTHROPIC_API_KEY não configurada" });
 
-  // ── 4. Disparar refresh em background (Anthropic + BCE) e responder de imediato
-  const started = startRefresh(apiKey, kvSlot, today);
-  // Já havia um refresh em curso — devolver o slot reservado em ── 3
+  // ── 4. Submeter o batch (Anthropic) e responder de imediato. O resultado é
+  // recolhido pelo polling (GET) e fica PENDENTE até aprovação no admin.
+  const started = await startBatchRefresh(apiKey, kvSlot, today);
+  // Já havia um batch em curso — devolver o slot reservado em ── 3
   if (!started && kvSlot !== null) kvDecr(KV_CALLS_PFX + today).catch(() => {});
+  // Falha na submissão do batch — devolver o slot e reportar o erro
+  if (!started && REFRESH.error && !REFRESH.running) {
+    if (kvSlot !== null) kvDecr(KV_CALLS_PFX + today).catch(() => {});
+    return res.status(502).json({ error: REFRESH.error, ...refreshStatus() });
+  }
 
   const staleData      = kvCached?.data || MEM.data || null;
   const staleFetchedAt = kvCached?.fetchedAt || MEM.fetchedAt || 0;
@@ -554,3 +633,5 @@ module.exports = async function handler(req, res) {
 module.exports.validateSpreads = validateSpreads;
 module.exports.toSpreadsMap    = toSpreadsMap;
 module.exports.SPREADS_SCHEMA  = SPREADS_SCHEMA;
+module.exports.buildRequestParams = buildRequestParams;
+module.exports.BANK_SOURCES     = BANK_SOURCES;

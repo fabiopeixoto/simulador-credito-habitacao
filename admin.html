@@ -32,11 +32,12 @@
 <div class="ai-box">
   <div class="ai-box-info">
     <h2>🤖 Actualizar Spreads via Anthropic AI</h2>
-    <p>Chama a API Anthropic para obter os spreads mais recentes de todos os bancos e guarda-os na base de dados. Sem limite de chamadas para admin.</p>
+    <p>Pesquisa os preçários oficiais (web_fetch) via Batch API e devolve os spreads de todos os bancos. O resultado fica em <strong>revisão</strong> — confirma antes de publicar.</p>
   </div>
   <div id="aiStatus"></div>
   <button type="button" class="btn-ai" id="btnAi" onclick="refreshSpreadsAI()">🤖 Actualizar Agora</button>
 </div>
+<div id="aiPending"></div>
 
 <div id="adminEuriborBar" class="admin-eur-bar" style="display:none;" aria-label="Euribor de referência">
   <div class="row">
@@ -178,6 +179,6 @@
   </div>
 </div>
 
-<script src="/admin.js?v=2"></script>
+<script src="/admin.js?v=3"></script>
 </body>
 </html>

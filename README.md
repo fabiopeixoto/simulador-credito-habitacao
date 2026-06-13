@@ -140,16 +140,23 @@ Cache em memória + persistência em `banks.sqlite` (`kv_store`) com TTL 6 h. Ap
 
 ### `POST /api/spreads`
 
-Actualização massiva via **Anthropic** (Claude Opus 4.8 com pesquisa web dos preçários oficiais e resposta validada por JSON schema) + Euribor BCE.
+Actualização massiva via **Anthropic** (Claude Sonnet 4.6 com `web_fetch` directo aos preçários oficiais — URLs em `reference/precarios-pdf/sources.json` — `web_search` de recurso, e resposta validada por JSON schema) + Euribor BCE.
 
-A chamada ao modelo demora vários minutos (tipicamente 5–10), por isso corre **em background**: o `POST` responde de imediato (dados em cache com `X-Cache: REFRESHING`, ou `202 {status:"refreshing"}` se não houver cache) e o estado consulta-se via **`GET /api/spreads`** (`{running, startedAt, finishedAt, error, updatedAt}`) — é o que o painel admin usa para polling.
+A chamada ao modelo corre na **Batch API** (assíncrona, ~50% mais barata, sem timeouts/overload do lado do cliente e com o resultado disponível 29 dias). Fluxo:
+
+1. `POST /api/spreads` **submete o batch** e responde de imediato (dados em cache com `X-Cache: REFRESHING`, ou `202 {status:"refreshing"}`). O `id` do batch é guardado em `spreads.sqlite` (KV), por isso o polling **resiste a reinícios do contentor**.
+2. **`GET /api/spreads`** faz polling do estado *e* faz avançar o batch: quando termina, valida e deixa o resultado **pendente** (`{running, error, batchId, updatedAt, pending:{bancos, fetchedAt, spreads}}`).
+3. O resultado fica **em revisão** — não substitui os dados servidos até ser aprovado:
+   - `POST /api/spreads` com `x-admin-token` + `x-spreads-action: approve` → publica (promove a cache L1/L2).
+   - `… x-spreads-action: reject` → descarta.
+   - Define **`SPREADS_AUTO_APPLY=1`** para auto-publicar sem revisão (comportamento antigo).
 
 - **Com `x-admin-token` válido**: ignora cache e limites diários (uso administrativo / Jenkins).
-- **Sem token**: **rate limit** por IP (~20 pedidos/h) e **limite global** ~2 chamadas "frescas" ao modelo por dia por instância (com cache SQLite ~25 h e cache em memória). Serve dados em cache quando excede limites.
+- **Sem token**: **rate limit** por IP (~20 pedidos/h) e **limite global** ~2 submissões por dia por instância (cache SQLite ~25 h + cache em memória). Serve dados em cache quando excede limites.
 
-Persistência: grava spreads em `banks.sqlite` via `bulkInsertSpreads`; Euribor também em cache (`banks.js`).
+Persistência: ao aprovar grava spreads em `banks.sqlite` via `bulkInsertSpreads` (só se `ANTHROPIC_PERSIST_SPREADS=1`); Euribor em cache (`banks.js`).
 
-Variável obrigatória no servidor: **`ANTHROPIC_API_KEY`**.
+Variável obrigatória no servidor: **`ANTHROPIC_API_KEY`**. Opcionais: **`SPREADS_AUTO_APPLY`**, **`ANTHROPIC_PERSIST_SPREADS`**.
 
 ---
 
@@ -190,8 +197,10 @@ Requer **`x-admin-token`**. Devolve:
 | Variável | Uso |
 |----------|-----|
 | `PORT` | Porta HTTP (defeito **3000**) |
-| `ANTHROPIC_API_KEY` | Activa `POST /api/spreads` com chamada ao modelo |
-| `ADMIN_TOKEN` | Admin: `GET /api/stats`, `POST/DELETE /api/banks`, `DELETE /api/comments`, e bypass de limites em `POST /api/spreads` |
+| `ANTHROPIC_API_KEY` | Activa `POST /api/spreads` (Batch API + web_fetch) |
+| `ADMIN_TOKEN` | Admin: `GET /api/stats`, `POST/DELETE /api/banks`, `DELETE /api/comments`, aprovar/rejeitar e bypass de limites em `POST /api/spreads` |
+| `SPREADS_AUTO_APPLY` | `=1` publica o resultado da AI sem revisão (por defeito fica pendente) |
+| `ANTHROPIC_PERSIST_SPREADS` | `=1` grava spreads aprovados em `banks.sqlite` (por defeito não persiste) |
 | `DEBUG_SECRET` | Endpoint de diagnóstico dos comentários |
 
 ---
