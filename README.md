@@ -78,7 +78,7 @@ Aplicação web para **simular e comparar** crédito habitação em Portugal: pr
 │
 ├── api/
 │   ├── banks.js             # CRUD bancos/spreads, Euribor, seed SQLite; ETag em GET
-│   ├── spreads.js           # POST: Anthropic + BCE, cache/rate limit
+│   ├── spreads.js           # POST: Gemini + BCE, cache/rate limit
 │   ├── comments.js          # Comentários + respostas (SQLite, cache 30s, UUID)
 │   ├── stats.js             # Estatísticas de visitas + localização por cidade
 │   └── euribor-history.js   # Histórico BCE (3m/6m/12m) com cache SQLite
@@ -140,9 +140,9 @@ Cache em memória + persistência em `banks.sqlite` (`kv_store`) com TTL 6 h. Ap
 
 ### `POST /api/spreads`
 
-Actualização massiva via **Anthropic** (Claude Sonnet 4.6 com `web_fetch` directo aos preçários oficiais — fetches em paralelo, um por banco — resposta validada por JSON schema) + Euribor BCE.
+Actualização massiva via **Google Gemini** (modelo `gemini-2.5-pro` com a *URL context tool* a ler directamente os preçários oficiais em PDF — extrai texto e tabelas — resposta validada por JSON schema) + Euribor BCE.
 
-A chamada corre em background (Messages API, ~1–3 min com web_fetch + thinking adaptativo). Fluxo:
+A chamada corre em background (uma ou duas chamadas `generateContent`, repartidas pelo limite de 20 URLs/pedido, ~1–3 min). Fluxo:
 
 1. `POST /api/spreads` **inicia o refresh em background** e responde de imediato (dados em cache com `X-Cache: REFRESHING`, ou `202 {status:"refreshing"}`).
 2. **`GET /api/spreads`** devolve o estado do refresh (`{running, error, updatedAt, pending:{bancos, fetchedAt, spreads}}`).
@@ -156,7 +156,7 @@ A chamada corre em background (Messages API, ~1–3 min com web_fetch + thinking
 
 Persistência: ao aprovar grava spreads em `banks.sqlite` via `bulkInsertSpreads` (sempre — aprovação implica publicação); Euribor em cache (`banks.js`).
 
-Variável obrigatória no servidor: **`ANTHROPIC_API_KEY`**. Opcional: **`SPREADS_AUTO_APPLY`**.
+Variável obrigatória no servidor: **`GEMINI_API_KEY`**. Opcional: **`SPREADS_AUTO_APPLY`**, **`GEMINI_MODEL`**.
 
 ---
 
@@ -197,9 +197,10 @@ Requer **`x-admin-token`**. Devolve:
 | Variável | Uso |
 |----------|-----|
 | `PORT` | Porta HTTP (defeito **3000**) |
-| `ANTHROPIC_API_KEY` | Activa `POST /api/spreads` (Batch API + web_fetch) |
+| `GEMINI_API_KEY` | Activa `POST /api/spreads` (Gemini + URL context tool) |
 | `ADMIN_TOKEN` | Admin: `GET /api/stats`, `POST/DELETE /api/banks`, `DELETE /api/comments`, aprovar/rejeitar e bypass de limites em `POST /api/spreads` |
 | `SPREADS_AUTO_APPLY` | `=1` publica o resultado da AI sem revisão (por defeito fica pendente) |
+| `GEMINI_MODEL` | Modelo Gemini a usar (defeito **`gemini-2.5-pro`**) |
 | `DEBUG_SECRET` | Endpoint de diagnóstico dos comentários |
 
 ---
@@ -232,7 +233,7 @@ Requisitos: Node 20+ recomendado. Os ficheiros SQLite são criados automaticamen
 docker build -t simulador-credito-habitacao .
 docker run -d --name simulador-credito-habitacao -p 3000:3000 \
   -v simulador-credito-habitacao-data:/usr/src/app/data \
-  -e ANTHROPIC_API_KEY="..." \
+  -e GEMINI_API_KEY="..." \
   -e ADMIN_TOKEN="..." \
   -e DEBUG_SECRET="..." \
   simulador-credito-habitacao:latest
@@ -252,7 +253,7 @@ O `Jenkinsfile`:
 
 Credenciais típicas (IDs referidos no pipeline):
 
-- `anthropic-api-key`, `admin-token`, `debug-secret`
+- `gemini-api-key`, `admin-token`, `debug-secret`
 - `discord-webhook-url` — notificações de build
 - `github-api-token` — enriquecimento de mensagens (se configurado no pipeline)
 
@@ -265,7 +266,7 @@ O ambiente de exemplo publica com **`-p 3999:3000`** (host 3999 → app 3000). A
 | Ficheiro | Conteúdo |
 |----------|----------|
 | `banks.sqlite` | Tabelas `banks`, `spreads` (histórico por `fetched_at`), `kv_store` (cache Euribor + histórico BCE) |
-| `spreads.sqlite` | Cache KV / contadores para limites do endpoint Anthropic |
+| `spreads.sqlite` | Cache KV / contadores para limites do endpoint Gemini |
 | `comments.sqlite` | Comentários e respostas |
 | `stats.sqlite` | Visitas diárias (`daily`), totais (`meta`), localização por cidade (`visitor_locations`) |
 

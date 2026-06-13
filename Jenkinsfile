@@ -11,7 +11,7 @@ pipeline {
 
   environment {
     DEPLOY_IMAGE = "simulador-credito-habitacao:${env.GIT_COMMIT ?: 'latest'}"
-    ANTHROPIC_API_KEY = credentials('anthropic-api-key')
+    GEMINI_API_KEY = credentials('gemini-api-key')
     ADMIN_TOKEN = credentials('admin-token')
     DEBUG_SECRET = credentials('debug-secret')
     PUBLIC_APP_URL = 'https://simulador-credito.tiagomartins.pt/'
@@ -76,7 +76,7 @@ pipeline {
 
           docker run -d --name simulador-credito-habitacao -p 3999:3000 \
             -v simulador-credito-habitacao-data:/usr/src/app/data \
-            -e ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY}" \
+            -e GEMINI_API_KEY="${GEMINI_API_KEY}" \
             -e ADMIN_TOKEN="${ADMIN_TOKEN}" \
             -e DEBUG_SECRET="${DEBUG_SECRET}" \
             "${DEPLOY_IMAGE}"
