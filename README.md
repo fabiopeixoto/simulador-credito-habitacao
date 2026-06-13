@@ -140,12 +140,12 @@ Cache em memória + persistência em `banks.sqlite` (`kv_store`) com TTL 6 h. Ap
 
 ### `POST /api/spreads`
 
-Actualização massiva via **Anthropic** (Claude Sonnet 4.6 com `web_fetch` directo aos preçários oficiais — URLs em `reference/precarios-pdf/sources.json` — `web_search` de recurso, e resposta validada por JSON schema) + Euribor BCE.
+Actualização massiva via **Anthropic** (Claude Opus 4.8 com `web_fetch` directo aos preçários oficiais — fetches em paralelo, um por banco — resposta validada por JSON schema) + Euribor BCE.
 
-A chamada ao modelo corre na **Batch API** (assíncrona, ~50% mais barata, sem timeouts/overload do lado do cliente e com o resultado disponível 29 dias). Fluxo:
+A chamada corre em background (Messages API, ~1–3 min com web_fetch + thinking adaptativo). Fluxo:
 
-1. `POST /api/spreads` **submete o batch** e responde de imediato (dados em cache com `X-Cache: REFRESHING`, ou `202 {status:"refreshing"}`). O `id` do batch é guardado em `spreads.sqlite` (KV), por isso o polling **resiste a reinícios do contentor**.
-2. **`GET /api/spreads`** faz polling do estado *e* faz avançar o batch: quando termina, valida e deixa o resultado **pendente** (`{running, error, batchId, updatedAt, pending:{bancos, fetchedAt, spreads}}`).
+1. `POST /api/spreads` **inicia o refresh em background** e responde de imediato (dados em cache com `X-Cache: REFRESHING`, ou `202 {status:"refreshing"}`).
+2. **`GET /api/spreads`** devolve o estado do refresh (`{running, error, updatedAt, pending:{bancos, fetchedAt, spreads}}`).
 3. O resultado fica **em revisão** — não substitui os dados servidos até ser aprovado:
    - `POST /api/spreads` com `x-admin-token` + `x-spreads-action: approve` → publica (promove a cache L1/L2).
    - `… x-spreads-action: reject` → descarta.
