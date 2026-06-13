@@ -141,7 +141,7 @@ function isRateLimited(ip) {
 // ── Anthropic API ─────────────────────────────────────────────────────────
 const BANK_CODES = ["CA", "CTT", "BNKTR", "ABANCA", "BCP", "ACTVO", "BPI", "MNTPO", "SANTR", "NB", "CGD", "UCI", "BNI", "BEST"];
 
-const ANTHROPIC_MODEL      = "claude-sonnet-4-6";
+const ANTHROPIC_MODEL      = "claude-opus-4-8";
 const WEB_FETCH_MAX_USES   = 14; // 1 por banco; o modelo deve chamá-los em paralelo (1 iteração)
 const PAUSE_TURN_MAX_CONT  = 3;  // continuações máximas após pause_turn
 
@@ -470,8 +470,9 @@ function startRefresh(apiKey, kvSlot, today) {
       console.log("spreads.js: a chamar Anthropic Messages API com web_fetch...");
       const message = await callWithContinuation(client, {
         model:         ANTHROPIC_MODEL,
-        max_tokens:    32000,
-        output_config: { effort: "medium", format: { type: "json_schema", schema: SPREADS_SCHEMA } },
+        max_tokens:    48000,
+        thinking:      { type: "adaptive" },
+        output_config: { format: { type: "json_schema", schema: SPREADS_SCHEMA } },
         system:        SYSTEM_PROMPT,
         tools:         [{ type: "web_fetch_20260209", name: "web_fetch", max_uses: WEB_FETCH_MAX_USES }],
         messages:      buildMessages(),
