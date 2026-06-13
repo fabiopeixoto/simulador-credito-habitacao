@@ -7,6 +7,7 @@
     "lint": "sh scripts/lint.sh"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.104.1",
     "better-sqlite3": "^12.9.0"
   }
 }
