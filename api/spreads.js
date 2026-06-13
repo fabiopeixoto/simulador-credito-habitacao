@@ -327,23 +327,43 @@ async function fetchBankPdfs() {
 }
 
 const DOC_LABELS = ["Taxas de juro §18.1", "Comissões §18.2"];
+const DOC_MAX    = 20; // limite da API Anthropic para document blocks por mensagem
 
 // Constrói o array `messages` com os PDFs como document blocks.
+// Dois passes: 1.º taxas (prioridade), 2.º comissões até atingir DOC_MAX.
 function buildMessages(pdfMap) {
   const content = [];
+  let docCount = 0;
+
+  // Passo 1 — taxas §18.1 (um por banco, todos)
   for (const code of BANK_CODES) {
-    const bufs = pdfMap[code] || [];
-    bufs.forEach((buf, i) => {
-      if (buf && buf.length > 0) {
-        content.push({
-          type: "document",
-          source: { type: "base64", media_type: "application/pdf", data: buf.toString("base64") },
-          title: `${code} — ${BANK_NAMES[code]} — ${DOC_LABELS[i] || "Preçário"}`,
-          context: "Folheto de preçário para crédito habitação HPP",
-        });
-      }
-    });
+    const buf = (pdfMap[code] || [])[0];
+    if (buf && buf.length > 0 && docCount < DOC_MAX) {
+      content.push({
+        type: "document",
+        source: { type: "base64", media_type: "application/pdf", data: buf.toString("base64") },
+        title: `${code} — ${BANK_NAMES[code]} — ${DOC_LABELS[0]}`,
+        context: "Folheto de preçário para crédito habitação HPP",
+      });
+      docCount++;
+    }
   }
+
+  // Passo 2 — comissões §18.2 (quando existem e há espaço)
+  for (const code of BANK_CODES) {
+    if (docCount >= DOC_MAX) break;
+    const buf = (pdfMap[code] || [])[1];
+    if (buf && buf.length > 0) {
+      content.push({
+        type: "document",
+        source: { type: "base64", media_type: "application/pdf", data: buf.toString("base64") },
+        title: `${code} — ${BANK_NAMES[code]} — ${DOC_LABELS[1]}`,
+        context: "Folheto de preçário para crédito habitação HPP",
+      });
+      docCount++;
+    }
+  }
+
   const missing = BANK_CODES.filter((c) => !(pdfMap[c] || []).length);
   let userText = "Extrai as condições actuais de crédito habitação HPP para os 14 bancos a partir dos documentos acima, no formato JSON definido.";
   if (missing.length) {
