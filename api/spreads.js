@@ -1,8 +1,4 @@
-const path    = require("path");
-const https   = require("https");
-const http    = require("http");
-const { URL: NodeURL } = require("url");
-const pdfParse = require("pdf-parse");
+const path  = require("path");
 const Anthropic = require("@anthropic-ai/sdk");
 const { openSqliteDb } = require(path.join(__dirname, "..", "lib", "open-sqlite.js"));
 const { fetchEuribor } = require("./euribor.js");
@@ -145,28 +141,17 @@ function isRateLimited(ip) {
 // ── Anthropic API ─────────────────────────────────────────────────────────
 const BANK_CODES = ["CA", "CTT", "BNKTR", "ABANCA", "BCP", "ACTVO", "BPI", "MNTPO", "SANTR", "NB", "CGD", "UCI", "BNI", "BEST"];
 
-const ANTHROPIC_MODEL = "claude-sonnet-4-6";
-// PDFs são buscados pelo Node.js e enviados ao modelo como document blocks —
-// sem tools, sem Batch API, sem loop de iterações.
-const PDF_FETCH_TIMEOUT_MS = 30_000; // por PDF
-const PDF_MAX_BYTES        = 6 * 1024 * 1024; // 6 MB
+const ANTHROPIC_MODEL      = "claude-sonnet-4-6";
+const WEB_FETCH_MAX_USES   = 14; // 1 por banco; o modelo deve chamá-los em paralelo (1 iteração)
+const PAUSE_TURN_MAX_CONT  = 3;  // continuações máximas após pause_turn
 
 // Auto-aplicar o resultado da AI sem revisão no admin (compatibilidade com o fluxo antigo).
 // Por defeito o resultado fica PENDENTE e só vai a "live" depois de aprovação no painel admin.
 const SPREADS_AUTO_APPLY = process.env.SPREADS_AUTO_APPLY === "1";
 
-const BANK_NAMES = {
-  CA: "Crédito Agrícola", CTT: "Banco CTT", BNKTR: "Bankinter Portugal",
-  ABANCA: "ABANCA Portugal", BCP: "Millennium BCP", ACTVO: "ActivoBank",
-  BPI: "Banco BPI", MNTPO: "Banco Montepio", SANTR: "Santander Portugal",
-  NB: "novobanco", CGD: "Caixa Geral de Depósitos", UCI: "UCI Portugal",
-  BNI: "BNI Europa", BEST: "Banco Best",
-};
-
-// Preçários oficiais por banco. O Node.js faz os fetches em paralelo e envia
-// os PDFs ao modelo como document blocks — sem tools, sem loop de iterações.
-// Dois URLs por banco onde disponível: [taxas §18.1, comissões §18.2].
-// BEST não tem URL público — fica sem PDF (o modelo estima).
+// Preçários oficiais por banco: [taxas §18.1, comissões §18.2].
+// O modelo usa web_fetch nestes URLs directamente (servidores Anthropic
+// evitam bloqueios de IP e gerem cookies). BEST sem URL — modelo estima.
 const BANK_SOURCES = {
   CA:     ["https://www.creditoagricola.pt/-/media/files/precario/documents-site/taxas-de-juro-_aviso-8-2009-do-bdp/pre-ft-202605.pdf",
            "https://www.creditoagricola.pt/-/media/files/precario/documents-site/comissoes-e-despesas-_aviso-8-2009-do-bdp/pre-fc-20260501.pdf"],
@@ -249,7 +234,7 @@ const SPREADS_SCHEMA = {
   },
 };
 
-const SYSTEM_PROMPT = `És um analista de crédito habitação em Portugal. A tua tarefa é extrair as condições ACTUAIS de crédito habitação para aquisição de habitação própria permanente (HPP) a partir dos folhetos de preçário (PDFs) fornecidos como documentos nesta mensagem.
+const SYSTEM_PROMPT = `És um analista de crédito habitação em Portugal. A tua tarefa é apurar as condições ACTUAIS de crédito habitação para aquisição de habitação própria permanente (HPP) praticadas por 14 bancos portugueses, consultando os preçários oficiais via web_fetch.
 
 Bancos a apurar (código = nome oficial):
 - CA = Crédito Agrícola
@@ -267,106 +252,53 @@ Bancos a apurar (código = nome oficial):
 - BNI = BNI Europa
 - BEST = Banco Best
 
-Regras de extracção:
-- sCom é SEMPRE o spread contratual em vigor FORA do período promocional (ou após a promoção terminar) — nunca o spread reduzido da campanha. O spread de campanha vai em promoSpread.
-- Os valores "sem produtos" (sSem, mSem, fSem, jsSem) são as condições sem vendas associadas facultativas, por isso ≥ aos valores "com produtos".
-- Quando não há campanha promocional: promoPeriodo = 0 e promoSpread = null.
-- "Com produtos" assume o pacote típico exigido (domiciliação de ordenado, seguros no banco, cartões).
-- Lê os PDFs fornecidos e extrai spreads variáveis, TAN mista, TAN fixa, crédito jovem e comissões.
-- Para bancos sem PDF fornecido (ou cujo PDF esteja ilegível), usa uma estimativa razoável com base em bancos comparáveis e indica "Estimativa" em contaNota.
+Regras de apuramento:
+- sCom é SEMPRE o spread contratual em vigor FORA do período promocional — nunca o spread reduzido da campanha. O spread de campanha vai em promoSpread.
+- Os valores "sem produtos" (sSem, mSem, fSem, jsSem) são ≥ aos valores "com produtos".
+- Quando não há campanha: promoPeriodo = 0 e promoSpread = null.
+- IMPORTANTE: chama TODOS os web_fetch numa única resposta (em paralelo), um por banco. Não faças fetches sequencialmente.
+- Para cada banco, usa web_fetch nos URLs do preçário indicados na mensagem (taxas §18.1 e comissões §18.2).
+- Se um URL devolver erro ou não cobrir o campo, usa uma estimativa razoável e indica "Estimativa" em contaNota.
+- Para bancos sem URL (BEST), estima com base em bancos comparáveis e indica "Estimativa".
 - Indica o mês/ano da fonte em contaNota quando confirmares o valor (ex.: "Preçário mai.2026").
-- Quando não encontrares um valor concreto (ex.: comissão exacta de dossier), usa uma estimativa razoável com base em bancos comparáveis e escreve "Estimativa" em contaNota (e "(est.)" em insV/insM se a seguradora for desconhecida).
 - Valores monetários em EUR; spreads e TANs em pontos percentuais (ex.: 0.70 = 0,70%).
 
-Responde apenas com o objecto JSON pedido — {"bancos":[...]} com exactamente 14 entradas, cada uma com o campo "codigo" — sem texto adicional.`;
+Responde apenas com o objecto JSON pedido — {"bancos":[...]} com exactamente 14 entradas — sem texto adicional.`;
 
-// ── Fetch PDFs server-side ────────────────────────────────────────────────
-// Busca um PDF via HTTP/HTTPS com timeout e limite de tamanho. Segue até 3
-// redirects. Devolve Buffer com o conteúdo ou null em caso de falha.
-async function fetchPdf(rawUrl, _depth) {
-  const depth = _depth || 0;
-  if (depth > 3) return null;
-  return new Promise((resolve) => {
-    let settled = false;
-    function done(v) { if (!settled) { settled = true; resolve(v); } }
-    let parsed;
-    try { parsed = new NodeURL(rawUrl); } catch (_) { return done(null); }
-    const client = parsed.protocol === "https:" ? https : http;
-    const req = client.get(rawUrl, { headers: { "User-Agent": "simulador-precarios/1.0" } }, (res) => {
-      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        res.resume();
-        fetchPdf(res.headers.location, depth + 1).then(done);
-        return;
-      }
-      if (res.statusCode !== 200) { res.resume(); return done(null); }
-      const chunks = [];
-      let size = 0;
-      res.on("data", (chunk) => {
-        size += chunk.length;
-        if (size > PDF_MAX_BYTES) { req.destroy(); return done(null); }
-        chunks.push(chunk);
-      });
-      res.on("end", () => done(Buffer.concat(chunks)));
-      res.on("error", () => done(null));
-    });
-    req.on("error", () => done(null));
-    req.setTimeout(PDF_FETCH_TIMEOUT_MS, () => { req.destroy(); done(null); });
-  });
+// Mensagem do utilizador com os URLs de preçário por banco.
+function buildMessages() {
+  const linhas = BANK_CODES.map((code) => {
+    const urls = BANK_SOURCES[code] || [];
+    if (!urls.length) return `- ${code}: (sem URL — estima)`;
+    return `- ${code}: ${urls.join(" + ")}`;
+  }).join("\n");
+  return [{
+    role: "user",
+    content: `Apura as condições de crédito habitação HPP para os 14 bancos. Chama TODOS os web_fetch em paralelo (numa única resposta).\n\nURLs (taxas §18.1 + comissões §18.2):\n${linhas}`,
+  }];
 }
 
-// Busca todos os PDFs em paralelo. Devolve mapa code → Buffer[] (um por URL).
-async function fetchBankPdfs() {
-  const results = await Promise.all(
-    BANK_CODES.map(async (code) => {
-      const urls = BANK_SOURCES[code] || [];
-      if (!urls.length) return [code, []];
-      const bufs = await Promise.all(urls.map((u) => fetchPdf(u)));
-      return [code, bufs.filter(Boolean)];
-    })
-  );
-  return Object.fromEntries(results);
-}
+// Executa a chamada à API com continuation loop para pause_turn.
+// Com server-side tools (web_fetch), a API pode pausar antes de terminar;
+// continuamos acrescentando a resposta parcial + "continua" até ao limite.
+async function callWithContinuation(client, baseParams) {
+  let messages = [...baseParams.messages];
+  let lastMessage = null;
 
-// Extrai texto de um Buffer PDF. Devolve string ou null se falhar.
-async function extractPdfText(buf) {
-  if (!buf || !buf.length) return null;
-  try {
-    const data = await pdfParse(buf);
-    const txt = (data.text || "").trim();
-    return txt.length > 50 ? txt : null;
-  } catch (_) {
-    return null;
-  }
-}
-
-// Constrói o array `messages` com o texto dos PDFs como blocos de texto.
-// Evita qualquer limite de document blocks da API — o texto é enviado inline.
-async function buildMessages(pdfMap) {
-  const content = [];
-
-  for (const code of BANK_CODES) {
-    const bufs = pdfMap[code] || [];
-    const labels = ["Taxas §18.1", "Comissões §18.2"];
-    const parts = [];
-    for (let i = 0; i < bufs.length; i++) {
-      const txt = await extractPdfText(bufs[i]);
-      if (txt) parts.push(`=== ${labels[i] || "Preçário"} ===\n${txt}`);
-    }
-    if (parts.length) {
-      content.push({
-        type: "text",
-        text: `### ${code} — ${BANK_NAMES[code]}\n\n${parts.join("\n\n")}`,
-      });
+  for (let i = 0; i <= PAUSE_TURN_MAX_CONT; i++) {
+    const msg = await client.messages.create({ ...baseParams, messages });
+    lastMessage = msg;
+    if (msg.stop_reason !== "pause_turn") break;
+    if (i < PAUSE_TURN_MAX_CONT) {
+      messages = [
+        ...messages,
+        { role: "assistant", content: msg.content },
+        { role: "user", content: [{ type: "text", text: "Continua com os bancos em falta e termina o JSON completo com os 14 bancos." }] },
+      ];
+      console.log(`spreads.js: pause_turn — continuação ${i + 1}/${PAUSE_TURN_MAX_CONT}`);
     }
   }
-
-  const missing = BANK_CODES.filter((c) => !(pdfMap[c] || []).length || !content.find(b => b.text?.startsWith(`### ${c} `)));
-  let userText = "Extrai as condições actuais de crédito habitação HPP para os 14 bancos a partir dos preçários acima, no formato JSON definido.";
-  if (missing.length) {
-    userText += `\n\nBancos sem preçário disponível — estima com base em bancos comparáveis: ${missing.join(", ")}.`;
-  }
-  content.push({ type: "text", text: userText });
-  return [{ role: "user", content }];
+  return lastMessage;
 }
 
 // ── Validação da resposta antes de cachear/servir
@@ -519,9 +451,9 @@ function applyPending(today, kvSlot) {
   return true;
 }
 
-// Inicia o refresh em background: busca PDFs em paralelo, chama Messages API
-// de forma síncrona e actualiza REFRESH/PENDING quando termina. O POST HTTP
-// responde imediatamente; o admin faz polling ao GET até running=false.
+// Inicia o refresh em background: chama Messages API com web_fetch (servidor
+// Anthropic busca os preçários directamente, evitando bloqueios de IP).
+// O POST HTTP responde imediatamente; o admin faz polling ao GET até running=false.
 function startRefresh(apiKey, kvSlot, today) {
   if (REFRESH.running) return false;
   REFRESH.running    = true;
@@ -534,18 +466,15 @@ function startRefresh(apiKey, kvSlot, today) {
 
   (async () => {
     try {
-      console.log("spreads.js: a buscar PDFs dos preçários...");
-      const pdfMap = await fetchBankPdfs();
-      const nFetched = Object.values(pdfMap).filter(Boolean).length;
-      console.log(`spreads.js: ${nFetched}/${BANK_CODES.length} PDFs obtidos`);
-
-      const client = new Anthropic({ apiKey, maxRetries: 3, timeout: 120_000 });
-      const message = await client.messages.create({
+      const client = new Anthropic({ apiKey, maxRetries: 1, timeout: 180_000 });
+      console.log("spreads.js: a chamar Anthropic Messages API com web_fetch...");
+      const message = await callWithContinuation(client, {
         model:         ANTHROPIC_MODEL,
         max_tokens:    32000,
         output_config: { effort: "medium", format: { type: "json_schema", schema: SPREADS_SCHEMA } },
         system:        SYSTEM_PROMPT,
-        messages:      await buildMessages(pdfMap),
+        tools:         [{ type: "web_fetch_20260209", name: "web_fetch", max_uses: WEB_FETCH_MAX_USES }],
+        messages:      buildMessages(),
       });
 
       const spreads = extractSpreads(message);
@@ -702,5 +631,4 @@ module.exports.toSpreadsMap    = toSpreadsMap;
 module.exports.SPREADS_SCHEMA  = SPREADS_SCHEMA;
 module.exports.BANK_SOURCES    = BANK_SOURCES;
 module.exports.extractSpreads  = extractSpreads;
-module.exports.fetchBankPdfs   = fetchBankPdfs;
 module.exports.buildMessages   = buildMessages;
