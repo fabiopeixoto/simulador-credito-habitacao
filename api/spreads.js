@@ -1,4 +1,7 @@
-const path = require("path");
+const path  = require("path");
+const https = require("https");
+const http  = require("http");
+const { URL: NodeURL } = require("url");
 const Anthropic = require("@anthropic-ai/sdk");
 const { openSqliteDb } = require(path.join(__dirname, "..", "lib", "open-sqlite.js"));
 const { fetchEuribor } = require("./euribor.js");
@@ -143,22 +146,28 @@ function isRateLimited(ip) {
 // ── Anthropic API ─────────────────────────────────────────────────────────
 const BANK_CODES = ["CA", "CTT", "BNKTR", "ABANCA", "BCP", "ACTVO", "BPI", "MNTPO", "SANTR", "NB", "CGD", "UCI", "BNI", "BEST"];
 
-const ANTHROPIC_MODEL     = "claude-sonnet-4-6"; // extracção, não raciocínio profundo — Sonnet chega e é mais barato/rápido
-const WEB_FETCH_MAX_USES  = 14;                  // 1 fetch por banco (chamados em paralelo = ~1 iteração); evita pause_turn no batch
-const WEB_SEARCH_MAX_USES = 3;                   // fallback para bancos sem URL (BEST) ou URLs em 404
-const BATCH_KV_KEY        = "spreads:batch:v1";  // estado do batch em curso (persiste a reinícios do contentor)
-const BATCH_KV_TTL        = 26 * 60 * 60;        // 26 h (batches expiram do lado da Anthropic em 29 dias)
+const ANTHROPIC_MODEL = "claude-sonnet-4-6";
+// PDFs são buscados pelo Node.js e enviados ao modelo como document blocks —
+// sem tools, sem Batch API, sem loop de iterações.
+const PDF_FETCH_TIMEOUT_MS = 30_000; // por PDF
+const PDF_MAX_BYTES        = 6 * 1024 * 1024; // 6 MB
 
 // Auto-aplicar o resultado da AI sem revisão no admin (compatibilidade com o fluxo antigo).
 // Por defeito o resultado fica PENDENTE e só vai a "live" depois de aprovação no painel admin.
 const SPREADS_AUTO_APPLY = process.env.SPREADS_AUTO_APPLY === "1";
 
-// Preçários oficiais por banco (espelho de reference/precarios-pdf/sources.json).
-// O modelo usa web_fetch directo nestes URLs (rápido, fiável, determinístico) e
-// só recorre a web_search quando um banco não tem URL (BEST) ou o URL devolve 404.
-// Um único URL por banco (folheto de taxas de juro §18.1).
-// Comissões (dossier, avaliação, etc.) são estimadas a partir do mesmo folheto ou de
-// bancos comparáveis — evitando um 2.º fetch por banco e reduzindo iterações do batch.
+const BANK_NAMES = {
+  CA: "Crédito Agrícola", CTT: "Banco CTT", BNKTR: "Bankinter Portugal",
+  ABANCA: "ABANCA Portugal", BCP: "Millennium BCP", ACTVO: "ActivoBank",
+  BPI: "Banco BPI", MNTPO: "Banco Montepio", SANTR: "Santander Portugal",
+  NB: "novobanco", CGD: "Caixa Geral de Depósitos", UCI: "UCI Portugal",
+  BNI: "BNI Europa", BEST: "Banco Best",
+};
+
+// Preçários oficiais por banco. O Node.js faz os fetches em paralelo e envia
+// os PDFs ao modelo como document blocks — sem tools, sem loop de iterações.
+// Um único URL por banco (folheto §18.1 taxas de juro). Comissões no mesmo doc
+// ou estimadas. BEST não tem URL público — fica sem PDF (o modelo estima).
 const BANK_SOURCES = {
   CA:     ["https://www.creditoagricola.pt/-/media/files/precario/documents-site/taxas-de-juro-_aviso-8-2009-do-bdp/pre-ft-202605.pdf"],
   CTT:    ["https://www.bancoctt.pt/application/themes/pdfs/precario.pdf?language_id=1555597541833"],
@@ -232,7 +241,7 @@ const SPREADS_SCHEMA = {
   },
 };
 
-const SYSTEM_PROMPT = `És um analista de crédito habitação em Portugal. A tua tarefa é apurar as condições ACTUAIS de crédito habitação para aquisição de habitação própria permanente (HPP) praticadas por 14 bancos portugueses, pesquisando na web os preçários e páginas oficiais de cada banco.
+const SYSTEM_PROMPT = `És um analista de crédito habitação em Portugal. A tua tarefa é extrair as condições ACTUAIS de crédito habitação para aquisição de habitação própria permanente (HPP) a partir dos folhetos de preçário (PDFs) fornecidos como documentos nesta mensagem.
 
 Bancos a apurar (código = nome oficial):
 - CA = Crédito Agrícola
@@ -250,26 +259,87 @@ Bancos a apurar (código = nome oficial):
 - BNI = BNI Europa
 - BEST = Banco Best
 
-Regras de apuramento:
+Regras de extracção:
 - sCom é SEMPRE o spread contratual em vigor FORA do período promocional (ou após a promoção terminar) — nunca o spread reduzido da campanha. O spread de campanha vai em promoSpread.
 - Os valores "sem produtos" (sSem, mSem, fSem, jsSem) são as condições sem vendas associadas facultativas, por isso ≥ aos valores "com produtos".
 - Quando não há campanha promocional: promoPeriodo = 0 e promoSpread = null.
 - "Com produtos" assume o pacote típico exigido (domiciliação de ordenado, seguros no banco, cartões).
-- IMPORTANTE: chama TODOS os web_fetch numa única resposta (em paralelo), um por banco. Não faças web_fetch sequencialmente banco a banco — isso esgota o número de iterações permitido e causa timeout.
-- Para cada banco, usa a tool web_fetch no URL oficial indicado na mensagem (folheto de preçário §18.1 — taxas de juro). Extrai spreads variáveis, TAN mista, TAN fixa, crédito jovem e comissões presentes no mesmo documento.
-- Se um URL devolver 404 ou HTML em vez do PDF, usa web_search para a página de crédito habitação do banco. Para o BEST (sem URL indicado) usa sempre web_search. Usa no máximo 3 pesquisas no total.
+- Lê os PDFs fornecidos e extrai spreads variáveis, TAN mista, TAN fixa, crédito jovem e comissões.
+- Para bancos sem PDF fornecido (ou cujo PDF esteja ilegível), usa uma estimativa razoável com base em bancos comparáveis e indica "Estimativa" em contaNota.
 - Indica o mês/ano da fonte em contaNota quando confirmares o valor (ex.: "Preçário mai.2026").
 - Quando não encontrares um valor concreto (ex.: comissão exacta de dossier), usa uma estimativa razoável com base em bancos comparáveis e escreve "Estimativa" em contaNota (e "(est.)" em insV/insM se a seguradora for desconhecida).
 - Valores monetários em EUR; spreads e TANs em pontos percentuais (ex.: 0.70 = 0,70%).
 
 Responde apenas com o objecto JSON pedido — {"bancos":[...]} com exactamente 14 entradas, cada uma com o campo "codigo" — sem texto adicional.`;
 
-function buildUserPrompt() {
-  const linhas = BANK_CODES.map((code) => {
-    const urls = BANK_SOURCES[code] || [];
-    return `- ${code}: ${urls.length ? urls.join(" | ") : "(sem URL — usa web_search)"}`;
-  }).join("\n");
-  return `Apura as condições actuais de crédito habitação HPP para os 14 bancos, no formato JSON definido.\n\nChama TODOS os web_fetch em paralelo (uma única resposta) — não sequencialmente.\n\nPreçários oficiais a consultar (folheto §18.1 taxas de juro):\n${linhas}`;
+// ── Fetch PDFs server-side ────────────────────────────────────────────────
+// Busca um PDF via HTTP/HTTPS com timeout e limite de tamanho. Segue até 3
+// redirects. Devolve Buffer com o conteúdo ou null em caso de falha.
+async function fetchPdf(rawUrl, _depth) {
+  const depth = _depth || 0;
+  if (depth > 3) return null;
+  return new Promise((resolve) => {
+    let settled = false;
+    function done(v) { if (!settled) { settled = true; resolve(v); } }
+    let parsed;
+    try { parsed = new NodeURL(rawUrl); } catch (_) { return done(null); }
+    const client = parsed.protocol === "https:" ? https : http;
+    const req = client.get(rawUrl, { headers: { "User-Agent": "simulador-precarios/1.0" } }, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        res.resume();
+        fetchPdf(res.headers.location, depth + 1).then(done);
+        return;
+      }
+      if (res.statusCode !== 200) { res.resume(); return done(null); }
+      const chunks = [];
+      let size = 0;
+      res.on("data", (chunk) => {
+        size += chunk.length;
+        if (size > PDF_MAX_BYTES) { req.destroy(); return done(null); }
+        chunks.push(chunk);
+      });
+      res.on("end", () => done(Buffer.concat(chunks)));
+      res.on("error", () => done(null));
+    });
+    req.on("error", () => done(null));
+    req.setTimeout(PDF_FETCH_TIMEOUT_MS, () => { req.destroy(); done(null); });
+  });
+}
+
+// Busca todos os PDFs em paralelo. Devolve mapa code → Buffer|null.
+async function fetchBankPdfs() {
+  const results = await Promise.all(
+    BANK_CODES.map(async (code) => {
+      const urls = BANK_SOURCES[code] || [];
+      if (!urls.length) return [code, null];
+      const buf = await fetchPdf(urls[0]);
+      return [code, buf];
+    })
+  );
+  return Object.fromEntries(results);
+}
+
+// Constrói o array `messages` com os PDFs como document blocks.
+function buildMessages(pdfMap) {
+  const content = [];
+  for (const code of BANK_CODES) {
+    const buf = pdfMap[code];
+    if (buf && buf.length > 0) {
+      content.push({
+        type: "document",
+        source: { type: "base64", media_type: "application/pdf", data: buf.toString("base64") },
+        title: `Preçário ${code} — ${BANK_NAMES[code]}`,
+        context: "Folheto de taxas de juro §18.1 e comissões para crédito habitação HPP",
+      });
+    }
+  }
+  const missing = BANK_CODES.filter((c) => !pdfMap[c] || !pdfMap[c].length);
+  let userText = "Extrai as condições actuais de crédito habitação HPP para os 14 bancos a partir dos documentos acima, no formato JSON definido.";
+  if (missing.length) {
+    userText += `\n\nBancos sem PDF disponível — estima com base em bancos comparáveis: ${missing.join(", ")}.`;
+  }
+  content.push({ type: "text", text: userText });
+  return [{ role: "user", content }];
 }
 
 // ── Validação da resposta antes de cachear/servir
@@ -376,30 +446,13 @@ function extractSpreads(message) {
   }
 }
 
-// Parâmetros do pedido Messages, submetidos como uma entrada do batch.
-function buildRequestParams() {
-  return {
-    model: ANTHROPIC_MODEL,
-    max_tokens: 32000,
-    thinking: { type: "adaptive" },
-    output_config: { effort: "medium", format: { type: "json_schema", schema: SPREADS_SCHEMA } },
-    system: SYSTEM_PROMPT,
-    tools: [
-      { type: "web_fetch_20260209",  name: "web_fetch",  max_uses: WEB_FETCH_MAX_USES },
-      { type: "web_search_20260209", name: "web_search", max_uses: WEB_SEARCH_MAX_USES },
-    ],
-    messages: [{ role: "user", content: buildUserPrompt() }],
-  };
-}
-
-// ── Refresh via Batch API ──────────────────────────────────────────────────
-// A chamada ao modelo (Sonnet + web_fetch dos preçários) corre como um job
-// assíncrono na Anthropic (Batch API): 50% mais barato, sem timeouts/overload
-// do lado do cliente, e o resultado fica disponível 29 dias. O id do batch é
-// guardado em KV, por isso o polling resiste a reinícios do contentor (o
-// problema "parou" desaparece). O resultado fica PENDENTE até aprovação no
-// admin (ou auto-aplicado se SPREADS_AUTO_APPLY=1).
-const REFRESH = { running: false, startedAt: 0, finishedAt: 0, error: null, batchId: null, _polling: false, _kvSlot: null, _today: "" };
+// ── Refresh assíncrono (background) ──────────────────────────────────────
+// Os PDFs são buscados pelo Node.js em paralelo e enviados ao modelo como
+// document blocks. Sem tools, sem Batch API — apenas uma chamada síncrona
+// à Messages API que corre em background (Promise não awaited pelo handler).
+// O resultado fica PENDENTE até aprovação no admin (ou auto-aplicado se
+// SPREADS_AUTO_APPLY=1).
+const REFRESH = { running: false, startedAt: 0, finishedAt: 0, error: null, batchId: null, _kvSlot: null, _today: "" };
 let PENDING = null; // { spreads, eur, eurLabel, fetchedAt }
 
 function refreshStatus() {
@@ -436,102 +489,58 @@ function applyPending(today, kvSlot) {
   return true;
 }
 
-// Submete o batch e guarda o estado (memória + KV). Awaitable — a criação do
-// batch é rápida (só submete), por isso o POST não fica bloqueado.
-async function startBatchRefresh(apiKey, kvSlot, today) {
+// Inicia o refresh em background: busca PDFs em paralelo, chama Messages API
+// de forma síncrona e actualiza REFRESH/PENDING quando termina. O POST HTTP
+// responde imediatamente; o admin faz polling ao GET até running=false.
+function startRefresh(apiKey, kvSlot, today) {
   if (REFRESH.running) return false;
   REFRESH.running    = true;
   REFRESH.startedAt  = Date.now();
   REFRESH.finishedAt = 0;
   REFRESH.error      = null;
+  REFRESH.batchId    = null;
   REFRESH._kvSlot    = kvSlot;
   REFRESH._today     = today;
-  try {
-    const client = new Anthropic({ apiKey, maxRetries: 4 });
-    const batch = await client.messages.batches.create({
-      requests: [{ custom_id: "spreads", params: buildRequestParams() }],
-    });
-    REFRESH.batchId = batch.id;
-    await kvSet(BATCH_KV_KEY, { batchId: batch.id, startedAt: REFRESH.startedAt, kvSlot, today }, BATCH_KV_TTL).catch(() => {});
-    console.log("spreads.js: batch submetido", batch.id);
-    return true;
-  } catch (e) {
-    REFRESH.running    = false;
-    REFRESH.finishedAt = Date.now();
-    REFRESH.error      = e?.message || "Erro ao submeter batch";
-    console.error("spreads.js: falha ao submeter batch:", REFRESH.error);
-    return false;
-  }
-}
 
-// Reidrata o estado do batch a partir do KV (após reinício do contentor).
-async function hydrateBatchState() {
-  if (REFRESH.batchId || REFRESH.running) return;
-  const saved = await kvGet(BATCH_KV_KEY);
-  if (saved && saved.batchId) {
-    REFRESH.batchId   = saved.batchId;
-    REFRESH.startedAt = saved.startedAt || Date.now();
-    REFRESH.running   = true;
-    REFRESH._kvSlot   = saved.kvSlot ?? null;
-    REFRESH._today    = saved.today || utcDayKey();
-  }
-}
+  (async () => {
+    try {
+      console.log("spreads.js: a buscar PDFs dos preçários...");
+      const pdfMap = await fetchBankPdfs();
+      const nFetched = Object.values(pdfMap).filter(Boolean).length;
+      console.log(`spreads.js: ${nFetched}/${BANK_CODES.length} PDFs obtidos`);
 
-// Verifica o batch uma vez (chamado a partir do GET de polling do admin).
-// Em "ended": extrai/valida → fica PENDENTE (ou auto-aplica). Resiste a
-// reinícios porque o id está em KV.
-async function pollBatchOnce(apiKey) {
-  await hydrateBatchState();
-  if (!REFRESH.batchId || REFRESH._polling) return;
-  REFRESH._polling = true;
-  try {
-    const client = new Anthropic({ apiKey, maxRetries: 4 });
-    const batch = await client.messages.batches.retrieve(REFRESH.batchId);
-    if (batch.processing_status !== "ended") return;
+      const client = new Anthropic({ apiKey, maxRetries: 3, timeout: 120_000 });
+      const message = await client.messages.create({
+        model:         ANTHROPIC_MODEL,
+        max_tokens:    32000,
+        output_config: { effort: "medium", format: { type: "json_schema", schema: SPREADS_SCHEMA } },
+        system:        SYSTEM_PROMPT,
+        messages:      buildMessages(pdfMap),
+      });
 
-    let spreads = null, err = null;
-    for await (const r of await client.messages.batches.results(REFRESH.batchId)) {
-      if (r.custom_id !== "spreads") continue;
-      if (r.result.type === "succeeded") {
-        try { spreads = extractSpreads(r.result.message); }
-        catch (e) {
-          err = e.message;
-          console.error("spreads.js: validação do batch falhou:", err);
-        }
-      } else if (r.result.type === "errored") {
-        err = "batch errored: " + (r.result.error?.error?.message || r.result.error?.type || "?");
-      } else {
-        err = "batch " + r.result.type;
+      const spreads = extractSpreads(message);
+
+      let eur = null, eurLabel = "";
+      try { const e = await fetchEuribor(); eur = e.eur; eurLabel = e.eurLabel; }
+      catch (e) { console.error("spreads.js: fetchEuribor falhou:", e.message); }
+      if (eur && getBanksModule()?.setEuribor) {
+        try { getBanksModule().setEuribor(eur, eurLabel); } catch (_) {}
       }
+
+      PENDING = { spreads, eur, eurLabel, fetchedAt: Date.now() };
+      REFRESH.error = null;
+      if (SPREADS_AUTO_APPLY) applyPending(today, kvSlot);
+      console.log("spreads.js: refresh concluído —", SPREADS_AUTO_APPLY ? "auto-aplicado" : "pendente de aprovação");
+    } catch (e) {
+      REFRESH.error = e?.message || "Erro desconhecido";
+      console.error("spreads.js: refresh falhou:", REFRESH.error);
+    } finally {
+      REFRESH.running    = false;
+      REFRESH.finishedAt = Date.now();
     }
+  })();
 
-    // Batch terminou — limpar estado em curso
-    const kvSlot = REFRESH._kvSlot;
-    const today  = REFRESH._today || utcDayKey();
-    REFRESH.batchId    = null;
-    REFRESH.running    = false;
-    REFRESH.finishedAt = Date.now();
-    await kvSet(BATCH_KV_KEY, null, 1).catch(() => {});
-
-    if (!spreads) { REFRESH.error = err || "Erro desconhecido no batch"; return; }
-    REFRESH.error = null;
-
-    // Euribor (rápido) — actualizar também a cache do BCE
-    let eur = null, eurLabel = "";
-    try { const e = await fetchEuribor(); eur = e.eur; eurLabel = e.eurLabel; }
-    catch (e) { console.error("spreads.js: fetchEuribor falhou:", e.message); }
-    if (eur && getBanksModule() && getBanksModule().setEuribor) {
-      try { getBanksModule().setEuribor(eur, eurLabel); } catch (e) { console.error("spreads.js: setEuribor failed:", e.message); }
-    }
-
-    PENDING = { spreads, eur, eurLabel, fetchedAt: Date.now() };
-    if (SPREADS_AUTO_APPLY) applyPending(today, kvSlot);
-  } catch (e) {
-    // Erro transitório ao consultar o batch — deixar em curso, tentar no próximo poll
-    console.error("spreads.js: pollBatch erro transitório:", e?.message);
-  } finally {
-    REFRESH._polling = false;
-  }
+  return true;
 }
 
 function withMeta(payload, source, fetchedAt) {
@@ -551,7 +560,6 @@ module.exports = async function handler(req, res) {
   // GET — estado do refresh (polling do admin). Também faz avançar o batch:
   // consulta o estado do job e, quando termina, valida e fica PENDENTE.
   if (req.method === "GET") {
-    if (apiKeyEnv) { try { await pollBatchOnce(apiKeyEnv); } catch (_) {} }
     return res.status(200).json(refreshStatus());
   }
   if (req.method !== "POST") return res.status(405).json({ error: "Método não suportado" });
@@ -643,16 +651,11 @@ module.exports = async function handler(req, res) {
   const apiKey = apiKeyEnv;
   if (!apiKey) return res.status(503).json({ error: "ANTHROPIC_API_KEY não configurada" });
 
-  // ── 4. Submeter o batch (Anthropic) e responder de imediato. O resultado é
-  // recolhido pelo polling (GET) e fica PENDENTE até aprovação no admin.
-  const started = await startBatchRefresh(apiKey, kvSlot, today);
-  // Já havia um batch em curso — devolver o slot reservado em ── 3
+  // ── 4. Iniciar o refresh em background e responder de imediato. O resultado
+  // fica PENDENTE até aprovação no admin (ou auto-aplicado se SPREADS_AUTO_APPLY=1).
+  const started = startRefresh(apiKey, kvSlot, today);
+  // Já havia um refresh em curso — devolver o slot reservado em ── 3
   if (!started && kvSlot !== null) kvDecr(KV_CALLS_PFX + today).catch(() => {});
-  // Falha na submissão do batch — devolver o slot e reportar o erro
-  if (!started && REFRESH.error && !REFRESH.running) {
-    if (kvSlot !== null) kvDecr(KV_CALLS_PFX + today).catch(() => {});
-    return res.status(502).json({ error: REFRESH.error, ...refreshStatus() });
-  }
 
   const staleData      = kvCached?.data || MEM.data || null;
   const staleFetchedAt = kvCached?.fetchedAt || MEM.fetchedAt || 0;
@@ -667,6 +670,7 @@ module.exports = async function handler(req, res) {
 module.exports.validateSpreads = validateSpreads;
 module.exports.toSpreadsMap    = toSpreadsMap;
 module.exports.SPREADS_SCHEMA  = SPREADS_SCHEMA;
-module.exports.buildRequestParams = buildRequestParams;
-module.exports.BANK_SOURCES     = BANK_SOURCES;
-module.exports.extractSpreads   = extractSpreads;
+module.exports.BANK_SOURCES    = BANK_SOURCES;
+module.exports.extractSpreads  = extractSpreads;
+module.exports.fetchBankPdfs   = fetchBankPdfs;
+module.exports.buildMessages   = buildMessages;
