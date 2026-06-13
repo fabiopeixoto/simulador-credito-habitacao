@@ -266,7 +266,7 @@ async function refreshSpreadsAI() {
   const aiEl = document.getElementById('aiStatus');
   btn.disabled = true;
   btn.textContent = '⏳ A actualizar...';
-  aiEl.textContent = 'A buscar preçários e a chamar Anthropic AI...';
+  aiEl.textContent = 'A ler preçários e a chamar Google Gemini...';
   aiEl.className = '';
   document.getElementById('aiPending').innerHTML = '';
   try {
@@ -278,8 +278,8 @@ async function refreshSpreadsAI() {
     if (!r.ok && r.status !== 202) throw new Error(data.error || 'HTTP ' + r.status);
 
     // O refresh corre em background no servidor (~2-5 min) — polling via GET /api/spreads.
-    aiEl.textContent = '⏳ Actualização em curso (PDFs + Anthropic AI — ~2-5 min)...';
-    const deadline = Date.now() + 13 * 60 * 1000; // 13 min = SDK timeout (180s) × 4 iterações máx.
+    aiEl.textContent = '⏳ Actualização em curso (PDFs + Google Gemini — ~2-5 min)...';
+    const deadline = Date.now() + 13 * 60 * 1000; // 13 min — margem para 1–2 chamadas Gemini.
     let st = null;
     while (Date.now() < deadline) {
       await new Promise(s => setTimeout(s, 5000));

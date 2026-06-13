@@ -1,5 +1,5 @@
 const path  = require("path");
-const Anthropic = require("@anthropic-ai/sdk");
+const { GoogleGenAI } = require("@google/genai");
 const { openSqliteDb } = require(path.join(__dirname, "..", "lib", "open-sqlite.js"));
 const { fetchEuribor } = require("./euribor.js");
 
@@ -138,19 +138,22 @@ function isRateLimited(ip) {
   return e.count > RATE_MAX;
 }
 
-// ── Anthropic API ─────────────────────────────────────────────────────────
+// ── Google Gemini API ─────────────────────────────────────────────────────
 const BANK_CODES = ["CA", "CTT", "BNKTR", "ABANCA", "BCP", "ACTVO", "BPI", "MNTPO", "SANTR", "NB", "CGD", "UCI", "BNI", "BEST"];
 
-const ANTHROPIC_MODEL      = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
-const WEB_FETCH_MAX_USES   = 14; // 1 por banco; o modelo deve chamá-los em paralelo (1 iteração)
-const PAUSE_TURN_MAX_CONT  = 3;  // continuações máximas após pause_turn
+const GEMINI_MODEL  = process.env.GEMINI_MODEL || "gemini-2.5-pro";
+// A URL context tool aceita no máximo 20 URLs por pedido; usamos uma margem e
+// repartimos os bancos por lotes quando o total de preçários excede o limite.
+const URL_BATCH_MAX = 18;
+// Modo de teste: devolve dados canónicos sem chamar a API (não gasta tokens/rede).
+const SPREADS_MOCK  = process.env.SPREADS_MOCK === "1";
 
 // Auto-aplicar o resultado da AI sem revisão no admin (compatibilidade com o fluxo antigo).
 // Por defeito o resultado fica PENDENTE e só vai a "live" depois de aprovação no painel admin.
 const SPREADS_AUTO_APPLY = process.env.SPREADS_AUTO_APPLY === "1";
 
 // Preçários oficiais por banco: [taxas §18.1, comissões §18.2].
-// O modelo usa web_fetch nestes URLs directamente (servidores Anthropic
+// A URL context tool do Gemini lê estes URLs directamente (servidores Google
 // evitam bloqueios de IP e gerem cookies). BEST sem URL — modelo estima.
 const BANK_SOURCES = {
   CA:     ["https://www.creditoagricola.pt/-/media/files/precario/documents-site/taxas-de-juro-_aviso-8-2009-do-bdp/pre-ft-202605.pdf",
@@ -234,7 +237,7 @@ const SPREADS_SCHEMA = {
   },
 };
 
-const SYSTEM_PROMPT = `És um analista de crédito habitação em Portugal. A tua tarefa é apurar as condições ACTUAIS de crédito habitação para aquisição de habitação própria permanente (HPP) praticadas por 14 bancos portugueses, consultando os preçários oficiais via web_fetch.
+const SYSTEM_PROMPT = `És um analista de crédito habitação em Portugal. A tua tarefa é apurar as condições ACTUAIS de crédito habitação para aquisição de habitação própria permanente (HPP) praticadas pelos bancos portugueses indicados na mensagem, lendo os preçários oficiais em PDF cujos URLs são fornecidos (a ferramenta de URL context busca-os por ti, incluindo as tabelas).
 
 Bancos a apurar (código = nome oficial):
 - CA = Crédito Agrícola
@@ -256,58 +259,87 @@ Regras de apuramento:
 - sCom é SEMPRE o spread contratual em vigor FORA do período promocional — nunca o spread reduzido da campanha. O spread de campanha vai em promoSpread.
 - Os valores "sem produtos" (sSem, mSem, fSem, jsSem) são ≥ aos valores "com produtos".
 - Quando não há campanha: promoPeriodo = 0 e promoSpread = null.
-- IMPORTANTE: chama TODOS os web_fetch numa única resposta (em paralelo), um por banco. Não faças fetches sequencialmente.
-- Para cada banco, usa web_fetch nos URLs do preçário indicados na mensagem (taxas §18.1 e comissões §18.2).
+- Para cada banco, lê os PDFs do preçário indicados na mensagem (taxas §18.1 e comissões §18.2).
 - Se um URL devolver erro ou não cobrir o campo, usa uma estimativa razoável e indica "Estimativa" em contaNota.
 - Para bancos sem URL (BEST), estima com base em bancos comparáveis e indica "Estimativa".
 - Indica o mês/ano da fonte em contaNota quando confirmares o valor (ex.: "Preçário mai.2026").
 - Valores monetários em EUR; spreads e TANs em pontos percentuais (ex.: 0.70 = 0,70%).
 
-Responde apenas com o objecto JSON pedido — {"bancos":[...]} com exactamente 14 entradas — sem texto adicional.`;
+Responde apenas com o objecto JSON pedido — {"bancos":[...]} com uma entrada por cada banco pedido na mensagem — sem texto adicional.`;
 
-// Mensagem do utilizador com os URLs de preçário por banco.
-function buildMessages() {
-  const linhas = BANK_CODES.map((code) => {
+// Reparte os bancos por lotes cujo total de URLs ≤ URL_BATCH_MAX (limite da
+// URL context tool). BEST não tem URL, logo não pesa no orçamento de URLs.
+function buildBatches() {
+  const batches = [];
+  let cur = [], curUrls = 0;
+  for (const code of BANK_CODES) {
+    const n = (BANK_SOURCES[code] || []).length;
+    if (cur.length && curUrls + n > URL_BATCH_MAX) {
+      batches.push(cur);
+      cur = []; curUrls = 0;
+    }
+    cur.push(code); curUrls += n;
+  }
+  if (cur.length) batches.push(cur);
+  return batches;
+}
+
+// Texto do pedido (contents) com os URLs de preçário dos bancos do lote.
+function buildPrompt(codes) {
+  const linhas = codes.map((code) => {
     const urls = BANK_SOURCES[code] || [];
     if (!urls.length) return `- ${code}: (sem URL — estima)`;
     return `- ${code}: ${urls.join(" + ")}`;
   }).join("\n");
-  return [{
-    role: "user",
-    content: `Apura as condições de crédito habitação HPP para os 14 bancos. Chama TODOS os web_fetch em paralelo (numa única resposta).\n\nURLs (taxas §18.1 + comissões §18.2):\n${linhas}`,
-  }];
+  return `Apura as condições de crédito habitação HPP para ${codes.length} banco(s): ${codes.join(", ")}.\n\nURLs (taxas §18.1 + comissões §18.2):\n${linhas}`;
 }
 
-// Executa a chamada à API com continuation loop para pause_turn.
-// Com server-side tools (web_fetch), a API pode pausar antes de terminar;
-// continuamos acrescentando a resposta parcial + "continua" até ao limite.
-async function callWithContinuation(client, baseParams) {
-  let messages = [...baseParams.messages];
-  let lastMessage = null;
+// Registo canónico usado pelo modo mock (passa em validateSpreads).
+const MOCK_BANK = {
+  sCom: 0.8, sSem: 1.6, mCom: 3.0, mSem: 3.5, fCom: 3.2, fSem: 3.7,
+  jsCom: 0.8, jsSem: 1.6, promoPeriodo: 0, promoSpread: null,
+  dossier: 280, avaliacao: 240, contaMes: 6, capMin: 25000, capMax: 1500000,
+  vRef: 22, mAno: 160, insV: "—", insM: "—", contaNota: "Mock", minutas: 0,
+  jovemIsenta: true,
+};
 
-  for (let i = 0; i <= PAUSE_TURN_MAX_CONT; i++) {
-    const msg = await client.messages.create({ ...baseParams, messages });
-    lastMessage = msg;
-    const u = msg.usage || {};
-    console.log(`spreads.js: usage iter ${i} — input=${u.input_tokens} cache_write=${u.cache_creation_input_tokens || 0} cache_read=${u.cache_read_input_tokens || 0} output=${u.output_tokens}`);
-    if (msg.stop_reason !== "pause_turn") break;
-    if (i < PAUSE_TURN_MAX_CONT) {
-      // cache_control no último bloco da resposta parcial: a próxima iteração lê todo o
-      // contexto anterior (conteúdo dos PDFs incluído) a ~10% do preço em vez de 100%.
-      const assistantContent = msg.content.map((b, idx) =>
-        idx === msg.content.length - 1
-          ? { ...b, cache_control: { type: "ephemeral" } }
-          : b
-      );
-      messages = [
-        ...messages,
-        { role: "assistant", content: assistantContent },
-        { role: "user", content: [{ type: "text", text: "Continua com os bancos em falta e termina o JSON completo com os 14 bancos." }] },
-      ];
-      console.log(`spreads.js: pause_turn — continuação ${i + 1}/${PAUSE_TURN_MAX_CONT}`);
-    }
+// Resposta simulada (mesma forma do generateContent: { text }) para SPREADS_MOCK.
+function mockResp(codes) {
+  const bancos = codes.map((codigo) => ({ codigo, ...MOCK_BANK }));
+  return { text: JSON.stringify({ bancos }) };
+}
+
+// Uma chamada Gemini por lote de bancos. A URL context tool lê os PDFs dos URLs
+// presentes no prompt. Sem responseSchema: é incompatível com tools, por isso o
+// JSON é instruído no prompt e extraído de forma robusta (ver parseBatchSpreads).
+async function callGemini(ai, codes) {
+  if (SPREADS_MOCK) return mockResp(codes);
+  return ai.models.generateContent({
+    model: GEMINI_MODEL,
+    contents: buildPrompt(codes),
+    config: {
+      systemInstruction: SYSTEM_PROMPT,
+      tools: [{ urlContext: {} }],
+      maxOutputTokens: 32000,
+    },
+  });
+}
+
+// Extrai o texto da resposta Gemini (resp.text, com fallback para candidates/parts).
+function geminiText(resp) {
+  if (!resp) throw new Error("Gemini sem resposta");
+  let txt = typeof resp.text === "string" ? resp.text : "";
+  if (!txt && Array.isArray(resp.candidates)) {
+    txt = resp.candidates
+      .flatMap((c) => c?.content?.parts || [])
+      .map((p) => p?.text || "")
+      .join("\n");
   }
-  return lastMessage;
+  if (!txt || !txt.trim()) {
+    const blocked = resp.promptFeedback?.blockReason;
+    throw new Error("Resposta Gemini vazia" + (blocked ? " (bloqueada: " + blocked + ")" : ""));
+  }
+  return txt;
 }
 
 // ── Validação da resposta antes de cachear/servir
@@ -381,31 +413,21 @@ function asSpreadsMap(parsed) {
   return null;
 }
 
-// Extrai e valida os spreads a partir da mensagem devolvida pelo batch.
-// Com web_fetch/web_search há blocos de texto intermédios (narração entre tools);
-// o JSON do schema é normalmente o ÚLTIMO bloco, mas pode haver texto a seguir —
-// por isso varre-se do último para o primeiro até encontrar um objecto válido.
-function extractSpreads(message) {
-  if (!message) throw new Error("Batch sem mensagem");
-  if (message.stop_reason === "pause_turn") throw new Error("modelo pausou (pause_turn) — re-tenta a actualização");
-  if (message.stop_reason === "refusal") throw new Error("API recusou o pedido");
-  const textBlocks = (message.content || []).filter(b => b.type === "text").map(b => b.text).filter(t => t && t.trim());
-  if (!textBlocks.length) throw new Error("Resposta vazia (stop_reason: " + message.stop_reason + ")");
-
-  let parsed = null;
-  for (let i = textBlocks.length - 1; i >= 0 && !parsed; i--) {
-    const raw = textBlocks[i].replace(/```(?:json)?/g, "").trim();
-    for (const fn of [() => JSON.parse(raw), () => parseSpreadsText(textBlocks[i])]) {
-      try { const m = asSpreadsMap(fn()); if (m) { parsed = m; break; } } catch (_) {}
-    }
+// Extrai o mapa (por código) de UM lote a partir da resposta Gemini.
+// O texto pode vir com cercas ```json``` ou alguma narração; o parsing é robusto
+// (tenta JSON.parse directo e, em fallback, isola o objecto que contém "bancos").
+function parseBatchSpreads(resp) {
+  const txt = geminiText(resp);
+  const raw = txt.replace(/```(?:json)?/g, "").trim();
+  for (const fn of [() => JSON.parse(raw), () => parseSpreadsText(txt)]) {
+    try { const m = asSpreadsMap(fn()); if (m) return m; } catch (_) {}
   }
-  // Último recurso: juntar todos os blocos e procurar o objecto "bancos".
-  if (!parsed) { try { parsed = asSpreadsMap(parseSpreadsText(textBlocks.join("\n"))); } catch (_) {} }
+  throw new Error("Não encontrei o JSON dos bancos na resposta Gemini. Início: " + txt.slice(0, 200));
+}
 
-  if (!parsed) {
-    const preview = textBlocks[textBlocks.length - 1].slice(0, 200);
-    throw new Error("Não encontrei o JSON dos bancos na resposta. Início do último bloco: " + preview);
-  }
+// Compat (testes/admin): extrai e valida uma resposta completa (14 bancos).
+function extractSpreads(resp) {
+  const parsed = parseBatchSpreads(resp);
   try {
     return validateSpreads(parsed);
   } catch (err) {
@@ -415,11 +437,11 @@ function extractSpreads(message) {
 }
 
 // ── Refresh assíncrono (background) ──────────────────────────────────────
-// Os PDFs são buscados pelo Node.js em paralelo e enviados ao modelo como
-// document blocks. Sem tools, sem Batch API — apenas uma chamada síncrona
-// à Messages API que corre em background (Promise não awaited pelo handler).
-// O resultado fica PENDENTE até aprovação no admin (ou auto-aplicado se
-// SPREADS_AUTO_APPLY=1).
+// Os PDFs dos preçários são lidos pela URL context tool do Gemini (servidores
+// Google buscam os URLs, evitando bloqueios de IP). Uma ou duas chamadas
+// generateContent (repartidas pelo limite de 20 URLs/pedido) correm em
+// background (Promise não awaited pelo handler). O resultado fica PENDENTE até
+// aprovação no admin (ou auto-aplicado se SPREADS_AUTO_APPLY=1).
 const REFRESH = { running: false, startedAt: 0, finishedAt: 0, error: null, batchId: null, _kvSlot: null, _today: "" };
 let PENDING = null; // { spreads, eur, eurLabel, fetchedAt }
 
@@ -452,7 +474,7 @@ function applyPending(today, kvSlot) {
   MEM.callsToday = kvSlot != null ? Number(kvSlot) : MEM.callsToday + 1;
   const banksModule = getBanksModule();
   if (banksModule?.bulkInsertSpreads) {
-    try { banksModule.bulkInsertSpreads(freshData.spreads, "anthropic"); }
+    try { banksModule.bulkInsertSpreads(freshData.spreads, "gemini"); }
     catch (e) { console.error("spreads.js: bulkInsertSpreads failed:", e.message); }
   }
   kvSet(KV_CACHE_KEY, { data: freshData, fetchedAt }, KV_CACHE_TTL).catch(() => {});
@@ -460,8 +482,8 @@ function applyPending(today, kvSlot) {
   return true;
 }
 
-// Inicia o refresh em background: chama Messages API com web_fetch (servidor
-// Anthropic busca os preçários directamente, evitando bloqueios de IP).
+// Inicia o refresh em background: chama o Gemini com a URL context tool (servidor
+// Google busca os preçários directamente, evitando bloqueios de IP).
 // O POST HTTP responde imediatamente; o admin faz polling ao GET até running=false.
 function startRefresh(apiKey, kvSlot, today) {
   if (REFRESH.running) return false;
@@ -475,19 +497,19 @@ function startRefresh(apiKey, kvSlot, today) {
 
   (async () => {
     try {
-      const client = new Anthropic({ apiKey, maxRetries: 1, timeout: 180_000 });
-      console.log("spreads.js: a chamar Anthropic Messages API com web_fetch...");
-      // output_config.format (structured outputs) é incompatível com web_fetch server-side;
-      // o extractSpreads já faz parsing robusto do JSON no texto da resposta.
-      const message = await callWithContinuation(client, {
-        model:     ANTHROPIC_MODEL,
-        max_tokens: 32000,
-        system:    SYSTEM_PROMPT,
-        tools:     [{ type: "web_fetch_20260209", name: "web_fetch", max_uses: WEB_FETCH_MAX_USES }],
-        messages:  buildMessages(),
-      });
-
-      const spreads = extractSpreads(message);
+      const ai = SPREADS_MOCK ? null : new GoogleGenAI({ apiKey });
+      const batches = buildBatches();
+      console.log(`spreads.js: a chamar Gemini (${GEMINI_MODEL}) com URL context — ${batches.length} lote(s)...`);
+      // responseSchema é incompatível com tools (URL context); o JSON é instruído
+      // no prompt e parseBatchSpreads faz parsing robusto. Os lotes são fundidos.
+      const merged = {};
+      for (const codes of batches) {
+        const resp = await callGemini(ai, codes);
+        const u = resp.usageMetadata || {};
+        console.log(`spreads.js: lote [${codes.join(",")}] — prompt=${u.promptTokenCount || "?"} output=${u.candidatesTokenCount || "?"}`);
+        Object.assign(merged, parseBatchSpreads(resp));
+      }
+      const spreads = validateSpreads(merged);
 
       let eur = null, eurLabel = "";
       try { const e = await fetchEuribor(); eur = e.eur; eurLabel = e.eurLabel; }
@@ -524,7 +546,7 @@ function withMeta(payload, source, fetchedAt) {
 }
 
 module.exports = async function handler(req, res) {
-  const apiKeyEnv = process.env.ANTHROPIC_API_KEY;
+  const apiKeyEnv = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
 
   // GET — estado do refresh (polling do admin). Também faz avançar o batch:
   // consulta o estado do job e, quando termina, valida e fica PENDENTE.
@@ -618,7 +640,7 @@ module.exports = async function handler(req, res) {
   }
 
   const apiKey = apiKeyEnv;
-  if (!apiKey) return res.status(503).json({ error: "ANTHROPIC_API_KEY não configurada" });
+  if (!apiKey && !SPREADS_MOCK) return res.status(503).json({ error: "GEMINI_API_KEY não configurada" });
 
   // ── 4. Iniciar o refresh em background e responder de imediato. O resultado
   // fica PENDENTE até aprovação no admin (ou auto-aplicado se SPREADS_AUTO_APPLY=1).
@@ -641,4 +663,6 @@ module.exports.toSpreadsMap    = toSpreadsMap;
 module.exports.SPREADS_SCHEMA  = SPREADS_SCHEMA;
 module.exports.BANK_SOURCES    = BANK_SOURCES;
 module.exports.extractSpreads  = extractSpreads;
-module.exports.buildMessages   = buildMessages;
+module.exports.parseBatchSpreads = parseBatchSpreads;
+module.exports.buildPrompt     = buildPrompt;
+module.exports.buildBatches    = buildBatches;

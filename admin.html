@@ -31,8 +31,8 @@
 
 <div class="ai-box">
   <div class="ai-box-info">
-    <h2>🤖 Actualizar Spreads via Anthropic AI</h2>
-    <p>Descarrega os preçários oficiais (PDFs) e extrai os spreads via Anthropic AI (~1-2 min). O resultado fica em <strong>revisão</strong> — confirma antes de publicar.</p>
+    <h2>🤖 Actualizar Spreads via Google Gemini</h2>
+    <p>Lê os preçários oficiais (PDFs) e extrai os spreads via Google Gemini (~1-2 min). O resultado fica em <strong>revisão</strong> — confirma antes de publicar.</p>
   </div>
   <div id="aiStatus"></div>
   <button type="button" class="btn-ai" id="btnAi" onclick="refreshSpreadsAI()">🤖 Actualizar Agora</button>
@@ -155,7 +155,7 @@
     <div class="form-group" style="padding:12px;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.2);border-radius:8px;">
       <label>Fonte preferida de spreads</label>
       <select id="f_preferSource">
-        <option value="api">API / FINE (recomendado — valores mais recentes da API Anthropic/comparação FINEs)</option>
+        <option value="api">API / FINE (recomendado — valores mais recentes da API Gemini/comparação FINEs)</option>
         <option value="manual">Manual (admin — usa os valores introduzidos manualmente)</option>
       </select>
       <p style="font-size:11px;color:var(--muted);margin-top:6px;">Por defeito, os spreads da API/FINE têm prioridade. Muda para Manual se quiserres usar valores próprios para este banco.</p>

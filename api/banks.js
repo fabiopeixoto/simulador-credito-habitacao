@@ -501,7 +501,7 @@ function getLatestSpreads() {
       FROM spreads s
       JOIN banks b ON b.code = s.bank_code
       WHERE (COALESCE(b.preferSource, 'api') = 'manual' AND s.source = 'manual')
-         OR (COALESCE(b.preferSource, 'api') != 'manual' AND s.source IN ('seed', 'seed-reconcile', 'anthropic'))
+         OR (COALESCE(b.preferSource, 'api') != 'manual' AND s.source IN ('seed', 'seed-reconcile', 'gemini', 'anthropic'))
       GROUP BY s.bank_code
     ),
     fallback AS (
@@ -657,7 +657,7 @@ function insertSpreads(bankCode, spreadsData, source = "manual") {
   return true;
 }
 
-function bulkInsertSpreads(spreadsMap, source = "anthropic") {
+function bulkInsertSpreads(spreadsMap, source = "gemini") {
   if (!sqliteDb) return false;
   const stmt = sqliteDb.prepare(`
     INSERT INTO spreads (bank_code, sCom, sSem, mCom, mSem, fCom, fSem, jsCom, jsSem,
