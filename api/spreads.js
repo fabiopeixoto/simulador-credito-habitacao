@@ -38,8 +38,6 @@ const KV_CALLS_PFX   = "spreads:calls:";   // + "YYYY-MM-DD"
 const KV_CACHE_TTL   = 25 * 60 * 60;       // 25 h (segundos)
 const KV_CALLS_TTL   = 49 * 60 * 60;       // 49 h
 
-/** Por defeito não gravar respostas LLM na SQLite do simulador (`banks.sqlite`); os spreads servidos vêm de SEED_SPREADS + reconcile + POST /api/banks. Para persistir saídas Anthropic na BD: ANTHROPIC_PERSIST_SPREADS=1 */
-const PERSIST_ANTHROPIC_SPREADS_TO_SQLITE = process.env.ANTHROPIC_PERSIST_SPREADS === "1";
 
 async function kvGet(key) {
   if (!sqliteDb) return null;
@@ -166,23 +164,32 @@ const BANK_NAMES = {
 
 // Preçários oficiais por banco. O Node.js faz os fetches em paralelo e envia
 // os PDFs ao modelo como document blocks — sem tools, sem loop de iterações.
-// Um único URL por banco (folheto §18.1 taxas de juro). Comissões no mesmo doc
-// ou estimadas. BEST não tem URL público — fica sem PDF (o modelo estima).
+// Dois URLs por banco onde disponível: [taxas §18.1, comissões §18.2].
+// BEST não tem URL público — fica sem PDF (o modelo estima).
 const BANK_SOURCES = {
-  CA:     ["https://www.creditoagricola.pt/-/media/files/precario/documents-site/taxas-de-juro-_aviso-8-2009-do-bdp/pre-ft-202605.pdf"],
+  CA:     ["https://www.creditoagricola.pt/-/media/files/precario/documents-site/taxas-de-juro-_aviso-8-2009-do-bdp/pre-ft-202605.pdf",
+           "https://www.creditoagricola.pt/-/media/files/precario/documents-site/comissoes-e-despesas-_aviso-8-2009-do-bdp/pre-fc-20260501.pdf"],
   CTT:    ["https://www.bancoctt.pt/application/themes/pdfs/precario.pdf?language_id=1555597541833"],
   BNKTR:  ["https://clientebancario.bportugal.pt/sites/default/files/precario/0269_/0269_PRE_20221231000630.pdf"],
-  ABANCA: ["https://www.abanca.pt/files/documents/folheto-taxa-juro-precario-e3020223.pdf"],
+  ABANCA: ["https://www.abanca.pt/files/documents/folheto-taxa-juro-precario-e3020223.pdf",
+           "https://www.abanca.pt/files/documents/precario-folheto-comissoes-f942c04e.pdf"],
   BCP:    ["https://ind.millenniumbcp.pt/pt/Articles/Documents/precario/SECCAO_18.pdf"],
   ACTVO:  ["https://ind.millenniumbcp.pt/pt/Articles/Documents/precario/SECCAO_18.pdf"],
-  BPI:    ["https://www.bancobpi.pt/contentservice/getContent?documentName=PR_WCS01_UCM01004994"],
-  MNTPO:  ["https://www.bancomontepio.pt/content/dam/montepio/pdf/geral/precario/folheto-taxas-juro/folheto-taxas-juro.pdf"],
-  SANTR:  ["https://www.santander.pt/pdfs/particulares/credito-habitacao/CH_Informacao_Pre-Contratual_Geral.pdf"],
-  NB:     ["https://www.novobanco.pt/content/dam/novobancopublicsites/docs/pdfs/precario/particulares/PRE-FT.pdf.coredownload.inline.pdf"],
-  CGD:    ["https://www.cgd.pt/Precario/Documents/18.pdf"],
-  UCI:    ["https://uci.pt/-/media/Files/Portugal/precario/PRE-FT-202605.pdf"],
-  BNI:    ["https://bnieuropa.pt/wp-content/themes/responsive/pdf/precario/taxas-juro-particulares-credito-habitacao-e-contratos-conexos.pdf"],
-  BEST:   [], // sem preçário directo no índice — usar web_search
+  BPI:    ["https://www.bancobpi.pt/contentservice/getContent?documentName=PR_WCS01_UCM01004994",
+           "https://www.bancobpi.pt/contentservice/getContent?documentName=PR_WCS01_UCM01004993"],
+  MNTPO:  ["https://www.bancomontepio.pt/content/dam/montepio/pdf/geral/precario/folheto-taxas-juro/folheto-taxas-juro.pdf",
+           "https://www.bancomontepio.pt/content/dam/montepio/pdf/geral/precario/folheto-comissoes-despesas/folheto-comissoes-despesas.pdf"],
+  SANTR:  ["https://www.santander.pt/pdfs/particulares/credito-habitacao/CH_Informacao_Pre-Contratual_Geral.pdf",
+           "https://www.santander.pt/pdfs/precario-banco/folheto-taxas-juro/outros-clientes/20-operacoes-credito/20_precariofolhetotaxasjuro_oc_opscredito.pdf"],
+  NB:     ["https://www.novobanco.pt/content/dam/novobancopublicsites/docs/pdfs/precario/particulares/PRE-FT.pdf.coredownload.inline.pdf",
+           "https://www.novobanco.pt/content/dam/novobancopublicsites/docs/pdfs/precario/particulares/PRE-FC.pdf.coredownload.inline.pdf"],
+  CGD:    ["https://www.cgd.pt/Precario/Documents/18.pdf",
+           "https://www.cgd.pt/Precario/Documents/10.pdf"],
+  UCI:    ["https://uci.pt/-/media/Files/Portugal/precario/PRE-FT-202605.pdf",
+           "https://uci.pt/-/media/Files/Portugal/precario/PRE-FC-20260301.pdf"],
+  BNI:    ["https://bnieuropa.pt/wp-content/themes/responsive/pdf/precario/taxas-juro-particulares-credito-habitacao-e-contratos-conexos.pdf",
+           "https://bnieuropa.pt/wp-content/themes/responsive/pdf/precario/particulares-credito-habitacao-e-contratos-conexos.pdf"],
+  BEST:   [],
 };
 
 // JSON schema para structured outputs — garante a forma exacta da resposta.
@@ -306,34 +313,38 @@ async function fetchPdf(rawUrl, _depth) {
   });
 }
 
-// Busca todos os PDFs em paralelo. Devolve mapa code → Buffer|null.
+// Busca todos os PDFs em paralelo. Devolve mapa code → Buffer[] (um por URL).
 async function fetchBankPdfs() {
   const results = await Promise.all(
     BANK_CODES.map(async (code) => {
       const urls = BANK_SOURCES[code] || [];
-      if (!urls.length) return [code, null];
-      const buf = await fetchPdf(urls[0]);
-      return [code, buf];
+      if (!urls.length) return [code, []];
+      const bufs = await Promise.all(urls.map((u) => fetchPdf(u)));
+      return [code, bufs.filter(Boolean)];
     })
   );
   return Object.fromEntries(results);
 }
 
+const DOC_LABELS = ["Taxas de juro §18.1", "Comissões §18.2"];
+
 // Constrói o array `messages` com os PDFs como document blocks.
 function buildMessages(pdfMap) {
   const content = [];
   for (const code of BANK_CODES) {
-    const buf = pdfMap[code];
-    if (buf && buf.length > 0) {
-      content.push({
-        type: "document",
-        source: { type: "base64", media_type: "application/pdf", data: buf.toString("base64") },
-        title: `Preçário ${code} — ${BANK_NAMES[code]}`,
-        context: "Folheto de taxas de juro §18.1 e comissões para crédito habitação HPP",
-      });
-    }
+    const bufs = pdfMap[code] || [];
+    bufs.forEach((buf, i) => {
+      if (buf && buf.length > 0) {
+        content.push({
+          type: "document",
+          source: { type: "base64", media_type: "application/pdf", data: buf.toString("base64") },
+          title: `${code} — ${BANK_NAMES[code]} — ${DOC_LABELS[i] || "Preçário"}`,
+          context: "Folheto de preçário para crédito habitação HPP",
+        });
+      }
+    });
   }
-  const missing = BANK_CODES.filter((c) => !pdfMap[c] || !pdfMap[c].length);
+  const missing = BANK_CODES.filter((c) => !(pdfMap[c] || []).length);
   let userText = "Extrai as condições actuais de crédito habitação HPP para os 14 bancos a partir dos documentos acima, no formato JSON definido.";
   if (missing.length) {
     userText += `\n\nBancos sem PDF disponível — estima com base em bancos comparáveis: ${missing.join(", ")}.`;
@@ -472,7 +483,8 @@ function refreshStatus() {
   };
 }
 
-// Promove os dados PENDENTES para "live" (L1 + L2 + opcionalmente SQLite).
+// Promove os dados PENDENTES para "live" (L1 + L2 + banks.sqlite).
+// A aprovação explícita pelo admin (ou auto-apply) implica sempre persistência.
 function applyPending(today, kvSlot) {
   if (!PENDING) return false;
   const freshData = { spreads: PENDING.spreads, eur: PENDING.eur, eurLabel: PENDING.eurLabel };
@@ -481,8 +493,10 @@ function applyPending(today, kvSlot) {
   MEM.fetchedAt  = fetchedAt;
   MEM.dayKey     = today;
   MEM.callsToday = kvSlot != null ? Number(kvSlot) : MEM.callsToday + 1;
-  if (PERSIST_ANTHROPIC_SPREADS_TO_SQLITE && getBanksModule() && getBanksModule().bulkInsertSpreads) {
-    try { getBanksModule().bulkInsertSpreads(freshData.spreads, "anthropic"); } catch (e) { console.error("spreads.js: bulkInsertSpreads failed:", e.message); }
+  const banksModule = getBanksModule();
+  if (banksModule?.bulkInsertSpreads) {
+    try { banksModule.bulkInsertSpreads(freshData.spreads, "anthropic"); }
+    catch (e) { console.error("spreads.js: bulkInsertSpreads failed:", e.message); }
   }
   kvSet(KV_CACHE_KEY, { data: freshData, fetchedAt }, KV_CACHE_TTL).catch(() => {});
   PENDING = null;
