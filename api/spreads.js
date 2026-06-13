@@ -468,13 +468,14 @@ function startRefresh(apiKey, kvSlot, today) {
     try {
       const client = new Anthropic({ apiKey, maxRetries: 1, timeout: 180_000 });
       console.log("spreads.js: a chamar Anthropic Messages API com web_fetch...");
+      // output_config.format (structured outputs) é incompatível com web_fetch server-side;
+      // o extractSpreads já faz parsing robusto do JSON no texto da resposta.
       const message = await callWithContinuation(client, {
-        model:         ANTHROPIC_MODEL,
-        max_tokens:    32000,
-        output_config: { format: { type: "json_schema", schema: SPREADS_SCHEMA } },
-        system:        SYSTEM_PROMPT,
-        tools:         [{ type: "web_fetch_20260209", name: "web_fetch", max_uses: WEB_FETCH_MAX_USES }],
-        messages:      buildMessages(),
+        model:     ANTHROPIC_MODEL,
+        max_tokens: 32000,
+        system:    SYSTEM_PROMPT,
+        tools:     [{ type: "web_fetch_20260209", name: "web_fetch", max_uses: WEB_FETCH_MAX_USES }],
+        messages:  buildMessages(),
       });
 
       const spreads = extractSpreads(message);
