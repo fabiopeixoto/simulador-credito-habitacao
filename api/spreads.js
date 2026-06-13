@@ -258,6 +258,7 @@ Bancos a apurar (código = nome oficial):
 Regras de apuramento:
 - sCom é SEMPRE o spread contratual em vigor FORA do período promocional — nunca o spread reduzido da campanha. O spread de campanha vai em promoSpread.
 - Os valores "sem produtos" (sSem, mSem, fSem, jsSem) são ≥ aos valores "com produtos".
+- jsCom/jsSem são o spread do Crédito Habitação Jovem (regime com garantia do Estado). Inclui-os SEMPRE. Se o preçário não indicar um spread próprio para jovens, usa o mesmo spread comercial (jsCom = sCom, jsSem = sSem).
 - Quando não há campanha: promoPeriodo = 0 e promoSpread = null.
 - Para cada banco, lê os PDFs do preçário indicados na mensagem (taxas §18.1 e comissões §18.2).
 - Se um URL devolver erro ou não cobrir o campo, usa uma estimativa razoável e indica "Estimativa" em contaNota.
@@ -366,6 +367,29 @@ function toSpreadsMap(parsed) {
   return parsed;
 }
 
+// Alguns preçários não distinguem um spread próprio para o Crédito Habitação
+// Jovem, pelo que o modelo pode omitir jsCom/jsSem (responseSchema não é
+// aplicável com a URL context tool, logo a forma não é garantida). Como o regime
+// jovem costuma usar o mesmo spread comercial (jovemSameSpread), herdamo-los de
+// sCom/sSem em vez de rejeitar o lote inteiro. Bancos com spread jovem próprio
+// (ex.: CGD) são corrigidos na revisão do admin antes de irem a "live".
+function normalizeSpreads(spreads) {
+  if (!spreads || typeof spreads !== "object") return spreads;
+  for (const code of Object.keys(spreads)) {
+    const b = spreads[code];
+    if (!b || typeof b !== "object") continue;
+    if (!Number.isFinite(b.jsCom) && Number.isFinite(b.sCom)) {
+      console.warn(`spreads.js: ${code}.jsCom em falta — herdado de sCom (${b.sCom})`);
+      b.jsCom = b.sCom;
+    }
+    if (!Number.isFinite(b.jsSem) && Number.isFinite(b.sSem)) {
+      console.warn(`spreads.js: ${code}.jsSem em falta — herdado de sSem (${b.sSem})`);
+      b.jsSem = b.sSem;
+    }
+  }
+  return spreads;
+}
+
 function validateSpreads(spreads) {
   if (!spreads || typeof spreads !== "object") throw new Error("Spreads inválidos: resposta não é um objecto");
   for (const code of BANK_CODES) {
@@ -427,7 +451,7 @@ function parseBatchSpreads(resp) {
 
 // Compat (testes/admin): extrai e valida uma resposta completa (14 bancos).
 function extractSpreads(resp) {
-  const parsed = parseBatchSpreads(resp);
+  const parsed = normalizeSpreads(parseBatchSpreads(resp));
   try {
     return validateSpreads(parsed);
   } catch (err) {
@@ -509,7 +533,7 @@ function startRefresh(apiKey, kvSlot, today) {
         console.log(`spreads.js: lote [${codes.join(",")}] — prompt=${u.promptTokenCount || "?"} output=${u.candidatesTokenCount || "?"}`);
         Object.assign(merged, parseBatchSpreads(resp));
       }
-      const spreads = validateSpreads(merged);
+      const spreads = validateSpreads(normalizeSpreads(merged));
 
       let eur = null, eurLabel = "";
       try { const e = await fetchEuribor(); eur = e.eur; eurLabel = e.eurLabel; }
@@ -659,6 +683,7 @@ module.exports = async function handler(req, res) {
 
 // Exposto para testes/admin (não usado pelo router)
 module.exports.validateSpreads = validateSpreads;
+module.exports.normalizeSpreads = normalizeSpreads;
 module.exports.toSpreadsMap    = toSpreadsMap;
 module.exports.SPREADS_SCHEMA  = SPREADS_SCHEMA;
 module.exports.BANK_SOURCES    = BANK_SOURCES;
