@@ -307,7 +307,12 @@ function reconcileSeedSpreadsToDb() {
     const map = {};
     for (const [code, sd] of Object.entries(SEED_SPREADS)) {
       const row = latest[code];
-      if (row && String(row.source || "").trim() === "manual") {
+      const src = row ? String(row.source || "").trim() : "";
+      // Dados aprovados pelo admin (AI) nunca devem ser sobrepostos pelo seed —
+      // caso contrário, a cada arranque/redeploy o seed-reconcile reverteria as
+      // aprovações (source=gemini/anthropic) para os valores canónicos.
+      if (src === "gemini" || src === "anthropic") continue;
+      if (src === "manual") {
         // Skip manual rows only when all new seed fields are already consistent
         const boolsMatch = (!!row.jovemSameSpread === !!sd.jovemSameSpread)
           && (!!row.jovemIsentaAval === !!sd.jovemIsentaAval);
