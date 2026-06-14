@@ -162,7 +162,8 @@ const BANK_SOURCES = {
   CA:     ["https://www.creditoagricola.pt/-/media/files/precario/documents-site/taxas-de-juro-_aviso-8-2009-do-bdp/pre-ft-202605.pdf",
            "https://www.creditoagricola.pt/-/media/files/precario/documents-site/comissoes-e-despesas-_aviso-8-2009-do-bdp/pre-fc-20260501.pdf"],
   CTT:    ["https://www.bancoctt.pt/application/themes/pdfs/precario.pdf?language_id=1555597541833"],
-  BNKTR:  ["https://clientebancario.bportugal.pt/sites/default/files/precario/0269_/0269_PRE_20221231000630.pdf"],
+  BNKTR:  ["https://banco.bankinter.pt/particulares/pdfs/precario/p_ftj_operacoes_credito.pdf",
+           "https://banco.bankinter.pt/particulares/pdfs/precario/p_fcd_operacoes_credito.pdf"],
   // abanca.pt bloqueia o fetcher da URL context tool; usamos o preçário combinado
   // do Portal do Cliente Bancário (BdP), código 0170, alias "_1" = filing mais recente.
   ABANCA: ["https://clientebancario.bportugal.pt/sites/default/files/precario/0170_/0170_PRE_1.pdf"],
