@@ -347,6 +347,28 @@ function pendingFmtVal(v) {
   return escapeHtml(s.length > 44 ? s.slice(0, 44) + '…' : s);
 }
 
+// Classifica a origem dos valores de um banco: lido do preçário (ficheiro via
+// API) vs estimado pelo modelo, vs manual, vs canónico (seed). Baseia-se no
+// source do registo e na contaNota (o modelo escreve "Estimativa..." quando não
+// leu o ficheiro).
+function spreadsOrigin(s) {
+  const note = String((s && s.contaNota) || '');
+  const src = String((s && s.source) || '').toLowerCase();
+  const isEstimate = /estimativ|estimad|url\s*inv|inv[aá]lid|sem\s+pre[cç]/i.test(note);
+  const tip = note ? ' — ' + note : '';
+  if (src === 'manual') return { label: 'Manual', icon: '✍', color: '#60a5fa', title: 'Inserido manualmente (admin)' + tip };
+  if (isEstimate) return { label: 'Estimativa', icon: '≈', color: '#fbbf24', title: 'Estimado pelo modelo (preçário não lido)' + tip };
+  if (src === 'gemini' || src === 'anthropic') return { label: 'Preçário (API)', icon: '📄', color: '#22c55e', title: 'Lido do preçário oficial via API' + tip };
+  if (src === 'seed' || src === 'seed-reconcile') return { label: 'Canónico', icon: '◆', color: '#94a3b8', title: 'Valor canónico do seed (ainda sem extração API)' + tip };
+  return { label: '—', icon: '', color: 'var(--muted)', title: tip };
+}
+
+function originBadge(s) {
+  const o = spreadsOrigin(s);
+  if (!o.label || o.label === '—') return '';
+  return `<span class="badge" title="${escapeHtml(o.title)}" style="background:${o.color}22;color:${o.color};border:1px solid ${o.color}55">${o.icon} ${escapeHtml(o.label)}</span>`;
+}
+
 // Mostra os dados PENDENTES (devolvidos pela AI) como um DIFF face aos valores
 // servidos: lista, por banco, todos os campos que vão ser modificados (atual → novo).
 function renderPending(pending) {
@@ -375,11 +397,13 @@ function renderPending(pending) {
     totalChanges += changes.length;
     changes.forEach((k, i) => {
       const label = PENDING_FIELD_LABELS[k] || k;
+      const origin = originBadge({ ...next, source: next.source || 'gemini' });
       const bankCell = i === 0
         ? `<td rowspan="${changes.length}" style="vertical-align:top">`
           + `<label style="display:flex;gap:6px;align-items:center;font-weight:600;cursor:pointer">`
           + `<input type="checkbox" class="pending-bank-chk" value="${escapeHtml(code)}" checked>`
-          + `<span>${escapeHtml(code)}${isNew ? ' <span style="color:#22c55e">(novo)</span>' : ''}</span></label></td>`
+          + `<span>${escapeHtml(code)}${isNew ? ' <span style="color:#22c55e">(novo)</span>' : ''}</span></label>`
+          + (origin ? `<div style="margin-top:4px">${origin}</div>` : '') + `</td>`
         : '';
       diffRows.push(
         `<tr>${bankCell}<td>${escapeHtml(label)}</td>`
@@ -585,6 +609,7 @@ function renderBanks() {
           <span class="card-code">${b.code}</span>
           <span class="badge ${b.active ? 'badge-active' : 'badge-inactive'}">${b.active ? 'activo' : 'inactivo'}</span>
           ${prefBadge}
+          ${originBadge(s)}
         </div>
         <div class="card-body">
           <table>
