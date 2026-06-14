@@ -317,24 +317,90 @@ async function refreshSpreadsAI() {
   }
 }
 
-// Mostra os dados PENDENTES (devolvidos pela AI) com botões aprovar/rejeitar.
+// Etiquetas legíveis para os campos comparados no diff de aprovação.
+const PENDING_FIELD_LABELS = {
+  sCom: 'Spread var. c/ produtos', sSem: 'Spread var. s/ produtos',
+  mCom: 'TAN mista c/', mSem: 'TAN mista s/', fCom: 'TAN fixa c/', fSem: 'TAN fixa s/',
+  jsCom: 'Spread jovem c/', jsSem: 'Spread jovem s/',
+  promoPeriodo: 'Promo (meses)', promoSpread: 'Spread promo',
+  dossier: 'Dossier (€)', avaliacao: 'Avaliação (€)', contaMes: 'Conta/mês (€)',
+  capMin: 'Capital mín. (€)', capMax: 'Capital máx. (€)',
+  vRef: 'Seg. vida ref. (€)', mAno: 'Multirriscos/ano (€)',
+  insV: 'Seguradora vida', insM: 'Seguradora multirriscos',
+  contaNota: 'Nota da conta', minutas: 'Minutas (€)', jovemIsenta: 'Jovem isenta comissões',
+};
+
+// Igualdade tolerante: números com margem de arredondamento; null/undefined/'' equivalentes.
+function pendingValsEqual(a, b) {
+  const na = (a === undefined || a === '') ? null : a;
+  const nb = (b === undefined || b === '') ? null : b;
+  if (typeof na === 'number' && typeof nb === 'number') return Math.abs(na - nb) < 1e-9;
+  if (na !== null && nb !== null && !isNaN(Number(na)) && !isNaN(Number(nb)) &&
+      typeof na !== 'boolean' && typeof nb !== 'boolean') return Math.abs(Number(na) - Number(nb)) < 1e-9;
+  return na === nb;
+}
+
+function pendingFmtVal(v) {
+  if (v === null || v === undefined || v === '') return '—';
+  if (typeof v === 'boolean') return v ? 'sim' : 'não';
+  const s = String(v);
+  return escapeHtml(s.length > 44 ? s.slice(0, 44) + '…' : s);
+}
+
+// Mostra os dados PENDENTES (devolvidos pela AI) como um DIFF face aos valores
+// servidos: lista, por banco, todos os campos que vão ser modificados (atual → novo).
 function renderPending(pending) {
   const el = document.getElementById('aiPending');
   if (!el) return;
   const ts = pending.fetchedAt ? new Date(pending.fetchedAt).toLocaleString('pt-PT') : '';
   const codes = Object.keys(pending.spreads || {});
-  const rows = codes.map(c => {
-    const b = pending.spreads[c] || {};
-    return `<tr><td>${escapeHtml(c)}</td><td>${b.sCom}</td><td>${b.sSem}</td><td>${b.dossier}</td>`
-      + `<td>${b.avaliacao}</td><td style="color:var(--muted)">${escapeHtml((b.contaNota || '').slice(0, 32))}</td></tr>`;
-  }).join('');
+  const liveByCode = {};
+  (banks || []).forEach(b => { liveByCode[b.code] = b.spreads || {}; });
+
+  let totalChanges = 0;
+  const changedBanks = [];
+  const unchanged = [];
+  const diffRows = [];
+
+  codes.forEach(code => {
+    const next = pending.spreads[code] || {};
+    const live = liveByCode[code] || {};
+    const isNew = !(code in liveByCode);
+    // Campos a apresentar = chaves do novo registo com etiqueta conhecida (+ outras chaves novas).
+    const fields = Object.keys(next).filter(k => k in PENDING_FIELD_LABELS)
+      .concat(Object.keys(next).filter(k => !(k in PENDING_FIELD_LABELS) && k !== 'codigo'));
+    const changes = fields.filter(k => !pendingValsEqual(live[k], next[k]));
+    if (!changes.length) { unchanged.push(code); return; }
+    changedBanks.push(code);
+    totalChanges += changes.length;
+    changes.forEach((k, i) => {
+      const label = PENDING_FIELD_LABELS[k] || k;
+      const bankCell = i === 0
+        ? `<td rowspan="${changes.length}" style="font-weight:600;vertical-align:top">${escapeHtml(code)}${isNew ? ' <span style="color:#22c55e">(novo)</span>' : ''}</td>`
+        : '';
+      diffRows.push(
+        `<tr>${bankCell}<td>${escapeHtml(label)}</td>`
+        + `<td style="color:var(--muted)">${pendingFmtVal(live[k])}</td>`
+        + `<td style="color:#fbbf24;font-weight:600">${pendingFmtVal(next[k])}</td></tr>`
+      );
+    });
+  });
+
+  const body = diffRows.length
+    ? `<div class="stats-admin-7d" style="max-height:360px;overflow:auto"><table><thead><tr>`
+      + `<th>Banco</th><th>Campo</th><th>Atual</th><th>Novo</th>`
+      + `</tr></thead><tbody>${diffRows.join('')}</tbody></table></div>`
+    : `<p style="margin:6px 0;color:var(--muted)">Sem alterações face aos valores servidos.</p>`;
+
+  const summary = `${totalChanges} alteração(ões) em ${changedBanks.length} banco(s)`
+    + (unchanged.length ? ` · ${unchanged.length} sem alterações (${escapeHtml(unchanged.join(', '))})` : '');
+
   el.innerHTML =
     `<div style="margin-top:12px;padding:12px;border:1px solid rgba(251,191,36,0.4);border-radius:8px;background:rgba(251,191,36,0.08)">`
-    + `<p style="margin:0 0 8px;font-weight:600">🕵️ Revisão pendente — ${codes.length} bancos${ts ? ' · ' + ts : ''}</p>`
-    + `<p style="margin:0 0 10px;font-size:12px;color:var(--muted)">Dados obtidos pela AI. Confirma antes de publicar — só ao aprovar é que substituem os dados servidos.</p>`
-    + `<div class="stats-admin-7d" style="max-height:280px;overflow:auto"><table><thead><tr>`
-    + `<th>Banco</th><th>Spread c/</th><th>Spread s/</th><th>Dossier</th><th>Aval.</th><th>Nota</th>`
-    + `</tr></thead><tbody>${rows}</tbody></table></div>`
+    + `<p style="margin:0 0 6px;font-weight:600">🕵️ Revisão pendente — ${codes.length} bancos${ts ? ' · ' + ts : ''}</p>`
+    + `<p style="margin:0 0 4px;font-size:12px">${summary}</p>`
+    + `<p style="margin:0 0 10px;font-size:12px;color:var(--muted)">Só ao aprovar é que estes valores substituem os dados servidos.</p>`
+    + body
     + `<div class="comments-admin-toolbar" style="margin-top:10px">`
     + `<button type="button" class="btn-ai" onclick="approvePendingSpreads()">✓ Aprovar e publicar</button>`
     + `<button type="button" class="btn-sm btn-history" onclick="rejectPendingSpreads()">✗ Rejeitar</button>`
