@@ -16,7 +16,9 @@ Aplicação web para **simular e comparar** crédito habitação em Portugal: pr
 - Gráficos e tabelas (cenários Euribor, barras de prestação, amortização, seguros, etc.).
 - **Partilha por URL**, histórico local (localStorage), secção de **comentários** com respostas.
 - **Calculadora inversa** (`/quanto-posso-pedir.html`): capital máximo dado rendimento, DSTI e taxa.
+- **Transferência de crédito** (`/transferencia.html`): compara bancos para transferir um crédito existente (poupança ao trocar de banco).
 - **Histórico** (`/historico.html`): gráfico da Euribor BCE (3m/6m/12m) e evolução de spreads por banco.
+- **Glossário** e **detalhe por banco** em modais; **política de privacidade** (`/privacidade.html`).
 - **PWA**: `manifest.json`, `icon.svg`, Service Worker (`sw.js`) com precache de assets; pedidos `GET /api/*` **não** são cacheados pelo SW.
 
 ---
@@ -38,7 +40,9 @@ Aplicação web para **simular e comparar** crédito habitação em Portugal: pr
 ```text
 ├── index.html               # Página inicial — carrega react-runtime + app + index-mount
 ├── quanto-posso-pedir.html  # Calculadora inversa (capital máximo por rendimento)
+├── transferencia.html       # Transferência de crédito habitação (comparar bancos p/ trocar)
 ├── historico.html           # Histórico Euribor BCE + spreads por banco
+├── privacidade.html         # Política de privacidade
 ├── admin.html               # Painel admin (bancos, spreads, comentários, estatísticas)
 ├── server.js                # Encaminhamento estático + APIs
 ├── sw.js                    # Service Worker (precache de assets)
@@ -53,9 +57,13 @@ Aplicação web para **simular e comparar** crédito habitação em Portugal: pr
 ├── page-header.js           # NavHeader partilhado (Euribor badges + tabs de navegação)
 ├── reverse-calc-page.js     # Componente da calculadora inversa
 ├── inversa-mount.js         # Mount da calculadora inversa
+├── transferencia-page.js    # Componente da página de transferência de crédito
+├── transferencia-mount.js   # Mount da página de transferência
 ├── historico-page.js        # Componente da página de histórico
 ├── historico-mount.js       # Mount da página de histórico
 ├── comments-modal.js        # Modal de comentários (partilhado entre páginas)
+├── glossario-modal.js       # Modal de glossário (termos de crédito habitação)
+├── bank-detail-modal.js     # Modal de detalhe por banco (spreads, comissões, origem)
 ├── admin.css, admin.js      # Estilos e lógica do painel admin (extraídos de admin.html)
 │
 ├── js/
@@ -79,6 +87,7 @@ Aplicação web para **simular e comparar** crédito habitação em Portugal: pr
 ├── api/
 │   ├── banks.js             # CRUD bancos/spreads, Euribor (servida da BD), seed SQLite; ETag em GET
 │   ├── spreads.js           # POST (só admin): Gemini + BCE, revisão/aprovação, seed fallbacks
+│   ├── euribor.js           # Fetch Euribor (3m/6m/12m) da API do BCE (usado no refresh do admin)
 │   ├── comments.js          # Comentários + respostas (SQLite, cache 30s, UUID)
 │   ├── stats.js             # Estatísticas de visitas + localização por cidade
 │   └── euribor-history.js   # Histórico BCE (3m/6m/12m) com cache SQLite
@@ -158,6 +167,21 @@ A chamada corre em background (lotes de `generateContent` repartidos pelo limite
 Persistência: ao aprovar grava spreads em `banks.sqlite` via `bulkInsertSpreads`; a Euribor obtida no refresh é persistida em `banks.js` (`setEuribor`).
 
 Variável obrigatória no servidor: **`GEMINI_API_KEY`**. Opcional: **`SPREADS_AUTO_APPLY`**, **`GEMINI_MODEL`**.
+
+#### Origem dos dados de spreads
+
+O refresh lê os **preçários oficiais em PDF** de cada banco (taxas §18.1 + comissões §18.2) configurados em `BANK_SOURCES` (`api/spreads.js`). A *URL context tool* do Gemini busca os PDFs do lado dos servidores Google, evitando bloqueios de IP; bancos cujo site bloqueia o fetcher (ex.: ABANCA, BEST) usam o preçário combinado do **Portal do Cliente Bancário (BdP)**.
+
+Cada banco é classificado por **origem** (mostrada no admin e no detalhe por banco):
+
+| Badge | Origem |
+|-------|--------|
+| 📄 Preçário (API) | lido do preçário oficial via Gemini |
+| ≈ Estimativa | o modelo não conseguiu ler o valor (URL falhou ou campo ausente) e estimou |
+| ✍ Manual | inserido manualmente no admin |
+| ◆ Canónico | valor do seed (ainda sem extração) |
+
+O *prompt* instrui o modelo a só marcar **Estimativa** quando os **spreads/TAN ou as comissões** forem estimados — nunca por causa dos campos de seguros/`capMax` (que vêm sempre dos seed fallbacks). `npm run audit:urls` valida que todos os URLs de `BANK_SOURCES` continuam acessíveis.
 
 ---
 
