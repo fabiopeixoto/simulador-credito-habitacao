@@ -167,7 +167,8 @@ const BANK_SOURCES = {
   // do Portal do Cliente Bancário (BdP), código 0170, alias "_1" = filing mais recente.
   ABANCA: ["https://clientebancario.bportugal.pt/sites/default/files/precario/0170_/0170_PRE_1.pdf"],
   BCP:    ["https://ind.millenniumbcp.pt/pt/Articles/Documents/precario/SECCAO_18.pdf"],
-  ACTVO:  ["https://ind.millenniumbcp.pt/pt/Articles/Documents/precario/SECCAO_18.pdf"],
+  // O preçário do BCP não cobre o ActivoBank; usamos o preçário do BdP (código 0023).
+  ACTVO:  ["https://clientebancario.bportugal.pt/sites/default/files/precario/0023_/0023_PRE.pdf"],
   BPI:    ["https://www.bancobpi.pt/contentservice/getContent?documentName=PR_WCS01_UCM01004994",
            "https://www.bancobpi.pt/contentservice/getContent?documentName=PR_WCS01_UCM01004993"],
   MNTPO:  ["https://www.bancomontepio.pt/content/dam/montepio/pdf/geral/precario/folheto-taxas-juro/folheto-taxas-juro.pdf",
@@ -176,8 +177,10 @@ const BANK_SOURCES = {
            "https://www.santander.pt/pdfs/precario-banco/folheto-taxas-juro/outros-clientes/20-operacoes-credito/20_precariofolhetotaxasjuro_oc_opscredito.pdf"],
   NB:     ["https://www.novobanco.pt/content/dam/novobancopublicsites/docs/pdfs/precario/particulares/PRE-FT.pdf.coredownload.inline.pdf",
            "https://www.novobanco.pt/content/dam/novobancopublicsites/docs/pdfs/precario/particulares/PRE-FC.pdf.coredownload.inline.pdf"],
+  // 18.pdf = taxas §18; o folheto completo de comissões cobre particulares
+  // (o anterior 10.pdf era de "Outros Clientes"/não-particulares).
   CGD:    ["https://www.cgd.pt/Precario/Documents/18.pdf",
-           "https://www.cgd.pt/Precario/Documents/10.pdf"],
+           "https://www.cgd.pt/Precario/Documents/Folheto-Completo-Comissoes-Despesas.pdf"],
   UCI:    ["https://www.uci.pt/-/media/Files/Portugal/precario/PRE-FT-202606.pdf",
            "https://www.uci.pt/-/media/Files/Portugal/precario/PRE-FC-20260301.pdf"],
   BNI:    ["https://bnieuropa.pt/wp-content/themes/responsive/pdf/precario/taxas-juro-particulares-credito-habitacao-e-contratos-conexos.pdf",
@@ -498,6 +501,28 @@ function normalizeSpreads(spreads) {
   return spreads;
 }
 
+// Campos que NÃO constam dos preçários §18.1/§18.2 (prémios de seguros e, por
+// vezes, o capital máximo). O modelo só os pode estimar; em vez disso mantemos o
+// valor canónico/manual já existente na BD (vindo do FINE/curadoria), que é mais
+// fiável. Aplicado antes da validação para que a revisão do admin já mostre estes
+// campos inalterados.
+const SEED_FALLBACK_FIELDS = ["vRef", "mAno", "insV", "insM", "capMax"];
+
+function applySeedFallbacks(spreads) {
+  if (!spreads || typeof spreads !== "object") return spreads;
+  const bm = getBanksModule();
+  let current = {};
+  try { current = bm && bm.getLatestSpreads ? bm.getLatestSpreads() : {}; } catch (_) { current = {}; }
+  for (const code of Object.keys(spreads)) {
+    const b = spreads[code]; const cur = current[code];
+    if (!b || typeof b !== "object" || !cur) continue;
+    for (const f of SEED_FALLBACK_FIELDS) {
+      if (cur[f] !== null && cur[f] !== undefined && cur[f] !== "") b[f] = cur[f];
+    }
+  }
+  return spreads;
+}
+
 function validateSpreads(spreads) {
   if (!spreads || typeof spreads !== "object") throw new Error("Spreads inválidos: resposta não é um objecto");
   for (const code of BANK_CODES) {
@@ -720,7 +745,7 @@ function startRefresh(apiKey, kvSlot, today) {
           }
         }
       }
-      const spreads = validateSpreads(normalizeSpreads(merged));
+      const spreads = validateSpreads(applySeedFallbacks(normalizeSpreads(merged)));
 
       let eur = null, eurLabel = "";
       try { const e = await fetchEuribor(); eur = e.eur; eurLabel = e.eurLabel; }
@@ -877,6 +902,7 @@ module.exports = async function handler(req, res) {
 // Exposto para testes/admin (não usado pelo router)
 module.exports.validateSpreads = validateSpreads;
 module.exports.normalizeSpreads = normalizeSpreads;
+module.exports.applySeedFallbacks = applySeedFallbacks;
 module.exports.toSpreadsMap    = toSpreadsMap;
 module.exports.SPREADS_SCHEMA  = SPREADS_SCHEMA;
 module.exports.BANK_SOURCES    = BANK_SOURCES;
