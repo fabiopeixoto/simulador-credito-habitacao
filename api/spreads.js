@@ -31,9 +31,7 @@ const SPREADS_KV_SCHEMA = `
 const { db: sqliteDb } = openSqliteDb(dbPath, { label: "spreads.js", schema: SPREADS_KV_SCHEMA });
 
 const KV_CACHE_KEY   = "spreads:cache:v1";
-const KV_CALLS_PFX   = "spreads:calls:";   // + "YYYY-MM-DD"
 const KV_CACHE_TTL   = 25 * 60 * 60;       // 25 h (segundos)
-const KV_CALLS_TTL   = 49 * 60 * 60;       // 49 h
 
 
 async function kvGet(key) {
@@ -65,78 +63,10 @@ async function kvSet(key, value, ttlSeconds) {
   } catch (_) {}
 }
 
-async function kvIncr(key, ttlSeconds) {
-  if (!sqliteDb) return null;
-  try {
-    const now = Date.now();
-    const expiresAt = now + ttlSeconds * 1000;
-    const tx = sqliteDb.transaction((k) => {
-      const row = sqliteDb.prepare("SELECT value, expiresAt FROM kv_store WHERE key = ?").get(k);
-      let current = 0;
-      if (row && (row.expiresAt === null || row.expiresAt > now)) {
-        current = Number(JSON.parse(row.value)) || 0;
-      }
-      const next = current + 1;
-      sqliteDb
-        .prepare(`
-          INSERT INTO kv_store(key, value, expiresAt) VALUES (?, ?, ?)
-          ON CONFLICT(key) DO UPDATE SET value = excluded.value, expiresAt = excluded.expiresAt
-        `)
-        .run(k, JSON.stringify(next), expiresAt);
-      return next;
-    });
-    return tx(key);
-  } catch (_) {
-    return null;
-  }
-}
-
-async function kvDecr(key) {
-  if (!sqliteDb) return false;
-  try {
-    const now = Date.now();
-    const tx = sqliteDb.transaction((k) => {
-      const row = sqliteDb.prepare("SELECT value, expiresAt FROM kv_store WHERE key = ?").get(k);
-      if (!row || (row.expiresAt !== null && row.expiresAt <= now)) {
-        sqliteDb.prepare("DELETE FROM kv_store WHERE key = ?").run(k);
-        return true;
-      }
-      const current = Number(JSON.parse(row.value)) || 0;
-      const next = Math.max(0, current - 1);
-      sqliteDb
-        .prepare("UPDATE kv_store SET value = ? WHERE key = ?")
-        .run(JSON.stringify(next), k);
-      return true;
-    });
-    return tx(key);
-  } catch (_) {
-    return false;
-  }
-}
-
 // ── In-memory L1 — evita round-trips KV dentro da mesma instância quente.
 const MEM = { data: null, fetchedAt: 0, callsToday: 0, dayKey: "" };
 
 function utcDayKey() { return new Date().toISOString().slice(0, 10); }
-
-// ── Limites
-const MAX_CALLS_PER_DAY = 2;
-const MIN_INTERVAL_MS   = Math.floor(24 / MAX_CALLS_PER_DAY) * 60 * 60 * 1000; // 12 h
-
-// ── Rate limiter (in-memory, best-effort por instância)
-const rateMap  = new Map();
-const RATE_WIN = 60 * 60 * 1000; // 1 h
-const RATE_MAX = 20;
-
-function isRateLimited(ip) {
-  const now = Date.now();
-  for (const [k, v] of rateMap) if (now > v.reset) rateMap.delete(k);
-  const e = rateMap.get(ip) || { count: 0, reset: now + RATE_WIN };
-  if (now > e.reset) { e.count = 0; e.reset = now + RATE_WIN; }
-  e.count++;
-  rateMap.set(ip, e);
-  return e.count > RATE_MAX;
-}
 
 // ── Google Gemini API ─────────────────────────────────────────────────────
 const BANK_CODES = ["CA", "CTT", "BNKTR", "ABANCA", "BCP", "ACTVO", "BPI", "MNTPO", "SANTR", "NB", "CGD", "UCI", "BNI", "BEST"];
@@ -772,17 +702,6 @@ function startRefresh(apiKey, kvSlot, today) {
   return true;
 }
 
-function withMeta(payload, source, fetchedAt) {
-  return {
-    ...payload,
-    meta: {
-      updatedAt: fetchedAt ? new Date(fetchedAt).toISOString() : null,
-      source,
-      note: "Prestação/TAEG/MTIC podem diferir do oficial se o cenário não for exatamente igual (prazo, comissões, seguros, idade, finalidade, LTV e tipo de taxa).",
-    },
-  };
-}
-
 module.exports = async function handler(req, res) {
   const apiKeyEnv = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
 
@@ -816,89 +735,20 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ rejected: true, ...refreshStatus() });
   }
 
-  // Variáveis partilhadas entre o bloco de limites e o bloco de API
-  const today    = utcDayKey();
-  let kvCached   = null;
-  let kvSlot     = null;
-
-  if (!isAdmin) {
-    // Rate limit (in-memory, por instância — suficiente para protecção básica)
-    const forwardedFor = req.headers["x-forwarded-for"] || "";
-    const realIp       = req.headers["x-real-ip"] || "";
-    const ip = forwardedFor.split(",")[0]?.trim() || realIp || req.socket?.remoteAddress || "unknown";
-    if (isRateLimited(ip)) return res.status(429).json({ error: "Demasiados pedidos — tenta mais tarde" });
-
-    // ── 1. L1: in-memory (evita round-trip KV na mesma instância quente)
-    if (MEM.dayKey !== today) { MEM.callsToday = 0; MEM.dayKey = today; }
-    const memAge = Date.now() - MEM.fetchedAt;
-    if (MEM.data && (MEM.callsToday >= MAX_CALLS_PER_DAY || memAge < MIN_INTERVAL_MS)) {
-      res.setHeader("X-Cache",           "MEM-HIT");
-      res.setHeader("X-Cache-Age",       Math.floor(memAge / 60000) + "min");
-      res.setHeader("X-Calls-Today",     MEM.callsToday + "/" + MAX_CALLS_PER_DAY);
-      res.setHeader("X-Data-Updated-At", new Date(MEM.fetchedAt).toISOString());
-      return res.status(200).json(withMeta(MEM.data, "mem-cache", MEM.fetchedAt));
-    }
-
-    // ── 2. L2: SQLite KV cache
-    kvCached = await kvGet(KV_CACHE_KEY);
-    if (kvCached) {
-      const kvAge    = Date.now() - (kvCached.fetchedAt || 0);
-      const kvCalls  = Number(await kvGet(KV_CALLS_PFX + today) || 0);
-      const kvLimitOk = kvCalls < MAX_CALLS_PER_DAY && kvAge >= MIN_INTERVAL_MS;
-
-      if (!kvLimitOk) {
-        // Promover para L1 e servir
-        MEM.data       = kvCached.data;
-        MEM.fetchedAt  = kvCached.fetchedAt || 0;
-        MEM.callsToday = kvCalls;
-        MEM.dayKey     = today;
-        res.setHeader("X-Cache",           "KV-HIT");
-        res.setHeader("X-Cache-Age",       Math.floor(kvAge / 60000) + "min");
-        res.setHeader("X-Calls-Today",     kvCalls + "/" + MAX_CALLS_PER_DAY);
-        res.setHeader("X-Data-Updated-At", new Date(MEM.fetchedAt).toISOString());
-        return res.status(200).json(withMeta(kvCached.data, "kv-cache", MEM.fetchedAt));
-      }
-    }
-
-    // ── 3. Reservar slot atomicamente com INCR antes de chamar a API.
-    kvSlot = await kvIncr(KV_CALLS_PFX + today, KV_CALLS_TTL);
-
-    if (kvSlot !== null && kvSlot > MAX_CALLS_PER_DAY) {
-      kvDecr(KV_CALLS_PFX + today).catch(() => {});
-      const staleD  = kvCached?.data || MEM.data || null;
-      const staleTs = kvCached?.fetchedAt || MEM.fetchedAt || 0;
-      if (staleD) {
-        res.setHeader("X-Cache",       "KV-LIMIT");
-        res.setHeader("X-Calls-Today", (kvSlot - 1) + "/" + MAX_CALLS_PER_DAY);
-        return res.status(200).json(withMeta(staleD, "kv-cache", staleTs));
-      }
-    }
-    if (kvSlot === null && MEM.callsToday >= MAX_CALLS_PER_DAY) {
-      const staleD = MEM.data || null;
-      if (staleD) {
-        res.setHeader("X-Cache",       "MEM-LIMIT");
-        res.setHeader("X-Calls-Today", MEM.callsToday + "/" + MAX_CALLS_PER_DAY);
-        return res.status(200).json(withMeta(staleD, "mem-cache", MEM.fetchedAt));
-      }
-    }
-  }
+  // Só o admin pode disparar a extração (Gemini) e a actualização da Euribor
+  // (BCE). Não há limite diário — o gatilho é manual e exclusivo do painel admin.
+  // O simulador público lê os valores da BD via GET /api/banks (não chama APIs).
+  if (!isAdmin) return res.status(403).json({ error: "Requer x-admin-token" });
 
   const apiKey = apiKeyEnv;
   if (!apiKey && !SPREADS_MOCK) return res.status(503).json({ error: "GEMINI_API_KEY não configurada" });
 
-  // ── 4. Iniciar o refresh em background e responder de imediato. O resultado
-  // fica PENDENTE até aprovação no admin (ou auto-aplicado se SPREADS_AUTO_APPLY=1).
-  const started = startRefresh(apiKey, kvSlot, today);
-  // Já havia um refresh em curso — devolver o slot reservado em ── 3
-  if (!started && kvSlot !== null) kvDecr(KV_CALLS_PFX + today).catch(() => {});
-
-  const staleData      = kvCached?.data || MEM.data || null;
-  const staleFetchedAt = kvCached?.fetchedAt || MEM.fetchedAt || 0;
-  if (staleData) {
-    res.setHeader("X-Cache", "REFRESHING");
-    return res.status(200).json(withMeta(staleData, "stale-cache", staleFetchedAt));
-  }
-  return res.status(202).json({ status: "refreshing", ...refreshStatus() });
+  // Inicia o refresh em background e responde de imediato. O resultado fica
+  // PENDENTE até aprovação no admin (ou auto-aplicado se SPREADS_AUTO_APPLY=1).
+  const started = startRefresh(apiKey, null, utcDayKey());
+  return res
+    .status(started ? 202 : 200)
+    .json({ status: started ? "refreshing" : "already-running", ...refreshStatus() });
 };
 
 // Exposto para testes/admin (não usado pelo router)
