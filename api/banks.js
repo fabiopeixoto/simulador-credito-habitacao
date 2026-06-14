@@ -1,6 +1,5 @@
 const path = require("path");
 const { openSqliteDb } = require(path.join(__dirname, "..", "lib", "open-sqlite.js"));
-const { fetchEuribor: fetchEuriborFromBce } = require("./euribor.js");
 
 // ── SQLite ────────────────────────────────────────────────────────────────
 const dbDir = path.join(__dirname, "..", "data");
@@ -104,10 +103,6 @@ const { db: sqliteDb } = openSqliteDb(dbPath, {
 });
 
 // ── Euribor cache helpers ──────────────────────────────────────────────────
-/** Intervalo mínimo entre pedidos HTTP ao BCE em GET /api/banks (evita sobrecarga). */
-const EUR_BCE_NET_MIN_MS = 90 * 1000;
-let lastEuriborNetAttemptMs = 0;
-
 function euriborPayloadDiffers(prev, eur, eurLabel) {
   if (!eur || typeof eur !== "object") return false;
   const keys = ["3m", "6m", "12m"];
@@ -146,31 +141,6 @@ function getEuribor() {
     if (!row) return null;
     return JSON.parse(row.value);
   } catch (_) { return null; }
-}
-
-async function fetchAndCacheEuribor() {
-  const { eur, eurLabel } = await fetchEuriborFromBce(10000);
-  const result = { eur, eurLabel, fetchedAt: Date.now() };
-  setEuribor(eur, eurLabel);
-  return result;
-}
-
-/**
- * Re-descobre Euribor na rede com throttle; só persiste em SQLite quando os valores
- * diferem do cache (setEuribor já compara).
- */
-async function refreshEuriborFromBceForGet() {
-  const now = Date.now();
-  if (now - lastEuriborNetAttemptMs < EUR_BCE_NET_MIN_MS) {
-    return getEuribor();
-  }
-  lastEuriborNetAttemptMs = now;
-  try {
-    await fetchAndCacheEuribor();
-  } catch (e) {
-    console.error("banks.js: fetchAndCacheEuribor failed:", e.message);
-  }
-  return getEuribor();
 }
 
 // ── Seed data ─────────────────────────────────────────────────────────────
@@ -766,13 +736,9 @@ module.exports = async function handler(req, res) {
       spreads: spreads[bank.code] || null,
     }));
 
-    // Euribor: sincroniza com BCE (throttle à rede); SQLite só actualiza se os valores diferirem
-    let euriborData = getEuribor();
-    try {
-      euriborData = await refreshEuriborFromBceForGet();
-    } catch (_) {
-      /* mantém cache */
-    }
+    // Euribor servida da BD (sem rede). A actualização via BCE só acontece no
+    // refresh do admin (POST /api/spreads), não no carregamento público.
+    const euriborData = getEuribor();
 
     return res.status(200).json({ banks: result, euribor: euriborData || null });
   }

@@ -31,9 +31,7 @@ const SPREADS_KV_SCHEMA = `
 const { db: sqliteDb } = openSqliteDb(dbPath, { label: "spreads.js", schema: SPREADS_KV_SCHEMA });
 
 const KV_CACHE_KEY   = "spreads:cache:v1";
-const KV_CALLS_PFX   = "spreads:calls:";   // + "YYYY-MM-DD"
 const KV_CACHE_TTL   = 25 * 60 * 60;       // 25 h (segundos)
-const KV_CALLS_TTL   = 49 * 60 * 60;       // 49 h
 
 
 async function kvGet(key) {
@@ -65,78 +63,10 @@ async function kvSet(key, value, ttlSeconds) {
   } catch (_) {}
 }
 
-async function kvIncr(key, ttlSeconds) {
-  if (!sqliteDb) return null;
-  try {
-    const now = Date.now();
-    const expiresAt = now + ttlSeconds * 1000;
-    const tx = sqliteDb.transaction((k) => {
-      const row = sqliteDb.prepare("SELECT value, expiresAt FROM kv_store WHERE key = ?").get(k);
-      let current = 0;
-      if (row && (row.expiresAt === null || row.expiresAt > now)) {
-        current = Number(JSON.parse(row.value)) || 0;
-      }
-      const next = current + 1;
-      sqliteDb
-        .prepare(`
-          INSERT INTO kv_store(key, value, expiresAt) VALUES (?, ?, ?)
-          ON CONFLICT(key) DO UPDATE SET value = excluded.value, expiresAt = excluded.expiresAt
-        `)
-        .run(k, JSON.stringify(next), expiresAt);
-      return next;
-    });
-    return tx(key);
-  } catch (_) {
-    return null;
-  }
-}
-
-async function kvDecr(key) {
-  if (!sqliteDb) return false;
-  try {
-    const now = Date.now();
-    const tx = sqliteDb.transaction((k) => {
-      const row = sqliteDb.prepare("SELECT value, expiresAt FROM kv_store WHERE key = ?").get(k);
-      if (!row || (row.expiresAt !== null && row.expiresAt <= now)) {
-        sqliteDb.prepare("DELETE FROM kv_store WHERE key = ?").run(k);
-        return true;
-      }
-      const current = Number(JSON.parse(row.value)) || 0;
-      const next = Math.max(0, current - 1);
-      sqliteDb
-        .prepare("UPDATE kv_store SET value = ? WHERE key = ?")
-        .run(JSON.stringify(next), k);
-      return true;
-    });
-    return tx(key);
-  } catch (_) {
-    return false;
-  }
-}
-
 // ── In-memory L1 — evita round-trips KV dentro da mesma instância quente.
 const MEM = { data: null, fetchedAt: 0, callsToday: 0, dayKey: "" };
 
 function utcDayKey() { return new Date().toISOString().slice(0, 10); }
-
-// ── Limites
-const MAX_CALLS_PER_DAY = 2;
-const MIN_INTERVAL_MS   = Math.floor(24 / MAX_CALLS_PER_DAY) * 60 * 60 * 1000; // 12 h
-
-// ── Rate limiter (in-memory, best-effort por instância)
-const rateMap  = new Map();
-const RATE_WIN = 60 * 60 * 1000; // 1 h
-const RATE_MAX = 20;
-
-function isRateLimited(ip) {
-  const now = Date.now();
-  for (const [k, v] of rateMap) if (now > v.reset) rateMap.delete(k);
-  const e = rateMap.get(ip) || { count: 0, reset: now + RATE_WIN };
-  if (now > e.reset) { e.count = 0; e.reset = now + RATE_WIN; }
-  e.count++;
-  rateMap.set(ip, e);
-  return e.count > RATE_MAX;
-}
 
 // ── Google Gemini API ─────────────────────────────────────────────────────
 const BANK_CODES = ["CA", "CTT", "BNKTR", "ABANCA", "BCP", "ACTVO", "BPI", "MNTPO", "SANTR", "NB", "CGD", "UCI", "BNI", "BEST"];
@@ -162,12 +92,14 @@ const BANK_SOURCES = {
   CA:     ["https://www.creditoagricola.pt/-/media/files/precario/documents-site/taxas-de-juro-_aviso-8-2009-do-bdp/pre-ft-202605.pdf",
            "https://www.creditoagricola.pt/-/media/files/precario/documents-site/comissoes-e-despesas-_aviso-8-2009-do-bdp/pre-fc-20260501.pdf"],
   CTT:    ["https://www.bancoctt.pt/application/themes/pdfs/precario.pdf?language_id=1555597541833"],
-  BNKTR:  ["https://clientebancario.bportugal.pt/sites/default/files/precario/0269_/0269_PRE_20221231000630.pdf"],
+  BNKTR:  ["https://banco.bankinter.pt/particulares/pdfs/precario/p_ftj_operacoes_credito.pdf",
+           "https://banco.bankinter.pt/particulares/pdfs/precario/p_fcd_operacoes_credito.pdf"],
   // abanca.pt bloqueia o fetcher da URL context tool; usamos o preçário combinado
   // do Portal do Cliente Bancário (BdP), código 0170, alias "_1" = filing mais recente.
   ABANCA: ["https://clientebancario.bportugal.pt/sites/default/files/precario/0170_/0170_PRE_1.pdf"],
   BCP:    ["https://ind.millenniumbcp.pt/pt/Articles/Documents/precario/SECCAO_18.pdf"],
-  ACTVO:  ["https://ind.millenniumbcp.pt/pt/Articles/Documents/precario/SECCAO_18.pdf"],
+  // O preçário do BCP não cobre o ActivoBank; usamos o preçário do BdP (código 0023).
+  ACTVO:  ["https://clientebancario.bportugal.pt/sites/default/files/precario/0023_/0023_PRE.pdf"],
   BPI:    ["https://www.bancobpi.pt/contentservice/getContent?documentName=PR_WCS01_UCM01004994",
            "https://www.bancobpi.pt/contentservice/getContent?documentName=PR_WCS01_UCM01004993"],
   MNTPO:  ["https://www.bancomontepio.pt/content/dam/montepio/pdf/geral/precario/folheto-taxas-juro/folheto-taxas-juro.pdf",
@@ -176,8 +108,10 @@ const BANK_SOURCES = {
            "https://www.santander.pt/pdfs/precario-banco/folheto-taxas-juro/outros-clientes/20-operacoes-credito/20_precariofolhetotaxasjuro_oc_opscredito.pdf"],
   NB:     ["https://www.novobanco.pt/content/dam/novobancopublicsites/docs/pdfs/precario/particulares/PRE-FT.pdf.coredownload.inline.pdf",
            "https://www.novobanco.pt/content/dam/novobancopublicsites/docs/pdfs/precario/particulares/PRE-FC.pdf.coredownload.inline.pdf"],
+  // 18.pdf = taxas §18; o folheto completo de comissões cobre particulares
+  // (o anterior 10.pdf era de "Outros Clientes"/não-particulares).
   CGD:    ["https://www.cgd.pt/Precario/Documents/18.pdf",
-           "https://www.cgd.pt/Precario/Documents/10.pdf"],
+           "https://www.cgd.pt/Precario/Documents/Folheto-Completo-Comissoes-Despesas.pdf"],
   UCI:    ["https://www.uci.pt/-/media/Files/Portugal/precario/PRE-FT-202606.pdf",
            "https://www.uci.pt/-/media/Files/Portugal/precario/PRE-FC-20260301.pdf"],
   BNI:    ["https://bnieuropa.pt/wp-content/themes/responsive/pdf/precario/taxas-juro-particulares-credito-habitacao-e-contratos-conexos.pdf",
@@ -290,7 +224,8 @@ Regras de apuramento:
 - jsCom/jsSem são o spread do Crédito Habitação Jovem (regime com garantia do Estado). Inclui-os SEMPRE. Se o preçário não indicar um spread próprio para jovens, usa o mesmo spread comercial (jsCom = sCom, jsSem = sSem).
 - Quando não há campanha: promoPeriodo = 0 e promoSpread = null.
 - Para cada banco, lê os PDFs do preçário indicados na mensagem (taxas §18.1 e comissões §18.2).
-- Se um URL devolver erro ou não cobrir o campo, usa uma estimativa razoável e indica "Estimativa" em contaNota.
+- Os campos vRef, mAno, insV, insM e capMax NÃO constam dos preçários (são prémios de seguros e limites preenchidos a partir de dados curados). Dá o teu melhor valor aproximado, mas NÃO menciones "Estimativa" na contaNota por causa destes campos — eles são substituídos depois.
+- A contaNota só deve conter "Estimativa" se os SPREADS/TAN (sCom, sSem, mCom, mSem, fCom, fSem, jsCom, jsSem) OU as comissões (dossier, avaliacao, minutas) tiverem de ser estimados por o preçário não os cobrir ou o URL falhar. Caso contrário, indica apenas a fonte (ex.: "Preçário jun.2026").
 - Para bancos sem URL (caso existam), estima com base em bancos comparáveis e indica "Estimativa".
 - Indica o mês/ano da fonte em contaNota quando confirmares o valor (ex.: "Preçário mai.2026").
 - Valores monetários em EUR; spreads e TANs em pontos percentuais (ex.: 0.70 = 0,70%).
@@ -493,6 +428,28 @@ function normalizeSpreads(spreads) {
     if (!Number.isFinite(b.jsSem) && Number.isFinite(b.sSem)) {
       console.warn(`spreads.js: ${code}.jsSem em falta — herdado de sSem (${b.sSem})`);
       b.jsSem = b.sSem;
+    }
+  }
+  return spreads;
+}
+
+// Campos que NÃO constam dos preçários §18.1/§18.2 (prémios de seguros e, por
+// vezes, o capital máximo). O modelo só os pode estimar; em vez disso mantemos o
+// valor canónico/manual já existente na BD (vindo do FINE/curadoria), que é mais
+// fiável. Aplicado antes da validação para que a revisão do admin já mostre estes
+// campos inalterados.
+const SEED_FALLBACK_FIELDS = ["vRef", "mAno", "insV", "insM", "capMax"];
+
+function applySeedFallbacks(spreads) {
+  if (!spreads || typeof spreads !== "object") return spreads;
+  const bm = getBanksModule();
+  let current = {};
+  try { current = bm && bm.getLatestSpreads ? bm.getLatestSpreads() : {}; } catch (_) { current = {}; }
+  for (const code of Object.keys(spreads)) {
+    const b = spreads[code]; const cur = current[code];
+    if (!b || typeof b !== "object" || !cur) continue;
+    for (const f of SEED_FALLBACK_FIELDS) {
+      if (cur[f] !== null && cur[f] !== undefined && cur[f] !== "") b[f] = cur[f];
     }
   }
   return spreads;
@@ -720,7 +677,7 @@ function startRefresh(apiKey, kvSlot, today) {
           }
         }
       }
-      const spreads = validateSpreads(normalizeSpreads(merged));
+      const spreads = validateSpreads(applySeedFallbacks(normalizeSpreads(merged)));
 
       let eur = null, eurLabel = "";
       try { const e = await fetchEuribor(); eur = e.eur; eurLabel = e.eurLabel; }
@@ -743,17 +700,6 @@ function startRefresh(apiKey, kvSlot, today) {
   })();
 
   return true;
-}
-
-function withMeta(payload, source, fetchedAt) {
-  return {
-    ...payload,
-    meta: {
-      updatedAt: fetchedAt ? new Date(fetchedAt).toISOString() : null,
-      source,
-      note: "Prestação/TAEG/MTIC podem diferir do oficial se o cenário não for exatamente igual (prazo, comissões, seguros, idade, finalidade, LTV e tipo de taxa).",
-    },
-  };
 }
 
 module.exports = async function handler(req, res) {
@@ -789,94 +735,26 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ rejected: true, ...refreshStatus() });
   }
 
-  // Variáveis partilhadas entre o bloco de limites e o bloco de API
-  const today    = utcDayKey();
-  let kvCached   = null;
-  let kvSlot     = null;
-
-  if (!isAdmin) {
-    // Rate limit (in-memory, por instância — suficiente para protecção básica)
-    const forwardedFor = req.headers["x-forwarded-for"] || "";
-    const realIp       = req.headers["x-real-ip"] || "";
-    const ip = forwardedFor.split(",")[0]?.trim() || realIp || req.socket?.remoteAddress || "unknown";
-    if (isRateLimited(ip)) return res.status(429).json({ error: "Demasiados pedidos — tenta mais tarde" });
-
-    // ── 1. L1: in-memory (evita round-trip KV na mesma instância quente)
-    if (MEM.dayKey !== today) { MEM.callsToday = 0; MEM.dayKey = today; }
-    const memAge = Date.now() - MEM.fetchedAt;
-    if (MEM.data && (MEM.callsToday >= MAX_CALLS_PER_DAY || memAge < MIN_INTERVAL_MS)) {
-      res.setHeader("X-Cache",           "MEM-HIT");
-      res.setHeader("X-Cache-Age",       Math.floor(memAge / 60000) + "min");
-      res.setHeader("X-Calls-Today",     MEM.callsToday + "/" + MAX_CALLS_PER_DAY);
-      res.setHeader("X-Data-Updated-At", new Date(MEM.fetchedAt).toISOString());
-      return res.status(200).json(withMeta(MEM.data, "mem-cache", MEM.fetchedAt));
-    }
-
-    // ── 2. L2: SQLite KV cache
-    kvCached = await kvGet(KV_CACHE_KEY);
-    if (kvCached) {
-      const kvAge    = Date.now() - (kvCached.fetchedAt || 0);
-      const kvCalls  = Number(await kvGet(KV_CALLS_PFX + today) || 0);
-      const kvLimitOk = kvCalls < MAX_CALLS_PER_DAY && kvAge >= MIN_INTERVAL_MS;
-
-      if (!kvLimitOk) {
-        // Promover para L1 e servir
-        MEM.data       = kvCached.data;
-        MEM.fetchedAt  = kvCached.fetchedAt || 0;
-        MEM.callsToday = kvCalls;
-        MEM.dayKey     = today;
-        res.setHeader("X-Cache",           "KV-HIT");
-        res.setHeader("X-Cache-Age",       Math.floor(kvAge / 60000) + "min");
-        res.setHeader("X-Calls-Today",     kvCalls + "/" + MAX_CALLS_PER_DAY);
-        res.setHeader("X-Data-Updated-At", new Date(MEM.fetchedAt).toISOString());
-        return res.status(200).json(withMeta(kvCached.data, "kv-cache", MEM.fetchedAt));
-      }
-    }
-
-    // ── 3. Reservar slot atomicamente com INCR antes de chamar a API.
-    kvSlot = await kvIncr(KV_CALLS_PFX + today, KV_CALLS_TTL);
-
-    if (kvSlot !== null && kvSlot > MAX_CALLS_PER_DAY) {
-      kvDecr(KV_CALLS_PFX + today).catch(() => {});
-      const staleD  = kvCached?.data || MEM.data || null;
-      const staleTs = kvCached?.fetchedAt || MEM.fetchedAt || 0;
-      if (staleD) {
-        res.setHeader("X-Cache",       "KV-LIMIT");
-        res.setHeader("X-Calls-Today", (kvSlot - 1) + "/" + MAX_CALLS_PER_DAY);
-        return res.status(200).json(withMeta(staleD, "kv-cache", staleTs));
-      }
-    }
-    if (kvSlot === null && MEM.callsToday >= MAX_CALLS_PER_DAY) {
-      const staleD = MEM.data || null;
-      if (staleD) {
-        res.setHeader("X-Cache",       "MEM-LIMIT");
-        res.setHeader("X-Calls-Today", MEM.callsToday + "/" + MAX_CALLS_PER_DAY);
-        return res.status(200).json(withMeta(staleD, "mem-cache", MEM.fetchedAt));
-      }
-    }
-  }
+  // Só o admin pode disparar a extração (Gemini) e a actualização da Euribor
+  // (BCE). Não há limite diário — o gatilho é manual e exclusivo do painel admin.
+  // O simulador público lê os valores da BD via GET /api/banks (não chama APIs).
+  if (!isAdmin) return res.status(403).json({ error: "Requer x-admin-token" });
 
   const apiKey = apiKeyEnv;
   if (!apiKey && !SPREADS_MOCK) return res.status(503).json({ error: "GEMINI_API_KEY não configurada" });
 
-  // ── 4. Iniciar o refresh em background e responder de imediato. O resultado
-  // fica PENDENTE até aprovação no admin (ou auto-aplicado se SPREADS_AUTO_APPLY=1).
-  const started = startRefresh(apiKey, kvSlot, today);
-  // Já havia um refresh em curso — devolver o slot reservado em ── 3
-  if (!started && kvSlot !== null) kvDecr(KV_CALLS_PFX + today).catch(() => {});
-
-  const staleData      = kvCached?.data || MEM.data || null;
-  const staleFetchedAt = kvCached?.fetchedAt || MEM.fetchedAt || 0;
-  if (staleData) {
-    res.setHeader("X-Cache", "REFRESHING");
-    return res.status(200).json(withMeta(staleData, "stale-cache", staleFetchedAt));
-  }
-  return res.status(202).json({ status: "refreshing", ...refreshStatus() });
+  // Inicia o refresh em background e responde de imediato. O resultado fica
+  // PENDENTE até aprovação no admin (ou auto-aplicado se SPREADS_AUTO_APPLY=1).
+  const started = startRefresh(apiKey, null, utcDayKey());
+  return res
+    .status(started ? 202 : 200)
+    .json({ status: started ? "refreshing" : "already-running", ...refreshStatus() });
 };
 
 // Exposto para testes/admin (não usado pelo router)
 module.exports.validateSpreads = validateSpreads;
 module.exports.normalizeSpreads = normalizeSpreads;
+module.exports.applySeedFallbacks = applySeedFallbacks;
 module.exports.toSpreadsMap    = toSpreadsMap;
 module.exports.SPREADS_SCHEMA  = SPREADS_SCHEMA;
 module.exports.BANK_SOURCES    = BANK_SOURCES;
