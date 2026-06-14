@@ -642,6 +642,15 @@ function applyPending(today, kvSlot, onlyCodes) {
 // sobretudo em lotes grandes (muitos PDFs + muito JSON). Faz retries e, se
 // persistir, divide o lote ao meio (chamadas mais pequenas são bem mais fiáveis
 // e isolam um banco/URL problemático). Lotes de 1 banco que falhem propagam o erro.
+// Deteta uma contaNota em que o modelo sinaliza que NÃO conseguiu ler o preçário
+// (ex.: "Estimativa (URL inválido)") — falha de retrieval, distinta de uma
+// estimativa legítima (ex.: "Estimativa (Preçário mai.2026)").
+function urlFailedNote(note) {
+  const s = String(note || "").toLowerCase();
+  if (!s.includes("url")) return false;
+  return /(inv[aá]lid|invalid|erro|inacess|n[aã]o\s+acess|indispon|falh|bloque|403|404|timeout|n[aã]o\s+foi\s+poss)/.test(s);
+}
+
 async function fetchBatchSpreads(ai, codes) {
   const MAX_RETRY = 2;
   let lastErr;
@@ -690,6 +699,26 @@ function startRefresh(apiKey, kvSlot, today) {
       const merged = {};
       for (const codes of batches) {
         Object.assign(merged, await fetchBatchSpreads(ai, codes));
+      }
+      // Re-tenta individualmente os bancos cuja contaNota indica falha de URL
+      // (retrieval transitório). Uma chamada por banco é mais fiável; se mesmo
+      // assim falhar, mantém a estimativa (melhor esforço).
+      const flagged = Object.keys(merged).filter((c) => urlFailedNote(merged[c] && merged[c].contaNota));
+      if (flagged.length) {
+        console.log(`spreads.js: a re-tentar bancos com falha de URL: ${flagged.join(",")}`);
+        for (const code of flagged) {
+          try {
+            const retry = await fetchBatchSpreads(ai, [code]);
+            if (retry[code] && !urlFailedNote(retry[code].contaNota)) {
+              merged[code] = retry[code];
+              console.log(`spreads.js: ${code} recuperado na re-tentativa individual`);
+            } else {
+              console.warn(`spreads.js: ${code} continua com falha de URL após re-tentativa`);
+            }
+          } catch (e) {
+            console.warn(`spreads.js: re-tentativa de ${code} falhou: ${e.message}`);
+          }
+        }
       }
       const spreads = validateSpreads(normalizeSpreads(merged));
 
