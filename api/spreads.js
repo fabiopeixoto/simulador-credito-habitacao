@@ -104,8 +104,10 @@ const BANK_SOURCES = {
            "https://www.bancobpi.pt/contentservice/getContent?documentName=PR_WCS01_UCM01004993"],
   MNTPO:  ["https://www.bancomontepio.pt/content/dam/montepio/pdf/geral/precario/folheto-taxas-juro/folheto-taxas-juro.pdf",
            "https://www.bancomontepio.pt/content/dam/montepio/pdf/geral/precario/folheto-comissoes-despesas/folheto-comissoes-despesas.pdf"],
+  // [1] taxas/spreads via ficha pré-contratual; [2] comissões (dossier/avaliação)
+  // do folheto de comissões de operações de crédito a particulares.
   SANTR:  ["https://www.santander.pt/pdfs/particulares/credito-habitacao/CH_Informacao_Pre-Contratual_Geral.pdf",
-           "https://www.santander.pt/pdfs/precario-banco/folheto-taxas-juro/outros-clientes/20-operacoes-credito/20_precariofolhetotaxasjuro_oc_opscredito.pdf"],
+           "https://www.santander.pt/pdfs/precario-banco/folheto-comissoes-despesas/clientes-particulares/2-operacoes-credito/2_folhetocomissoesdespesas_cp_opscredito.pdf"],
   NB:     ["https://www.novobanco.pt/content/dam/novobancopublicsites/docs/pdfs/precario/particulares/PRE-FT.pdf.coredownload.inline.pdf",
            "https://www.novobanco.pt/content/dam/novobancopublicsites/docs/pdfs/precario/particulares/PRE-FC.pdf.coredownload.inline.pdf"],
   // 18.pdf = taxas §18; o folheto completo de comissões cobre particulares
