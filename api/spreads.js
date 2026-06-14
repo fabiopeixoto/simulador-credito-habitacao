@@ -160,8 +160,9 @@ const BANK_SOURCES = {
            "https://www.creditoagricola.pt/-/media/files/precario/documents-site/comissoes-e-despesas-_aviso-8-2009-do-bdp/pre-fc-20260501.pdf"],
   CTT:    ["https://www.bancoctt.pt/application/themes/pdfs/precario.pdf?language_id=1555597541833"],
   BNKTR:  ["https://clientebancario.bportugal.pt/sites/default/files/precario/0269_/0269_PRE_20221231000630.pdf"],
-  ABANCA: ["https://www.abanca.pt/files/documents/folheto-taxa-juro-precario-e3020223.pdf",
-           "https://www.abanca.pt/files/documents/precario-folheto-comissoes-f942c04e.pdf"],
+  // abanca.pt bloqueia o fetcher da URL context tool; usamos o preçário combinado
+  // do Portal do Cliente Bancário (BdP), código 0170, alias "_1" = filing mais recente.
+  ABANCA: ["https://clientebancario.bportugal.pt/sites/default/files/precario/0170_/0170_PRE_1.pdf"],
   BCP:    ["https://ind.millenniumbcp.pt/pt/Articles/Documents/precario/SECCAO_18.pdf"],
   ACTVO:  ["https://ind.millenniumbcp.pt/pt/Articles/Documents/precario/SECCAO_18.pdf"],
   BPI:    ["https://www.bancobpi.pt/contentservice/getContent?documentName=PR_WCS01_UCM01004994",
@@ -174,8 +175,8 @@ const BANK_SOURCES = {
            "https://www.novobanco.pt/content/dam/novobancopublicsites/docs/pdfs/precario/particulares/PRE-FC.pdf.coredownload.inline.pdf"],
   CGD:    ["https://www.cgd.pt/Precario/Documents/18.pdf",
            "https://www.cgd.pt/Precario/Documents/10.pdf"],
-  UCI:    ["https://uci.pt/-/media/Files/Portugal/precario/PRE-FT-202605.pdf",
-           "https://uci.pt/-/media/Files/Portugal/precario/PRE-FC-20260301.pdf"],
+  UCI:    ["https://www.uci.pt/-/media/Files/Portugal/precario/PRE-FT-202606.pdf",
+           "https://www.uci.pt/-/media/Files/Portugal/precario/PRE-FC-20260301.pdf"],
   BNI:    ["https://bnieuropa.pt/wp-content/themes/responsive/pdf/precario/taxas-juro-particulares-credito-habitacao-e-contratos-conexos.pdf",
            "https://bnieuropa.pt/wp-content/themes/responsive/pdf/precario/particulares-credito-habitacao-e-contratos-conexos.pdf"],
   BEST:   [],
