@@ -376,7 +376,10 @@ function renderPending(pending) {
     changes.forEach((k, i) => {
       const label = PENDING_FIELD_LABELS[k] || k;
       const bankCell = i === 0
-        ? `<td rowspan="${changes.length}" style="font-weight:600;vertical-align:top">${escapeHtml(code)}${isNew ? ' <span style="color:#22c55e">(novo)</span>' : ''}</td>`
+        ? `<td rowspan="${changes.length}" style="vertical-align:top">`
+          + `<label style="display:flex;gap:6px;align-items:center;font-weight:600;cursor:pointer">`
+          + `<input type="checkbox" class="pending-bank-chk" value="${escapeHtml(code)}" checked>`
+          + `<span>${escapeHtml(code)}${isNew ? ' <span style="color:#22c55e">(novo)</span>' : ''}</span></label></td>`
         : '';
       diffRows.push(
         `<tr>${bankCell}<td>${escapeHtml(label)}</td>`
@@ -388,7 +391,8 @@ function renderPending(pending) {
 
   const body = diffRows.length
     ? `<div class="stats-admin-7d" style="max-height:360px;overflow:auto"><table><thead><tr>`
-      + `<th>Banco</th><th>Campo</th><th>Atual</th><th>Novo</th>`
+      + `<th><label style="display:flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" id="pendingSelectAll" checked onchange="togglePendingAll(this)"> Banco</label></th>`
+      + `<th>Campo</th><th>Atual</th><th>Novo</th>`
       + `</tr></thead><tbody>${diffRows.join('')}</tbody></table></div>`
     : `<p style="margin:6px 0;color:var(--muted)">Sem alterações face aos valores servidos.</p>`;
 
@@ -402,24 +406,43 @@ function renderPending(pending) {
     + `<p style="margin:0 0 10px;font-size:12px;color:var(--muted)">Só ao aprovar é que estes valores substituem os dados servidos.</p>`
     + body
     + `<div class="comments-admin-toolbar" style="margin-top:10px">`
-    + `<button type="button" class="btn-ai" onclick="approvePendingSpreads()">✓ Aprovar e publicar</button>`
-    + `<button type="button" class="btn-sm btn-history" onclick="rejectPendingSpreads()">✗ Rejeitar</button>`
+    + `<button type="button" class="btn-ai" onclick="approvePendingSpreads()">✓ Aprovar selecionados</button>`
+    + `<button type="button" class="btn-sm btn-history" onclick="rejectPendingSpreads()">✗ Rejeitar tudo</button>`
     + `</div></div>`;
+}
+
+// Liga/desliga todos os checkboxes de banco da revisão pendente.
+function togglePendingAll(cb) {
+  document.querySelectorAll('.pending-bank-chk').forEach(c => { c.checked = cb.checked; });
 }
 
 async function approvePendingSpreads() {
   const token = getToken();
   if (!token) { setStatus('Introduz o Admin Token primeiro', 'error'); return; }
   const aiEl = document.getElementById('aiStatus');
+  const checks = Array.from(document.querySelectorAll('.pending-bank-chk'));
+  const selected = checks.filter(c => c.checked).map(c => c.value);
+  if (!selected.length) {
+    aiEl.textContent = 'Seleciona pelo menos um banco para aprovar.';
+    aiEl.className = 'error';
+    return;
+  }
   try {
-    const r = await fetch('/api/spreads', { method: 'POST', headers: { 'x-admin-token': token, 'x-spreads-action': 'approve' } });
+    const headers = { 'x-admin-token': token, 'x-spreads-action': 'approve' };
+    // Só envia a lista quando é aprovação parcial; ausente = aprovar todos.
+    if (selected.length < checks.length) headers['x-spreads-codes'] = selected.join(',');
+    const r = await fetch('/api/spreads', { method: 'POST', headers });
     const data = await r.json().catch(() => ({}));
     if (!r.ok || !data.applied) throw new Error(data.error || 'Nada para aprovar');
-    document.getElementById('aiPending').innerHTML = '';
-    const ts = data.updatedAt ? new Date(data.updatedAt).toLocaleString('pt-PT') : '';
-    aiEl.textContent = `✓ Publicado${ts ? ' · ' + ts : ''}`;
-    aiEl.className = 'ok';
+    // Recarrega bancos (actualiza valores live e re-rendeniza eventuais pendentes restantes).
     await loadBanks();
+    if (data.pending) {
+      aiEl.textContent = `✓ ${selected.length} banco(s) publicado(s) · ${data.pending.bancos} ainda em revisão`;
+    } else {
+      document.getElementById('aiPending').innerHTML = '';
+      aiEl.textContent = `✓ Publicado · ${selected.length} banco(s)`;
+    }
+    aiEl.className = 'ok';
   } catch (e) {
     aiEl.textContent = 'Erro ao aprovar: ' + e.message.slice(0, 80);
     aiEl.className = 'error';

@@ -594,9 +594,28 @@ function refreshStatus() {
 
 // Promove os dados PENDENTES para "live" (L1 + L2 + banks.sqlite).
 // A aprovação explícita pelo admin (ou auto-apply) implica sempre persistência.
-function applyPending(today, kvSlot) {
+// onlyCodes (opcional): aprova só esses bancos; os restantes ficam em revisão.
+function applyPending(today, kvSlot, onlyCodes) {
   if (!PENDING) return false;
-  const freshData = { spreads: PENDING.spreads, eur: PENDING.eur, eurLabel: PENDING.eurLabel };
+  const all = Object.keys(PENDING.spreads);
+  const codes = (Array.isArray(onlyCodes) && onlyCodes.length)
+    ? all.filter((c) => onlyCodes.includes(c))
+    : all;
+  if (!codes.length) return false;
+
+  // Mapa base servido publicamente: o último aplicado (MEM) ou, se ainda não há,
+  // o estado canónico actual dos bancos (banks.sqlite). Sobrepomos só os aprovados,
+  // para que aprovações parciais não apaguem os bancos não seleccionados.
+  let base = (MEM.data && MEM.data.spreads) ? { ...MEM.data.spreads } : null;
+  if (!base) {
+    const bm = getBanksModule();
+    try { base = bm?.getLatestSpreads ? { ...bm.getLatestSpreads() } : {}; }
+    catch (_) { base = {}; }
+  }
+  const subset = {};
+  for (const c of codes) { base[c] = PENDING.spreads[c]; subset[c] = PENDING.spreads[c]; }
+
+  const freshData = { spreads: base, eur: PENDING.eur, eurLabel: PENDING.eurLabel };
   const fetchedAt = PENDING.fetchedAt || Date.now();
   MEM.data       = freshData;
   MEM.fetchedAt  = fetchedAt;
@@ -604,11 +623,15 @@ function applyPending(today, kvSlot) {
   MEM.callsToday = kvSlot != null ? Number(kvSlot) : MEM.callsToday + 1;
   const banksModule = getBanksModule();
   if (banksModule?.bulkInsertSpreads) {
-    try { banksModule.bulkInsertSpreads(freshData.spreads, "gemini"); }
+    try { banksModule.bulkInsertSpreads(subset, "gemini"); }
     catch (e) { console.error("spreads.js: bulkInsertSpreads failed:", e.message); }
   }
   kvSet(KV_CACHE_KEY, { data: freshData, fetchedAt }, KV_CACHE_TTL).catch(() => {});
-  PENDING = null;
+
+  // Mantém em revisão os bancos não aprovados; limpa PENDING se nada sobra.
+  const remaining = {};
+  for (const c of all) if (!codes.includes(c)) remaining[c] = PENDING.spreads[c];
+  PENDING = Object.keys(remaining).length ? { ...PENDING, spreads: remaining } : null;
   return true;
 }
 
@@ -695,7 +718,13 @@ module.exports = async function handler(req, res) {
   if (action === "approve" || action === "reject") {
     if (!isAdmin) return res.status(403).json({ error: "Requer x-admin-token" });
     if (action === "approve") {
-      const applied = applyPending(utcDayKey(), null);
+      // x-spreads-codes (opcional): lista separada por vírgulas para aprovar só
+      // alguns bancos; ausente = aprovar todos.
+      const codesHdr  = String(req.headers["x-spreads-codes"] || "").trim();
+      const onlyCodes = codesHdr
+        ? codesHdr.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean)
+        : null;
+      const applied = applyPending(utcDayKey(), null, onlyCodes);
       return res.status(applied ? 200 : 409).json({ applied, ...refreshStatus() });
     }
     PENDING = null;
