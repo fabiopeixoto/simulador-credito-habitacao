@@ -303,19 +303,14 @@ ${SCHEMA_EXAMPLE}
 
 Responde apenas com o objecto JSON pedido — {"bancos":[...]} com uma entrada por cada banco pedido na mensagem, cada uma com TODAS as chaves acima — sem texto adicional.`;
 
-// Reparte os bancos por lotes. Por defeito 1 banco por chamada: a URL context
-// tool NÃO traz fiavelmente todos os PDFs quando há vários por pedido (resulta
-// em estimativas), mas com 1 banco lê o preçário de forma fiável. Configurável
-// via SPREADS_BANKS_PER_BATCH (>1 acelera mas reduz a fiabilidade). O nº de
-// chamadas por refresh não conta para o limite diário (esse é por POST).
-const BANKS_PER_BATCH = Math.max(1, parseInt(process.env.SPREADS_BANKS_PER_BATCH || "1", 10) || 1);
-
+// Reparte os bancos por lotes cujo total de URLs ≤ URL_BATCH_MAX (limite da
+// URL context tool). Bancos sem URL não pesam no orçamento de URLs.
 function buildBatches() {
   const batches = [];
   let cur = [], curUrls = 0;
   for (const code of BANK_CODES) {
     const n = (BANK_SOURCES[code] || []).length;
-    if (cur.length && (cur.length >= BANKS_PER_BATCH || curUrls + n > URL_BATCH_MAX)) {
+    if (cur.length && curUrls + n > URL_BATCH_MAX) {
       batches.push(cur);
       cur = []; curUrls = 0;
     }
