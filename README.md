@@ -8,11 +8,11 @@ Aplicação web para **simular e comparar** crédito habitação em Portugal: pr
 
 ## Funcionalidades (utilizador)
 
-- Comparação entre **13 bancos** (dados editáveis na base com valores seed).
+- Comparação entre **14 bancos** (dados editáveis na base com valores seed).
 - Modos **crédito normal** e **crédito jovem** (regras BdP, LTV, finalidade HPP / 2.ª habitação / arrendamento).
 - Taxa **variável, mista ou fixa**; vários indexantes Euribor onde aplicável.
-- **Euribor** (3m / 6m / 12m) obtido via **API do BCE** (CSV), com cache em memória e persistência SQLite.
-- **Spreads e comissões** lidos da API `GET /api/banks` com fallback local em caso de falha de rede.
+- **Euribor** (3m / 6m / 12m) com origem na **API do BCE** (CSV); a página pública lê o valor **da base de dados** (`GET /api/banks`) — o BCE só é consultado no refresh do admin. O histórico (`/historico.html`) usa `GET /api/euribor-history`.
+- **Spreads e comissões** lidos da API `GET /api/banks` com fallback local em caso de falha de rede. O botão **Actualizar** da página inicial relê os valores da BD (não chama APIs externas).
 - Gráficos e tabelas (cenários Euribor, barras de prestação, amortização, seguros, etc.).
 - **Partilha por URL**, histórico local (localStorage), secção de **comentários** com respostas.
 - **Calculadora inversa** (`/quanto-posso-pedir.html`): capital máximo dado rendimento, DSTI e taxa.
@@ -77,8 +77,8 @@ Aplicação web para **simular e comparar** crédito habitação em Portugal: pr
 ├── comp-table-desktop.js    # Tabela de comparação completa (23 colunas, desktop)
 │
 ├── api/
-│   ├── banks.js             # CRUD bancos/spreads, Euribor, seed SQLite; ETag em GET
-│   ├── spreads.js           # POST: Gemini + BCE, cache/rate limit
+│   ├── banks.js             # CRUD bancos/spreads, Euribor (servida da BD), seed SQLite; ETag em GET
+│   ├── spreads.js           # POST (só admin): Gemini + BCE, revisão/aprovação, seed fallbacks
 │   ├── comments.js          # Comentários + respostas (SQLite, cache 30s, UUID)
 │   ├── stats.js             # Estatísticas de visitas + localização por cidade
 │   └── euribor-history.js   # Histórico BCE (3m/6m/12m) com cache SQLite
@@ -111,7 +111,7 @@ Todas as rotas JSON usam UTF-8. CORS permissivo nas APIs (`Access-Control-Allow-
 Público. Devolve `{ banks, euribor }`:
 
 - **`banks`**: lista de bancos activos com `spreads` mais recentes por banco.
-- **`euribor`**: objecto em cache (servidor refresca a partir do BCE quando expira TTL ~6 h).
+- **`euribor`**: objecto servido **da base de dados** (sem rede no carregamento público). A actualização a partir do BCE acontece apenas no refresh do admin (`POST /api/spreads`).
 - Suporta **ETag** (`If-None-Match`) baseado nos timestamps de spreads, Euribor e metadados de bancos — devolve `304` quando nada mudou.
 
 Query opcional:
@@ -142,19 +142,20 @@ Cache em memória + persistência em `banks.sqlite` (`kv_store`) com TTL 6 h. Ap
 
 Actualização massiva via **Google Gemini** (modelo `gemini-2.5-pro` com a *URL context tool* a ler directamente os preçários oficiais em PDF — extrai texto e tabelas — resposta validada por JSON schema) + Euribor BCE.
 
-A chamada corre em background (uma ou duas chamadas `generateContent`, repartidas pelo limite de 20 URLs/pedido, ~1–3 min). Fluxo:
+**Só o admin** pode disparar a extração: `POST /api/spreads` **requer `x-admin-token`** (sem token → `403`). Não há limite diário nem rate limiter — o gatilho é manual e exclusivo do painel admin. A página pública nunca chama o Gemini nem o BCE (lê tudo da BD via `GET /api/banks`).
 
-1. `POST /api/spreads` **inicia o refresh em background** e responde de imediato (dados em cache com `X-Cache: REFRESHING`, ou `202 {status:"refreshing"}`).
-2. **`GET /api/spreads`** devolve o estado do refresh (`{running, error, updatedAt, pending:{bancos, fetchedAt, spreads}}`).
+A chamada corre em background (lotes de `generateContent` repartidos pelo limite de 20 URLs/pedido, ~1–3 min; bancos com falha transitória de URL são re-tentados individualmente). Fluxo:
+
+1. `POST /api/spreads` (admin) **inicia o refresh em background** e responde de imediato (`202 {status:"refreshing"}`, ou `200 {status:"already-running"}`).
+2. **`GET /api/spreads`** (público) devolve o estado do refresh (`{running, error, updatedAt, pending:{bancos, fetchedAt, spreads}}`).
 3. O resultado fica **em revisão** — não substitui os dados servidos até ser aprovado:
-   - `POST /api/spreads` com `x-admin-token` + `x-spreads-action: approve` → publica (promove a cache L1/L2).
+   - `POST /api/spreads` com `x-admin-token` + `x-spreads-action: approve` → publica. Aceita `x-spreads-codes` (lista separada por vírgulas) para **aprovação parcial** por banco.
    - `… x-spreads-action: reject` → descarta.
    - Define **`SPREADS_AUTO_APPLY=1`** para auto-publicar sem revisão (comportamento antigo).
 
-- **Com `x-admin-token` válido**: ignora cache e limites diários (uso administrativo / Jenkins).
-- **Sem token**: **rate limit** por IP (~20 pedidos/h) e **limite global** ~2 submissões por dia por instância (cache SQLite ~25 h + cache em memória). Serve dados em cache quando excede limites.
+**Seed fallbacks** (aplicados antes da validação): campos que não constam dos preçários — prémios de seguros (`vRef`, `mAno`, seguradoras `insV`/`insM`) e `capMax` — mantêm o valor curado/manual da BD em vez da estimativa do modelo. As taxas mista/fixa (`mCom`/`mSem`/`fCom`/`fSem`) são **opcionais**: quando o modelo devolve `null`, mantém-se o último valor conhecido da BD.
 
-Persistência: ao aprovar grava spreads em `banks.sqlite` via `bulkInsertSpreads` (sempre — aprovação implica publicação); Euribor em cache (`banks.js`).
+Persistência: ao aprovar grava spreads em `banks.sqlite` via `bulkInsertSpreads`; a Euribor obtida no refresh é persistida em `banks.js` (`setEuribor`).
 
 Variável obrigatória no servidor: **`GEMINI_API_KEY`**. Opcional: **`SPREADS_AUTO_APPLY`**, **`GEMINI_MODEL`**.
 
@@ -198,7 +199,7 @@ Requer **`x-admin-token`**. Devolve:
 |----------|-----|
 | `PORT` | Porta HTTP (defeito **3000**) |
 | `GEMINI_API_KEY` | Activa `POST /api/spreads` (Gemini + URL context tool) |
-| `ADMIN_TOKEN` | Admin: `GET /api/stats`, `POST/DELETE /api/banks`, `DELETE /api/comments`, aprovar/rejeitar e bypass de limites em `POST /api/spreads` |
+| `ADMIN_TOKEN` | Admin: `GET /api/stats`, `POST/DELETE /api/banks`, `DELETE /api/comments`, e **todo** o `POST /api/spreads` (disparar extração + aprovar/rejeitar) |
 | `SPREADS_AUTO_APPLY` | `=1` publica o resultado da AI sem revisão (por defeito fica pendente) |
 | `GEMINI_MODEL` | Modelo Gemini a usar (defeito **`gemini-2.5-pro`**) |
 | `DEBUG_SECRET` | Endpoint de diagnóstico dos comentários |
@@ -208,7 +209,8 @@ Requer **`x-admin-token`**. Devolve:
 ## Painel Admin (`/admin.html`)
 
 - Lista de bancos com ícones (favicon por domínio), edição de spreads/comissões, histórico por banco.
-- Botão **Actualizar spreads via AI** chama `POST /api/spreads` com o token introduzido na página.
+- Botão **Actualizar spreads via AI** chama `POST /api/spreads` com o token introduzido na página (único ponto que consome o Gemini + BCE).
+- **Revisão pendente**: tabela com **uma linha por banco** e, para cada campo, o valor **antigo → novo** (campos sem alteração aparecem repetidos; alterados destacados). Badge de origem por banco (📄 Preçário / ≈ Estimativa / ✍ Manual / ◆ Canónico) e **aprovação selectiva** por banco antes de publicar.
 - Operações sensíveis enviam **`x-admin-token`** no header.
 - **Estatísticas** (`GET /api/stats`): visitas cumulativas e por dia (UTC); tabela dos últimos 7 dias; contagem de comentários; tabela **"🌍 Localização dos visitantes"** com cidade, país e número de visitas.
 - **Moderação de comentários** (`DELETE /api/comments`): lista e apagar na própria página admin.
@@ -266,7 +268,7 @@ O ambiente de exemplo publica com **`-p 3999:3000`** (host 3999 → app 3000). A
 | Ficheiro | Conteúdo |
 |----------|----------|
 | `banks.sqlite` | Tabelas `banks`, `spreads` (histórico por `fetched_at`), `kv_store` (cache Euribor + histórico BCE) |
-| `spreads.sqlite` | Cache KV / contadores para limites do endpoint Gemini |
+| `spreads.sqlite` | Cache KV do endpoint Gemini (resultado publicado) |
 | `comments.sqlite` | Comentários e respostas |
 | `stats.sqlite` | Visitas diárias (`daily`), totais (`meta`), localização por cidade (`visitor_locations`) |
 
@@ -275,6 +277,11 @@ O ambiente de exemplo publica com **`-p 3999:3000`** (host 3999 → app 3000). A
 ## Scripts e referência de preçários
 
 `scripts/download-precarios-bancos.sh` descarrega PDFs listados em `reference/precarios-pdf/sources.json` para `reference/precarios-pdf/files/`. Requer **`jq`**. Útil para arquivo / auditoria manual de preçários; não faz parte do arranque da app.
+
+Scripts npm:
+
+- `npm run lint` — validação de sintaxe (`node --check`) de todos os ficheiros servidos e das APIs.
+- `npm run audit:urls` — verifica que **todos os URLs de preçário** configurados em `api/spreads.js` são acessíveis pela *URL context tool* do Gemini (retrieval `SUCCESS`). Requer **`GEMINI_API_KEY`** (consome quota).
 
 ---
 
