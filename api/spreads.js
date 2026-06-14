@@ -142,9 +142,11 @@ function isRateLimited(ip) {
 const BANK_CODES = ["CA", "CTT", "BNKTR", "ABANCA", "BCP", "ACTVO", "BPI", "MNTPO", "SANTR", "NB", "CGD", "UCI", "BNI", "BEST"];
 
 const GEMINI_MODEL  = process.env.GEMINI_MODEL || "gemini-2.5-pro";
-// A URL context tool aceita no máximo 20 URLs por pedido; usamos uma margem e
-// repartimos os bancos por lotes quando o total de preçários excede o limite.
-const URL_BATCH_MAX = 18;
+// A URL context tool aceita no máximo 20 URLs por pedido. Mantemos os lotes
+// pequenos (menos PDFs + menos JSON por chamada): reduz as respostas vazias do
+// gemini-2.5-pro (finishReason STOP sem texto) que ocorrem em lotes grandes.
+// O nº de chamadas por refresh não conta para o limite diário (esse é por POST).
+const URL_BATCH_MAX = 8;
 // Modo de teste: devolve dados canónicos sem chamar a API (não gasta tokens/rede).
 const SPREADS_MOCK  = process.env.SPREADS_MOCK === "1";
 
@@ -635,6 +637,36 @@ function applyPending(today, kvSlot, onlyCodes) {
   return true;
 }
 
+// Obtém os spreads de um lote com robustez: o gemini-2.5-pro com a URL context
+// tool devolve ocasionalmente uma resposta vazia (finishReason STOP, sem texto),
+// sobretudo em lotes grandes (muitos PDFs + muito JSON). Faz retries e, se
+// persistir, divide o lote ao meio (chamadas mais pequenas são bem mais fiáveis
+// e isolam um banco/URL problemático). Lotes de 1 banco que falhem propagam o erro.
+async function fetchBatchSpreads(ai, codes) {
+  const MAX_RETRY = 2;
+  let lastErr;
+  for (let attempt = 0; attempt <= MAX_RETRY; attempt++) {
+    try {
+      const resp = await callGemini(ai, codes);
+      const u = resp.usageMetadata || {};
+      console.log(`spreads.js: lote [${codes.join(",")}] tent.${attempt + 1} — prompt=${u.promptTokenCount || "?"} output=${u.candidatesTokenCount || "?"}`);
+      return parseBatchSpreads(resp);
+    } catch (e) {
+      lastErr = e;
+      console.warn(`spreads.js: lote [${codes.join(",")}] falhou (tent.${attempt + 1}): ${e.message}`);
+      if (attempt < MAX_RETRY) await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
+    }
+  }
+  if (codes.length > 1) {
+    const mid = Math.ceil(codes.length / 2);
+    console.warn(`spreads.js: a dividir o lote [${codes.join(",")}] em dois após retries esgotados`);
+    const left = await fetchBatchSpreads(ai, codes.slice(0, mid));
+    const right = await fetchBatchSpreads(ai, codes.slice(mid));
+    return { ...left, ...right };
+  }
+  throw lastErr;
+}
+
 // Inicia o refresh em background: chama o Gemini com a URL context tool (servidor
 // Google busca os preçários directamente, evitando bloqueios de IP).
 // O POST HTTP responde imediatamente; o admin faz polling ao GET até running=false.
@@ -657,10 +689,7 @@ function startRefresh(apiKey, kvSlot, today) {
       // no prompt e parseBatchSpreads faz parsing robusto. Os lotes são fundidos.
       const merged = {};
       for (const codes of batches) {
-        const resp = await callGemini(ai, codes);
-        const u = resp.usageMetadata || {};
-        console.log(`spreads.js: lote [${codes.join(",")}] — prompt=${u.promptTokenCount || "?"} output=${u.candidatesTokenCount || "?"}`);
-        Object.assign(merged, parseBatchSpreads(resp));
+        Object.assign(merged, await fetchBatchSpreads(ai, codes));
       }
       const spreads = validateSpreads(normalizeSpreads(merged));
 
