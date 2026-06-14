@@ -440,6 +440,11 @@ function normalizeSpreads(spreads) {
 // campos inalterados.
 const SEED_FALLBACK_FIELDS = ["vRef", "mAno", "insV", "insM", "capMax"];
 
+// Taxas mista/fixa: nem todos os bancos as oferecem, pelo que o modelo pode
+// devolver null. Nesse caso mantém-se o último valor conhecido (BD) em vez de
+// perder a informação — só se faz fallback quando o valor novo é null.
+const OPTIONAL_RATE_FIELDS = ["mCom", "mSem", "fCom", "fSem"];
+
 function applySeedFallbacks(spreads) {
   if (!spreads || typeof spreads !== "object") return spreads;
   const bm = getBanksModule();
@@ -451,6 +456,9 @@ function applySeedFallbacks(spreads) {
     for (const f of SEED_FALLBACK_FIELDS) {
       if (cur[f] !== null && cur[f] !== undefined && cur[f] !== "") b[f] = cur[f];
     }
+    for (const f of OPTIONAL_RATE_FIELDS) {
+      if ((b[f] === null || b[f] === undefined) && cur[f] !== null && cur[f] !== undefined && cur[f] !== "") b[f] = cur[f];
+    }
   }
   return spreads;
 }
@@ -461,7 +469,11 @@ function validateSpreads(spreads) {
     const b = spreads[code];
     if (!b || typeof b !== "object") throw new Error(`Spreads inválidos: falta o banco ${code}`);
     for (const f of ["sCom", "sSem", "jsCom", "jsSem"]) assertNum(code, f, b[f], 0, 6);
-    for (const f of ["mCom", "mSem", "fCom", "fSem"]) assertNum(code, f, b[f], 0, 12);
+    // Taxa mista/fixa é opcional (nem todos os bancos a oferecem) — null é válido.
+    for (const f of ["mCom", "mSem", "fCom", "fSem"]) {
+      if (b[f] === null || b[f] === undefined) continue;
+      assertNum(code, f, b[f], 0, 12);
+    }
     for (const f of ["dossier", "avaliacao", "minutas"]) assertNum(code, f, b[f], 0, 2000);
     assertNum(code, "contaMes", b.contaMes, 0, 25);
     assertNum(code, "promoPeriodo", b.promoPeriodo, 0, 120);
