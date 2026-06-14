@@ -237,6 +237,30 @@ const SPREADS_SCHEMA = {
   },
 };
 
+// Contrato de saída derivado de SPREADS_SCHEMA (fonte única). Como a URL context
+// tool é incompatível com responseSchema, o modelo não recebe o schema e, sem
+// isto, inventa nomes de campos (ex.: "bancoCodigo", "cEstudo") e omite campos.
+// Injectamos a lista exacta de chaves + tipos + descrições no prompt.
+function schemaContractText() {
+  const props = SPREADS_SCHEMA.$defs.bank.properties;
+  const order = SPREADS_SCHEMA.$defs.bank.required;
+  const typeStr = (p) => {
+    if (p.enum) return `string (um de: ${p.enum.join(", ")})`;
+    if (p.anyOf) return p.anyOf.map((a) => a.type).join(" ou ");
+    return p.type;
+  };
+  return order.map((k) => `- ${k} (${typeStr(props[k])}): ${props[k].description}`).join("\n");
+}
+
+// Exemplo de UMA entrada (valores ilustrativos da CGD) para fixar a forma exacta.
+const SCHEMA_EXAMPLE = JSON.stringify({
+  codigo: "CGD", sCom: 0.65, sSem: 1.35, mCom: 3.80, mSem: 4.50, fCom: 4.65, fSem: 5.35,
+  jsCom: 0.65, jsSem: 1.35, promoPeriodo: 0, promoSpread: null, dossier: 226.20,
+  avaliacao: 239.20, contaMes: 6.55, capMin: 5000, capMax: 3000000, vRef: 29.82, mAno: 110,
+  insV: "Fidelidade", insM: "Fidelidade Casa", contaNota: "Preçário mai.2026", minutas: 0,
+  jovemIsenta: false,
+});
+
 const SYSTEM_PROMPT = `És um analista de crédito habitação em Portugal. A tua tarefa é apurar as condições ACTUAIS de crédito habitação para aquisição de habitação própria permanente (HPP) praticadas pelos bancos portugueses indicados na mensagem, lendo os preçários oficiais em PDF cujos URLs são fornecidos (a ferramenta de URL context busca-os por ti, incluindo as tabelas).
 
 Bancos a apurar (código = nome oficial):
@@ -266,7 +290,13 @@ Regras de apuramento:
 - Indica o mês/ano da fonte em contaNota quando confirmares o valor (ex.: "Preçário mai.2026").
 - Valores monetários em EUR; spreads e TANs em pontos percentuais (ex.: 0.70 = 0,70%).
 
-Responde apenas com o objecto JSON pedido — {"bancos":[...]} com uma entrada por cada banco pedido na mensagem — sem texto adicional.`;
+Cada entrada do array "bancos" DEVE ter EXACTAMENTE estas chaves, com estes nomes literais (não inventes, não renomeies, não omitas nenhuma; o código vai SEMPRE no campo "codigo"):
+${schemaContractText()}
+
+Exemplo de UMA entrada (apenas para fixar a forma; usa os valores reais de cada banco):
+${SCHEMA_EXAMPLE}
+
+Responde apenas com o objecto JSON pedido — {"bancos":[...]} com uma entrada por cada banco pedido na mensagem, cada uma com TODAS as chaves acima — sem texto adicional.`;
 
 // Reparte os bancos por lotes cujo total de URLs ≤ URL_BATCH_MAX (limite da
 // URL context tool). BEST não tem URL, logo não pesa no orçamento de URLs.
@@ -701,3 +731,4 @@ module.exports.extractSpreads  = extractSpreads;
 module.exports.parseBatchSpreads = parseBatchSpreads;
 module.exports.buildPrompt     = buildPrompt;
 module.exports.buildBatches    = buildBatches;
+module.exports.SYSTEM_PROMPT   = SYSTEM_PROMPT;
