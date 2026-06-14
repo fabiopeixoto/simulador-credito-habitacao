@@ -154,14 +154,16 @@ const SPREADS_AUTO_APPLY = process.env.SPREADS_AUTO_APPLY === "1";
 
 // Preçários oficiais por banco: [taxas §18.1, comissões §18.2].
 // A URL context tool do Gemini lê estes URLs directamente (servidores Google
-// evitam bloqueios de IP e gerem cookies). BEST sem URL — modelo estima.
+// evitam bloqueios de IP e gerem cookies). Bancos cujo site bloqueia o fetcher
+// (ABANCA, BEST) usam o preçário combinado do Portal do Cliente Bancário (BdP).
 const BANK_SOURCES = {
   CA:     ["https://www.creditoagricola.pt/-/media/files/precario/documents-site/taxas-de-juro-_aviso-8-2009-do-bdp/pre-ft-202605.pdf",
            "https://www.creditoagricola.pt/-/media/files/precario/documents-site/comissoes-e-despesas-_aviso-8-2009-do-bdp/pre-fc-20260501.pdf"],
   CTT:    ["https://www.bancoctt.pt/application/themes/pdfs/precario.pdf?language_id=1555597541833"],
   BNKTR:  ["https://clientebancario.bportugal.pt/sites/default/files/precario/0269_/0269_PRE_20221231000630.pdf"],
-  ABANCA: ["https://www.abanca.pt/files/documents/folheto-taxa-juro-precario-e3020223.pdf",
-           "https://www.abanca.pt/files/documents/precario-folheto-comissoes-f942c04e.pdf"],
+  // abanca.pt bloqueia o fetcher da URL context tool; usamos o preçário combinado
+  // do Portal do Cliente Bancário (BdP), código 0170, alias "_1" = filing mais recente.
+  ABANCA: ["https://clientebancario.bportugal.pt/sites/default/files/precario/0170_/0170_PRE_1.pdf"],
   BCP:    ["https://ind.millenniumbcp.pt/pt/Articles/Documents/precario/SECCAO_18.pdf"],
   ACTVO:  ["https://ind.millenniumbcp.pt/pt/Articles/Documents/precario/SECCAO_18.pdf"],
   BPI:    ["https://www.bancobpi.pt/contentservice/getContent?documentName=PR_WCS01_UCM01004994",
@@ -174,11 +176,12 @@ const BANK_SOURCES = {
            "https://www.novobanco.pt/content/dam/novobancopublicsites/docs/pdfs/precario/particulares/PRE-FC.pdf.coredownload.inline.pdf"],
   CGD:    ["https://www.cgd.pt/Precario/Documents/18.pdf",
            "https://www.cgd.pt/Precario/Documents/10.pdf"],
-  UCI:    ["https://uci.pt/-/media/Files/Portugal/precario/PRE-FT-202605.pdf",
-           "https://uci.pt/-/media/Files/Portugal/precario/PRE-FC-20260301.pdf"],
+  UCI:    ["https://www.uci.pt/-/media/Files/Portugal/precario/PRE-FT-202606.pdf",
+           "https://www.uci.pt/-/media/Files/Portugal/precario/PRE-FC-20260301.pdf"],
   BNI:    ["https://bnieuropa.pt/wp-content/themes/responsive/pdf/precario/taxas-juro-particulares-credito-habitacao-e-contratos-conexos.pdf",
            "https://bnieuropa.pt/wp-content/themes/responsive/pdf/precario/particulares-credito-habitacao-e-contratos-conexos.pdf"],
-  BEST:   [],
+  // bancobest.pt bloqueia o fetcher; usamos o preçário combinado do BdP (código 0065).
+  BEST:   ["https://clientebancario.bportugal.pt/sites/default/files/precario/0065_/0065_PRE.pdf"],
 };
 
 // JSON schema para structured outputs — garante a forma exacta da resposta.
@@ -286,7 +289,7 @@ Regras de apuramento:
 - Quando não há campanha: promoPeriodo = 0 e promoSpread = null.
 - Para cada banco, lê os PDFs do preçário indicados na mensagem (taxas §18.1 e comissões §18.2).
 - Se um URL devolver erro ou não cobrir o campo, usa uma estimativa razoável e indica "Estimativa" em contaNota.
-- Para bancos sem URL (BEST), estima com base em bancos comparáveis e indica "Estimativa".
+- Para bancos sem URL (caso existam), estima com base em bancos comparáveis e indica "Estimativa".
 - Indica o mês/ano da fonte em contaNota quando confirmares o valor (ex.: "Preçário mai.2026").
 - Valores monetários em EUR; spreads e TANs em pontos percentuais (ex.: 0.70 = 0,70%).
 
@@ -299,7 +302,7 @@ ${SCHEMA_EXAMPLE}
 Responde apenas com o objecto JSON pedido — {"bancos":[...]} com uma entrada por cada banco pedido na mensagem, cada uma com TODAS as chaves acima — sem texto adicional.`;
 
 // Reparte os bancos por lotes cujo total de URLs ≤ URL_BATCH_MAX (limite da
-// URL context tool). BEST não tem URL, logo não pesa no orçamento de URLs.
+// URL context tool). Bancos sem URL não pesam no orçamento de URLs.
 function buildBatches() {
   const batches = [];
   let cur = [], curUrls = 0;
@@ -323,6 +326,69 @@ function buildPrompt(codes) {
     return `- ${code}: ${urls.join(" + ")}`;
   }).join("\n");
   return `Apura as condições de crédito habitação HPP para ${codes.length} banco(s): ${codes.join(", ")}.\n\nURLs (taxas §18.1 + comissões §18.2):\n${linhas}`;
+}
+
+// ── Health-check dos URLs de preçário ─────────────────────────────────────
+// Audita BANK_SOURCES via a URL context tool: confirma que o Gemini consegue
+// obter cada PDF (urlContextMetadata.urlRetrievalStatus === SUCCESS). Pensado
+// para correr periodicamente (admin/Jenkins) e avisar quando um URL parte —
+// p.ex. nomes com data como UCI "PRE-FT-AAAAMM" ou CA "pre-ft-AAAAMM" que
+// mudam quando o banco publica nova versão. Faz pedidos baratos (prompt mínimo)
+// repartidos pelo limite de URLs por chamada; não escreve em cache nem live.
+async function auditUrls(apiKey, { model = GEMINI_MODEL } = {}) {
+  const ai = new GoogleGenAI({ apiKey });
+  // Um URL pode servir vários bancos (ex.: BCP e ACTVO partilham SECCAO_18.pdf),
+  // por isso guardamos a lista de códigos por URL.
+  const urlCodes = {};
+  for (const [code, urls] of Object.entries(BANK_SOURCES)) {
+    urls.forEach((u) => { (urlCodes[u] = urlCodes[u] || []).push(code); });
+  }
+  const allUrls = Object.keys(urlCodes);
+
+  // Estado de retrieval de um conjunto de URLs numa só chamada (urlContextMetadata).
+  async function checkBatch(urls) {
+    const resp = await ai.models.generateContent({
+      model,
+      contents: 'Lê cada um destes URLs (PDFs de preçários) e responde apenas "OK":\n' + urls.map((u) => "- " + u).join("\n"),
+      config: { tools: [{ urlContext: {} }], maxOutputTokens: 1000, thinkingConfig: { thinkingBudget: 512 } },
+    });
+    const meta = resp.candidates?.[0]?.urlContextMetadata?.urlMetadata || [];
+    const byRetrieved = {};
+    for (const m of meta) byRetrieved[m.retrievedUrl] = String(m.urlRetrievalStatus || "").replace("URL_RETRIEVAL_STATUS_", "");
+    const out = {};
+    for (const u of urls) {
+      // Casa exacto e, em fallback, por sufixo (redirects normalizam o URL).
+      let st = byRetrieved[u];
+      if (!st) { const hit = Object.keys(byRetrieved).find((k) => k === u || k.endsWith(u) || u.endsWith(k)); if (hit) st = byRetrieved[hit]; }
+      out[u] = st || "UNKNOWN";
+    }
+    return out;
+  }
+
+  // 1ª passagem em lote (≤ URL_BATCH_MAX por pedido).
+  const statusByUrl = {};
+  for (let i = 0; i < allUrls.length; i += URL_BATCH_MAX) {
+    Object.assign(statusByUrl, await checkBatch(allUrls.slice(i, i + URL_BATCH_MAX)));
+  }
+  // 2ª passagem: re-verifica individualmente os não-SUCCESS. Em lotes grandes o
+  // modelo nem sempre obtém todos os URLs (devolve UNKNOWN); a verificação 1-a-1
+  // distingue um URL realmente partido de um simplesmente não-obtido no lote.
+  for (const u of allUrls) {
+    if (statusByUrl[u] === "SUCCESS") continue;
+    const retry = await checkBatch([u]);
+    statusByUrl[u] = retry[u] || statusByUrl[u];
+  }
+
+  const results = allUrls.map((url) => ({ codes: urlCodes[url], url, status: statusByUrl[url], ok: statusByUrl[url] === "SUCCESS" }));
+  const failed = results.filter((r) => !r.ok);
+  return {
+    checkedAt: new Date().toISOString(),
+    total: results.length,
+    ok: results.length - failed.length,
+    failed,
+    results,
+    banksWithoutUrl: BANK_CODES.filter((c) => !(BANK_SOURCES[c] || []).length),
+  };
 }
 
 // Registo canónico usado pelo modo mock (passa em validateSpreads).
@@ -528,9 +594,28 @@ function refreshStatus() {
 
 // Promove os dados PENDENTES para "live" (L1 + L2 + banks.sqlite).
 // A aprovação explícita pelo admin (ou auto-apply) implica sempre persistência.
-function applyPending(today, kvSlot) {
+// onlyCodes (opcional): aprova só esses bancos; os restantes ficam em revisão.
+function applyPending(today, kvSlot, onlyCodes) {
   if (!PENDING) return false;
-  const freshData = { spreads: PENDING.spreads, eur: PENDING.eur, eurLabel: PENDING.eurLabel };
+  const all = Object.keys(PENDING.spreads);
+  const codes = (Array.isArray(onlyCodes) && onlyCodes.length)
+    ? all.filter((c) => onlyCodes.includes(c))
+    : all;
+  if (!codes.length) return false;
+
+  // Mapa base servido publicamente: o último aplicado (MEM) ou, se ainda não há,
+  // o estado canónico actual dos bancos (banks.sqlite). Sobrepomos só os aprovados,
+  // para que aprovações parciais não apaguem os bancos não seleccionados.
+  let base = (MEM.data && MEM.data.spreads) ? { ...MEM.data.spreads } : null;
+  if (!base) {
+    const bm = getBanksModule();
+    try { base = bm?.getLatestSpreads ? { ...bm.getLatestSpreads() } : {}; }
+    catch (_) { base = {}; }
+  }
+  const subset = {};
+  for (const c of codes) { base[c] = PENDING.spreads[c]; subset[c] = PENDING.spreads[c]; }
+
+  const freshData = { spreads: base, eur: PENDING.eur, eurLabel: PENDING.eurLabel };
   const fetchedAt = PENDING.fetchedAt || Date.now();
   MEM.data       = freshData;
   MEM.fetchedAt  = fetchedAt;
@@ -538,11 +623,15 @@ function applyPending(today, kvSlot) {
   MEM.callsToday = kvSlot != null ? Number(kvSlot) : MEM.callsToday + 1;
   const banksModule = getBanksModule();
   if (banksModule?.bulkInsertSpreads) {
-    try { banksModule.bulkInsertSpreads(freshData.spreads, "gemini"); }
+    try { banksModule.bulkInsertSpreads(subset, "gemini"); }
     catch (e) { console.error("spreads.js: bulkInsertSpreads failed:", e.message); }
   }
   kvSet(KV_CACHE_KEY, { data: freshData, fetchedAt }, KV_CACHE_TTL).catch(() => {});
-  PENDING = null;
+
+  // Mantém em revisão os bancos não aprovados; limpa PENDING se nada sobra.
+  const remaining = {};
+  for (const c of all) if (!codes.includes(c)) remaining[c] = PENDING.spreads[c];
+  PENDING = Object.keys(remaining).length ? { ...PENDING, spreads: remaining } : null;
   return true;
 }
 
@@ -629,7 +718,13 @@ module.exports = async function handler(req, res) {
   if (action === "approve" || action === "reject") {
     if (!isAdmin) return res.status(403).json({ error: "Requer x-admin-token" });
     if (action === "approve") {
-      const applied = applyPending(utcDayKey(), null);
+      // x-spreads-codes (opcional): lista separada por vírgulas para aprovar só
+      // alguns bancos; ausente = aprovar todos.
+      const codesHdr  = String(req.headers["x-spreads-codes"] || "").trim();
+      const onlyCodes = codesHdr
+        ? codesHdr.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean)
+        : null;
+      const applied = applyPending(utcDayKey(), null, onlyCodes);
       return res.status(applied ? 200 : 409).json({ applied, ...refreshStatus() });
     }
     PENDING = null;
@@ -732,3 +827,4 @@ module.exports.parseBatchSpreads = parseBatchSpreads;
 module.exports.buildPrompt     = buildPrompt;
 module.exports.buildBatches    = buildBatches;
 module.exports.SYSTEM_PROMPT   = SYSTEM_PROMPT;
+module.exports.auditUrls       = auditUrls;
