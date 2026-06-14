@@ -154,7 +154,8 @@ const SPREADS_AUTO_APPLY = process.env.SPREADS_AUTO_APPLY === "1";
 
 // Preçários oficiais por banco: [taxas §18.1, comissões §18.2].
 // A URL context tool do Gemini lê estes URLs directamente (servidores Google
-// evitam bloqueios de IP e gerem cookies). BEST sem URL — modelo estima.
+// evitam bloqueios de IP e gerem cookies). Bancos cujo site bloqueia o fetcher
+// (ABANCA, BEST) usam o preçário combinado do Portal do Cliente Bancário (BdP).
 const BANK_SOURCES = {
   CA:     ["https://www.creditoagricola.pt/-/media/files/precario/documents-site/taxas-de-juro-_aviso-8-2009-do-bdp/pre-ft-202605.pdf",
            "https://www.creditoagricola.pt/-/media/files/precario/documents-site/comissoes-e-despesas-_aviso-8-2009-do-bdp/pre-fc-20260501.pdf"],
@@ -179,7 +180,8 @@ const BANK_SOURCES = {
            "https://www.uci.pt/-/media/Files/Portugal/precario/PRE-FC-20260301.pdf"],
   BNI:    ["https://bnieuropa.pt/wp-content/themes/responsive/pdf/precario/taxas-juro-particulares-credito-habitacao-e-contratos-conexos.pdf",
            "https://bnieuropa.pt/wp-content/themes/responsive/pdf/precario/particulares-credito-habitacao-e-contratos-conexos.pdf"],
-  BEST:   [],
+  // bancobest.pt bloqueia o fetcher; usamos o preçário combinado do BdP (código 0065).
+  BEST:   ["https://clientebancario.bportugal.pt/sites/default/files/precario/0065_/0065_PRE.pdf"],
 };
 
 // JSON schema para structured outputs — garante a forma exacta da resposta.
@@ -287,7 +289,7 @@ Regras de apuramento:
 - Quando não há campanha: promoPeriodo = 0 e promoSpread = null.
 - Para cada banco, lê os PDFs do preçário indicados na mensagem (taxas §18.1 e comissões §18.2).
 - Se um URL devolver erro ou não cobrir o campo, usa uma estimativa razoável e indica "Estimativa" em contaNota.
-- Para bancos sem URL (BEST), estima com base em bancos comparáveis e indica "Estimativa".
+- Para bancos sem URL (caso existam), estima com base em bancos comparáveis e indica "Estimativa".
 - Indica o mês/ano da fonte em contaNota quando confirmares o valor (ex.: "Preçário mai.2026").
 - Valores monetários em EUR; spreads e TANs em pontos percentuais (ex.: 0.70 = 0,70%).
 
