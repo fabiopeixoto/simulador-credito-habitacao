@@ -369,8 +369,9 @@ function originBadge(s) {
   return `<span class="badge" title="${escapeHtml(o.title)}" style="background:${o.color}22;color:${o.color};border:1px solid ${o.color}55">${o.icon} ${escapeHtml(o.label)}</span>`;
 }
 
-// Mostra os dados PENDENTES (devolvidos pela AI) como um DIFF face aos valores
-// servidos: lista, por banco, todos os campos que vão ser modificados (atual → novo).
+// Mostra os dados PENDENTES (devolvidos pela AI) como uma tabela: uma linha por
+// banco e, para cada campo, o valor antigo → novo. Campos que não mudam mostram
+// o mesmo valor dos dois lados; só os alterados ficam destacados.
 function renderPending(pending) {
   const el = document.getElementById('aiPending');
   if (!el) return;
@@ -379,49 +380,59 @@ function renderPending(pending) {
   const liveByCode = {};
   (banks || []).forEach(b => { liveByCode[b.code] = b.spreads || {}; });
 
-  let totalChanges = 0;
-  const changedBanks = [];
-  const unchanged = [];
-  const diffRows = [];
+  const hasVal = (v) => !(v === null || v === undefined || v === '');
 
+  // Colunas = campos conhecidos (ordem das etiquetas) + extra, só os que têm
+  // algum valor (antigo ou novo) em pelo menos um banco.
+  const extra = [];
   codes.forEach(code => {
+    Object.keys(pending.spreads[code] || {}).forEach(k => {
+      if (k !== 'codigo' && k !== 'source' && !(k in PENDING_FIELD_LABELS) && extra.indexOf(k) < 0) extra.push(k);
+    });
+  });
+  const fields = Object.keys(PENDING_FIELD_LABELS).concat(extra).filter(k =>
+    codes.some(code => hasVal((pending.spreads[code] || {})[k]) || hasVal((liveByCode[code] || {})[k])));
+
+  const STICKY = 'position:sticky;left:0;background:var(--card);z-index:1';
+  let changedBanks = 0, totalChanges = 0;
+
+  const rows = codes.map(code => {
     const next = pending.spreads[code] || {};
     const live = liveByCode[code] || {};
     const isNew = !(code in liveByCode);
-    // Campos a apresentar = chaves do novo registo com etiqueta conhecida (+ outras chaves novas).
-    const fields = Object.keys(next).filter(k => k in PENDING_FIELD_LABELS)
-      .concat(Object.keys(next).filter(k => !(k in PENDING_FIELD_LABELS) && k !== 'codigo'));
-    const changes = fields.filter(k => !pendingValsEqual(live[k], next[k]));
-    if (!changes.length) { unchanged.push(code); return; }
-    changedBanks.push(code);
-    totalChanges += changes.length;
-    changes.forEach((k, i) => {
-      const label = PENDING_FIELD_LABELS[k] || k;
-      const origin = originBadge({ ...next, source: next.source || 'gemini' });
-      const bankCell = i === 0
-        ? `<td rowspan="${changes.length}" style="vertical-align:top">`
-          + `<label style="display:flex;gap:6px;align-items:center;font-weight:600;cursor:pointer">`
-          + `<input type="checkbox" class="pending-bank-chk" value="${escapeHtml(code)}" checked>`
-          + `<span>${escapeHtml(code)}${isNew ? ' <span style="color:#22c55e">(novo)</span>' : ''}</span></label>`
-          + (origin ? `<div style="margin-top:4px">${origin}</div>` : '') + `</td>`
-        : '';
-      diffRows.push(
-        `<tr>${bankCell}<td>${escapeHtml(label)}</td>`
-        + `<td style="color:var(--muted)">${pendingFmtVal(live[k])}</td>`
-        + `<td style="color:#fbbf24;font-weight:600">${pendingFmtVal(next[k])}</td></tr>`
-      );
-    });
-  });
+    const changedFields = fields.filter(k => !pendingValsEqual(live[k], next[k]));
+    if (changedFields.length) { changedBanks++; totalChanges += changedFields.length; }
+    const origin = originBadge({ ...next, source: next.source || 'gemini' });
+    const bankCell = `<td style="${STICKY};text-align:left;white-space:nowrap;vertical-align:top">`
+      + `<label style="display:flex;gap:6px;align-items:center;font-weight:600;cursor:pointer;color:var(--text)">`
+      + `<input type="checkbox" class="pending-bank-chk" value="${escapeHtml(code)}" checked>`
+      + `<span>${escapeHtml(code)}${isNew ? ' <span style="color:#22c55e">(novo)</span>' : ''}</span></label>`
+      + (origin ? `<div style="margin-top:4px">${origin}</div>` : '')
+      + `<div style="font-size:10px;color:var(--muted);margin-top:2px">${changedFields.length ? changedFields.length + ' alteração(ões)' : 'sem alterações'}</div>`
+      + `</td>`;
+    const cells = fields.map(k => {
+      const changed = !pendingValsEqual(live[k], next[k]);
+      return `<td style="white-space:nowrap${changed ? ';background:rgba(251,191,36,0.10)' : ''}">`
+        + `<span style="color:var(--muted)">${pendingFmtVal(live[k])}</span>`
+        + `<span style="color:var(--muted)"> → </span>`
+        + `<span style="${changed ? 'color:#fbbf24;font-weight:600' : 'color:var(--text)'}">${pendingFmtVal(next[k])}</span>`
+        + `</td>`;
+    }).join('');
+    return `<tr>${bankCell}${cells}</tr>`;
+  }).join('');
 
-  const body = diffRows.length
-    ? `<div class="stats-admin-7d" style="max-height:360px;overflow:auto"><table><thead><tr>`
-      + `<th><label style="display:flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" id="pendingSelectAll" checked onchange="togglePendingAll(this)"> Banco</label></th>`
-      + `<th>Campo</th><th>Atual</th><th>Novo</th>`
-      + `</tr></thead><tbody>${diffRows.join('')}</tbody></table></div>`
-    : `<p style="margin:6px 0;color:var(--muted)">Sem alterações face aos valores servidos.</p>`;
+  const headCells = fields.map(k =>
+    `<th title="${escapeHtml(PENDING_FIELD_LABELS[k] || k)}" style="white-space:nowrap">${escapeHtml(k)}</th>`).join('');
 
-  const summary = `${totalChanges} alteração(ões) em ${changedBanks.length} banco(s)`
-    + (unchanged.length ? ` · ${unchanged.length} sem alterações (${escapeHtml(unchanged.join(', '))})` : '');
+  const body = codes.length
+    ? `<div class="stats-admin-7d" style="max-height:420px;overflow:auto"><table><thead><tr>`
+      + `<th style="${STICKY};z-index:2;text-align:left"><label style="display:flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" id="pendingSelectAll" checked onchange="togglePendingAll(this)"> Banco</label></th>`
+      + headCells
+      + `</tr></thead><tbody>${rows}</tbody></table></div>`
+    : `<p style="margin:6px 0;color:var(--muted)">Sem dados pendentes.</p>`;
+
+  const summary = `${totalChanges} alteração(ões) em ${changedBanks} de ${codes.length} banco(s)`
+    + ` · cada linha mostra antigo → novo (campos iguais aparecem repetidos)`;
 
   el.innerHTML =
     `<div style="margin-top:12px;padding:12px;border:1px solid rgba(251,191,36,0.4);border-radius:8px;background:rgba(251,191,36,0.08)">`
