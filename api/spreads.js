@@ -302,7 +302,7 @@ ${SCHEMA_EXAMPLE}
 Responde apenas com o objecto JSON pedido — {"bancos":[...]} com uma entrada por cada banco pedido na mensagem, cada uma com TODAS as chaves acima — sem texto adicional.`;
 
 // Reparte os bancos por lotes cujo total de URLs ≤ URL_BATCH_MAX (limite da
-// URL context tool). BEST não tem URL, logo não pesa no orçamento de URLs.
+// URL context tool). Bancos sem URL não pesam no orçamento de URLs.
 function buildBatches() {
   const batches = [];
   let cur = [], curUrls = 0;
@@ -326,6 +326,69 @@ function buildPrompt(codes) {
     return `- ${code}: ${urls.join(" + ")}`;
   }).join("\n");
   return `Apura as condições de crédito habitação HPP para ${codes.length} banco(s): ${codes.join(", ")}.\n\nURLs (taxas §18.1 + comissões §18.2):\n${linhas}`;
+}
+
+// ── Health-check dos URLs de preçário ─────────────────────────────────────
+// Audita BANK_SOURCES via a URL context tool: confirma que o Gemini consegue
+// obter cada PDF (urlContextMetadata.urlRetrievalStatus === SUCCESS). Pensado
+// para correr periodicamente (admin/Jenkins) e avisar quando um URL parte —
+// p.ex. nomes com data como UCI "PRE-FT-AAAAMM" ou CA "pre-ft-AAAAMM" que
+// mudam quando o banco publica nova versão. Faz pedidos baratos (prompt mínimo)
+// repartidos pelo limite de URLs por chamada; não escreve em cache nem live.
+async function auditUrls(apiKey, { model = GEMINI_MODEL } = {}) {
+  const ai = new GoogleGenAI({ apiKey });
+  // Um URL pode servir vários bancos (ex.: BCP e ACTVO partilham SECCAO_18.pdf),
+  // por isso guardamos a lista de códigos por URL.
+  const urlCodes = {};
+  for (const [code, urls] of Object.entries(BANK_SOURCES)) {
+    urls.forEach((u) => { (urlCodes[u] = urlCodes[u] || []).push(code); });
+  }
+  const allUrls = Object.keys(urlCodes);
+
+  // Estado de retrieval de um conjunto de URLs numa só chamada (urlContextMetadata).
+  async function checkBatch(urls) {
+    const resp = await ai.models.generateContent({
+      model,
+      contents: 'Lê cada um destes URLs (PDFs de preçários) e responde apenas "OK":\n' + urls.map((u) => "- " + u).join("\n"),
+      config: { tools: [{ urlContext: {} }], maxOutputTokens: 1000, thinkingConfig: { thinkingBudget: 512 } },
+    });
+    const meta = resp.candidates?.[0]?.urlContextMetadata?.urlMetadata || [];
+    const byRetrieved = {};
+    for (const m of meta) byRetrieved[m.retrievedUrl] = String(m.urlRetrievalStatus || "").replace("URL_RETRIEVAL_STATUS_", "");
+    const out = {};
+    for (const u of urls) {
+      // Casa exacto e, em fallback, por sufixo (redirects normalizam o URL).
+      let st = byRetrieved[u];
+      if (!st) { const hit = Object.keys(byRetrieved).find((k) => k === u || k.endsWith(u) || u.endsWith(k)); if (hit) st = byRetrieved[hit]; }
+      out[u] = st || "UNKNOWN";
+    }
+    return out;
+  }
+
+  // 1ª passagem em lote (≤ URL_BATCH_MAX por pedido).
+  const statusByUrl = {};
+  for (let i = 0; i < allUrls.length; i += URL_BATCH_MAX) {
+    Object.assign(statusByUrl, await checkBatch(allUrls.slice(i, i + URL_BATCH_MAX)));
+  }
+  // 2ª passagem: re-verifica individualmente os não-SUCCESS. Em lotes grandes o
+  // modelo nem sempre obtém todos os URLs (devolve UNKNOWN); a verificação 1-a-1
+  // distingue um URL realmente partido de um simplesmente não-obtido no lote.
+  for (const u of allUrls) {
+    if (statusByUrl[u] === "SUCCESS") continue;
+    const retry = await checkBatch([u]);
+    statusByUrl[u] = retry[u] || statusByUrl[u];
+  }
+
+  const results = allUrls.map((url) => ({ codes: urlCodes[url], url, status: statusByUrl[url], ok: statusByUrl[url] === "SUCCESS" }));
+  const failed = results.filter((r) => !r.ok);
+  return {
+    checkedAt: new Date().toISOString(),
+    total: results.length,
+    ok: results.length - failed.length,
+    failed,
+    results,
+    banksWithoutUrl: BANK_CODES.filter((c) => !(BANK_SOURCES[c] || []).length),
+  };
 }
 
 // Registo canónico usado pelo modo mock (passa em validateSpreads).
@@ -735,3 +798,4 @@ module.exports.parseBatchSpreads = parseBatchSpreads;
 module.exports.buildPrompt     = buildPrompt;
 module.exports.buildBatches    = buildBatches;
 module.exports.SYSTEM_PROMPT   = SYSTEM_PROMPT;
+module.exports.auditUrls       = auditUrls;

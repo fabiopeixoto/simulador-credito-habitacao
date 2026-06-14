@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "start": "node server.js",
-    "lint": "sh scripts/lint.sh"
+    "lint": "sh scripts/lint.sh",
+    "audit:urls": "node scripts/audit-urls.js"
   },
   "dependencies": {
     "@google/genai": "^1.52.0",
