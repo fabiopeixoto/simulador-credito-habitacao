@@ -294,7 +294,8 @@ Regras de apuramento:
 - jsCom/jsSem são o spread do Crédito Habitação Jovem (regime com garantia do Estado). Inclui-os SEMPRE. Se o preçário não indicar um spread próprio para jovens, usa o mesmo spread comercial (jsCom = sCom, jsSem = sSem).
 - Quando não há campanha: promoPeriodo = 0 e promoSpread = null.
 - Para cada banco, lê os PDFs do preçário indicados na mensagem (taxas §18.1 e comissões §18.2).
-- Se um URL devolver erro ou não cobrir o campo, usa uma estimativa razoável e indica "Estimativa" em contaNota.
+- Os campos vRef, mAno, insV, insM e capMax NÃO constam dos preçários (são prémios de seguros e limites preenchidos a partir de dados curados). Dá o teu melhor valor aproximado, mas NÃO menciones "Estimativa" na contaNota por causa destes campos — eles são substituídos depois.
+- A contaNota só deve conter "Estimativa" se os SPREADS/TAN (sCom, sSem, mCom, mSem, fCom, fSem, jsCom, jsSem) OU as comissões (dossier, avaliacao, minutas) tiverem de ser estimados por o preçário não os cobrir ou o URL falhar. Caso contrário, indica apenas a fonte (ex.: "Preçário jun.2026").
 - Para bancos sem URL (caso existam), estima com base em bancos comparáveis e indica "Estimativa".
 - Indica o mês/ano da fonte em contaNota quando confirmares o valor (ex.: "Preçário mai.2026").
 - Valores monetários em EUR; spreads e TANs em pontos percentuais (ex.: 0.70 = 0,70%).
