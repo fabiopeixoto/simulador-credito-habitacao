@@ -61,6 +61,7 @@
             h(CenRow,{l:"Prestação capital",v:fE(c.p)+"/mês",c:hueC}),
             h(CenRow,{l:"IS sobre juros",v:fE(c.isJuros)+"/mês"}),
             h(CenRow,{l:"+ Seguros",v:fE(c.seguros)+"/mês",c:"#14532d"}),
+            c.segProt>0&&h(CenRow,{l:"+ Seg. Protecção",v:fE(c.segProt)+"/mês",c:"#7c3aed"}),
             h(CenRow,{l:"TOTAL",v:fE(c.pt)+"/mês",c:hueC,big:true})
           ),
           h(CenSec,{t:"VIABILIDADE"},
@@ -81,6 +82,7 @@
     var rendT=props.rendT||0;
     var melhor=props.melhor||{};
     var bancoCenRow=props.bancoCenRow||melhor;
+    var segProtMensal=props.segProtMensal||0;
     var S=window._SIM||{};
     var fE=S.fE||function(v){return String(v);};
     var isJurosMedioMensal=S.isJurosMedioMensal||function(){return 0;};
@@ -89,13 +91,16 @@
 
     var sel=React.useState(null);
     var selected=sel[0],setSelected=sel[1];
-    var seguros=(melhor.seg&&melhor.seg.tot)||0;
+    // Os totais (c.pt) são calculados em app.js a partir do banco seleccionado
+    // (bancoCenRow) + protecção ao crédito; a decomposição tem de usar a mesma
+    // fonte, senão «+ Seguros» não bate certo com o TOTAL.
+    var seguros=(bancoCenRow.seg&&bancoCenRow.seg.tot)||0;
     var bancoNome=bancoCenRow.name||melhor.name||"—";
 
     var rows=cenarios.map(function(c){
       return Object.assign({},c,{
         isJuros:isJurosMedioMensal(capital,c.tan,prazoR,finalidade),
-        seguros:seguros,rendT:rendT,bancoNome:bancoNome
+        seguros:seguros,segProt:segProtMensal,rendT:rendT,bancoNome:bancoNome
       });
     });
 
