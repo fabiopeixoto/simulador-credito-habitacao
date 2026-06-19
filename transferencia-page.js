@@ -3,6 +3,7 @@
   if(!window._SIM||!window.React)return;
   var React=window.React;
   var h=React.createElement;
+  var IS_MOBILE=!!(window._SIM_SHARED&&window._SIM_SHARED.isMobileDevice);
   var useState=React.useState;
   var useMemo=React.useMemo;
   var fE=window._SIM.fE;
@@ -246,7 +247,9 @@
               h("div",{style:{marginBottom:8,fontSize:26}},"⏳"),
               "A carregar dados dos bancos…"
             )
-          :h("div",{style:{overflowX:"auto"}},
+          :(IS_MOBILE&&window.TransfTableMobile)
+            ?h(window.TransfTableMobile,{resultados:resultados,penaltyCost:penaltyCost,remainingMonths:remainingMonths})
+            :h("div",{style:{overflowX:"auto"}},
               h("table",{style:{width:"100%",borderCollapse:"collapse",background:"#fff",borderRadius:11,overflow:"hidden",boxShadow:"0 1px 3px rgba(0,0,0,0.07)"}},
                 h("thead",null,
                   h("tr",null,
