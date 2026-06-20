@@ -162,7 +162,7 @@ fetch("https://simuladorch.cgd.pt/calculate",{method:"POST",headers:{"Content-Ty
 |-------|---------------|--------------------:|--------------------:|---------:|---------------:|---------------:|----------:|----------------:|---------------:|---------:|-------------|
 | Millennium BCP | https://www.millenniumbcp.pt/credito/credito-habitacao/simulador | 720,80 € | 720,80 € | 0,000 % | 4,6 % | 4,7 % | −0,1 | — | — | — | ✅ dentro de tolerância |
 | Santander | https://simulador-credito-habitacao.santander.pt | 847,10 € | 847,10 € | 0,000 % | 3,7 % | 3,9 % | −0,19 | 330 845 € | 335 110 € | −1,27 % | ✅ dentro de tolerância (ver Teste 3) |
-| BPI | https://www.bancobpi.pt/particulares/credito-habitacao/simulador | | | | | | | | | | ⚠️ simulador bloqueia acesso automático |
+| BPI | https://www.bancobpi.pt/particulares/credito-habitacao/simulador | 970,58 € | 970,58 € | 0,000 % | 4,5 % | 4,7 % | −0,2 | 364 719 € | 366 856 € | −0,58 % | ✅ dentro de tolerância (ver Teste 4) |
 | Novo Banco | https://www.novobanco.pt/particulares/credito-habitacao | | | | | | | | | | ⚠️ simulador bloqueia acesso automático |
 
 ---
@@ -235,13 +235,29 @@ O simulador do Santander é uma **SPA com cálculo client-side** (`simulador-cre
 
 **Nota de produto:** a app mostra a prestação ao **spread normal** (`calcP(200k; 3,336 %; 30) = 879,88 €`), não a prestação **promocional** de 847,10 € — apesar de o seed do Santander já ter `promoPeriodo = 36` e `promoSpread = 0,50`. A fase promocional não está reflectida na prestação principal (candidato a melhoria).
 
+### Teste 4 — BPI (simulador, screenshot 2026-06-20)
+
+Cartão **base** (sem vendas associadas facultativas). Inputs: HPP, 200 000 € / imóvel 200 000 € (LTV 100 %), 30 anos, variável, Euribor 6m **2,536 %**. Campanha BPI com **comissões iniciais isentas** (dossier/avaliação/minutas = 0 €).
+
+| Métrica | Interno | BPI | Desvio | Veredito |
+|---------|--------:|----:|-------:|----------|
+| Spread base | 1,600 % (seed `sSem 1,50` + LTV 0,10) | 1,600 % | exacto | ✅ |
+| TAN | 4,136 % | 4,136 % | exacto | ✅ |
+| **Prestação** | **970,58 €** | 970,58 € | **0,000 %** | ✅ |
+| Seguro de vida (seed `vRef 13,12`) | 17,49 € | 16,99 € | +0,50 € (1,03×) | ✅ |
+| Multirriscos (seed `mAno 195`) | 16,25 € | 16,50 € | −0,25 € | ✅ |
+| TAEG | 4,5 % | 4,7 % | −0,2 p.p. | ✅ (±0,30) |
+| MTIC base | 364 719 € | 366 856 € | −0,58 % | ✅ (±5 %) |
+
+→ Prestação **ao cêntimo**. **Seguro de vida do BPI bem calibrado** (1,03×) — ao contrário da CGD/Santander.
+
 ### Observações sobre dados de seed (`api/banks.js`)
 
 - **BCP, spread com produtos:** seed `sCom = 0,70 %` = FINE **exacto**. ✅
 - **BCP, spread sem produtos:** seed `sSem = 1,50 %` vs FINE **1,25 %** → seed **0,25 p.p. mais conservador**. Candidato a actualização.
 - **Indexante dos FINE está desfasado** do BCE: BCP usa E12m 2,804 % (mai-2026), CGD usa E6m 2,454 % (abr-2026); ambos divergem do live (12m 2,759 % / 6m 2,607 %). Comparar sempre com a Euribor da mesma data do exemplo.
-- **Seguro de vida sobrestimado ~2× — sistemático.** O modelo `sVida` dá ~2× o prémio oficial em **dois** bancos independentes: CGD 39,76 € vs 16,72 € (**2,4×**) e Santander 30,07 € vs 14,11 € (**2,1×**). Não é ruído de um banco — é o `vRef`/escala do modelo de vida. **Candidato a recalibração transversal** (afecta a prestação total e a TAEG de todos os cartões). Notar que nem a CGD nem o Santander pediram idade na simulação.
-- **Multirriscos do Santander exacto:** seed `mAno = 246` → 20,50 € = oficial. O modelo de multirriscos está bem calibrado; o desvio está só no seguro de **vida**.
+- **Seguro de vida — problema é de `vRef` por banco, NÃO do modelo.** O modelo `sVida` está correcto: com o `vRef` certo acerta (BPI `vRef 13,12` → 17,49 € vs 16,99 € oficial, **1,03×**). Os desvios são em bancos com `vRef` inflacionado: **CGD `vRef 29,82`** → 39,76 € vs 16,72 € (**2,4×**) e **Santander `vRef 22,55`** → 30,07 € vs 14,11 € (**2,1×**). **Acção: baixar `vRef` da CGD (~12,5) e do Santander (~10,5)**; não mexer no modelo nem na BPI. (Conclusão revista após o Teste 4 — antes suspeitava-se de um factor sistémico do modelo.)
+- **Multirriscos bem calibrado** em todos: Santander `mAno 246` → 20,50 € (exacto); BPI `mAno 195` → 16,25 € (vs 16,50 €). O desvio de seguros está só no **vida** de CGD/Santander.
 
 ---
 
