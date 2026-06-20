@@ -525,7 +525,7 @@ function parseBatchSpreads(resp) {
   throw new Error("Não encontrei o JSON dos bancos na resposta Gemini. Início: " + txt.slice(0, 200));
 }
 
-// Compat (testes/admin): extrai e valida uma resposta completa (14 bancos).
+// Compat (testes/admin): extrai e valida uma resposta completa (13 bancos).
 function extractSpreads(resp) {
   const parsed = normalizeSpreads(parseBatchSpreads(resp));
   try {

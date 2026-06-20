@@ -218,7 +218,7 @@ function ReverseCalcPage({onBack,onSimulate,onOpenComments,onOpenGlossario,comme
       capMax>0&&React.createElement("div",{style:{background:"rgba(37,99,235,0.06)",border:"1px solid rgba(37,99,235,0.2)",borderRadius:9,padding:"12px 14px",marginBottom:14,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}},
         React.createElement("div",null,
           React.createElement("div",{style:{fontWeight:700,color:Au,marginBottom:3}},"Quer simular um banco específico para "+fE(capMax)+"?"),
-          React.createElement("div",{style:{fontSize:12,color:"#374151"}},"Usa o Simulador Principal para comparar prestações de 14 bancos com este capital.")
+          React.createElement("div",{style:{fontSize:12,color:"#374151"}},"Usa o Simulador Principal para comparar prestações de 13 bancos com este capital.")
         ),
         React.createElement("button",{onClick:()=>onSimulate(capMax,{youngMode:mJ,selectedLTV:jovemLTV,numTit:tit,prazo:pz,r1,c1,r2,c2,dep,out,tt,eRef}),style:{padding:"9px 18px",background:Au,border:"none",borderRadius:8,color:"#ffffff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"sans-serif",whiteSpace:"nowrap"}},"Abrir Simulador →")
       ),

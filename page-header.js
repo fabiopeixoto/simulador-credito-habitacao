@@ -91,7 +91,7 @@
               h("img",{src:"/images/logo.png",alt:"Simulador Crédito Habitação",style:{height:isMobileH?32:40,width:"auto",flexShrink:0}}),
               h("h1",{style:{margin:0,fontSize:isMobileH?16:21,fontWeight:700,color:"#111827",letterSpacing:-0.3,fontFamily:"'Inter',system-ui,sans-serif"}},"Simulador Crédito Habitação")
             ),
-            h("div",{style:{fontSize:11,color:"#374151",fontFamily:"sans-serif",marginTop:2}},"Portugal · 14 bancos · Euribor em tempo real"),
+            h("div",{style:{fontSize:11,color:"#374151",fontFamily:"sans-serif",marginTop:2}},"Portugal · 13 bancos · Euribor em tempo real"),
             h("div",{style:{display:"flex",gap:5,marginTop:7,flexWrap:"wrap"}},
               ["3m","6m","12m"].map(function(k){
                 var v=EUR[k]||FALLBACK_EUR[k];
