@@ -20,7 +20,8 @@
   <h2>📊 Estatísticas do site</h2>
   <div class="comments-admin-toolbar" style="margin-bottom:12px;">
     <button type="button" class="btn-sm btn-history" onclick="loadStatsAdmin()">Actualizar estatísticas</button>
-    <span class="status" style="font-size:12px;">Pedidos GET à página inicial e a esta página admin (UTC). Total é cumulativo desde o primeiro registo.</span>
+    <button type="button" class="btn-sm btn-delete" onclick="resetStatsAdmin()">🗑 Reset estatísticas</button>
+    <span class="status" style="font-size:12px;">Pedidos GET à página inicial e a esta página admin (UTC). Total é cumulativo desde o início da contagem actual.</span>
   </div>
   <div class="stats-admin-layout">
     <div id="statsAdmin7d" class="stats-admin-col-table stats-admin-7d"></div>
