@@ -10,6 +10,7 @@ const commentsHandler = require(path.join(root, "api", "comments.js"));
 const banksHandler = require(path.join(root, "api", "banks.js"));
 const statsHandler = require(path.join(root, "api", "stats.js"));
 const euriborHistoryHandler = require(path.join(root, "api", "euribor-history.js"));
+const faviconHandler = require(path.join(root, "api", "favicon.js"));
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
@@ -22,6 +23,8 @@ const mimeTypes = {
   ".jpeg": "image/jpeg",
   ".ico": "image/x-icon",
   ".webmanifest": "application/manifest+json",
+  ".woff2": "font/woff2",
+  ".woff": "font/woff",
 };
 
 const cacheControlHeaders = {
@@ -32,7 +35,7 @@ const cacheControlHeaders = {
 
 function getCacheControl(pathname, ext) {
   if (cacheControlHeaders[pathname]) return cacheControlHeaders[pathname];
-  if ([".js", ".css", ".svg", ".json", ".png", ".jpg", ".jpeg", ".webmanifest"].includes(ext)) {
+  if ([".js", ".css", ".svg", ".json", ".png", ".jpg", ".jpeg", ".webmanifest", ".woff2", ".woff"].includes(ext)) {
     return "public, max-age=31536000, immutable";
   }
   return "public, max-age=0, no-cache";
@@ -152,11 +155,19 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (pathname === "/api/comments") {
-      if (!["GET", "POST", "DELETE", "OPTIONS"].includes(req.method)) {
-        res.writeHead(405, { Allow: "GET, POST, DELETE, OPTIONS", "Content-Type": "application/json; charset=utf-8" });
+      if (!["GET", "POST", "PATCH", "DELETE", "OPTIONS"].includes(req.method)) {
+        res.writeHead(405, { Allow: "GET, POST, PATCH, DELETE, OPTIONS", "Content-Type": "application/json; charset=utf-8" });
         return res.end(JSON.stringify({ error: "Método não suportado" }));
       }
       return runApiHandler(req, res, requestUrl, commentsHandler);
+    }
+
+    if (pathname === "/api/favicon") {
+      if (req.method !== "GET") {
+        res.writeHead(405, { Allow: "GET", "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({ error: "Método não suportado" }));
+      }
+      return runApiHandler(req, res, requestUrl, faviconHandler);
     }
 
     if (pathname === "/api/banks") {
@@ -196,7 +207,7 @@ const server = http.createServer(async (req, res) => {
           const fwdFor = req.headers["x-forwarded-for"] || "";
           const realIp = req.headers["x-real-ip"] || "";
           const ip = fwdFor.split(",")[0]?.trim() || realIp || req.socket?.remoteAddress || "";
-          if (ip) statsHandler.recordVisitorLocation(ip).catch(() => {});
+          if (ip) statsHandler.recordVisitorLocation(ip);
         } else if (normalizedPath === "admin.html") statsHandler.recordAdminPageView();
       } catch (_) {}
     }

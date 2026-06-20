@@ -47,7 +47,7 @@
             React.createElement("td",{style:{...tdM,verticalAlign:"middle",background:bg}},
               React.createElement("div",{style:{display:"flex",alignItems:"center",gap:4}},
                 React.createElement("div",{style:{width:20,height:20,borderRadius:4,background:"rgba(0,0,0,0.05)",border:"1px solid "+b.color+"55",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,overflow:"hidden"}},
-                  React.createElement("img",{src:"https://www.google.com/s2/favicons?domain="+(BANK_DOMAINS[b.s]||"bank.pt")+"&sz=32",width:16,height:16,style:{objectFit:"contain",display:"block"},alt:b.s,onError:function(e){const d=e.currentTarget.parentElement;d.innerHTML='<span style="font-size:8px;font-weight:700;font-family:monospace;color:'+b.color+'">'+b.s+'</span>';e.currentTarget.onError=null;}})),
+                  React.createElement("img",{src:"/api/favicon?domain="+(BANK_DOMAINS[b.s]||"bank.pt")+"&sz=32",width:16,height:16,style:{objectFit:"contain",display:"block"},alt:b.s,onError:function(e){const d=e.currentTarget.parentElement;d.innerHTML='<span style="font-size:8px;font-weight:700;font-family:monospace;color:'+b.color+'">'+b.s+'</span>';e.currentTarget.onError=null;}})),
                 React.createElement("div",null,
                   React.createElement("span",{style:{fontWeight:700,color:top?"#2563eb":"#111827",fontSize:11}},b.name),
                   b.spreadUpdated&&React.createElement("span",{style:{fontSize:8,color:G,marginLeft:3}},"✓"),

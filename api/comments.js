@@ -25,6 +25,9 @@ function migrateComments(db) {
   if (!columns.includes("parentId")) {
     db.prepare("ALTER TABLE comments ADD COLUMN parentId TEXT").run();
   }
+  if (!columns.includes("flagged")) {
+    db.prepare("ALTER TABLE comments ADD COLUMN flagged INTEGER NOT NULL DEFAULT 0").run();
+  }
   db.prepare("CREATE INDEX IF NOT EXISTS idx_comments_parent ON comments(parentId, ts)").run();
 }
 
@@ -53,7 +56,7 @@ async function listComments() {
   if (_treeCache && Date.now() - _treeCacheAt < TREE_CACHE_TTL) return _treeCache;
   if (!hasSqlite()) return [];
   const rows = sqliteDb
-    .prepare("SELECT id, ts, name, text, bank, simPt, realPt, parentId FROM comments ORDER BY ts DESC LIMIT ?")
+    .prepare("SELECT id, ts, name, text, bank, simPt, realPt, parentId, flagged FROM comments ORDER BY ts DESC LIMIT ?")
     .all(MAX_COMMENTS);
   const comments = rows.map((row) => ({
     ...row,
@@ -117,9 +120,23 @@ function getCommentById(id) {
   return sqliteDb.prepare("SELECT id, parentId FROM comments WHERE id = ?").get(id) || null;
 }
 
+function flagCommentById(id) {
+  if (!hasSqlite()) return false;
+  const info = sqliteDb.prepare("UPDATE comments SET flagged = 1 WHERE id = ?").run(id);
+  if (info.changes > 0) invalidateTreeCache();
+  return info.changes > 0;
+}
+
+function unflagCommentById(id) {
+  if (!hasSqlite()) return false;
+  const info = sqliteDb.prepare("UPDATE comments SET flagged = 0 WHERE id = ?").run(id);
+  if (info.changes > 0) invalidateTreeCache();
+  return info.changes > 0;
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-admin-token");
   if (req.method === "OPTIONS") return res.status(200).end();
 
@@ -187,6 +204,29 @@ module.exports = async function handler(req, res) {
     if (!saved) return res.status(500).json({ error: "Erro ao guardar comentário" });
 
     return res.status(201).json({ ...comment, replies: [] });
+  }
+
+  if (req.method === "PATCH") {
+    const id = (req.query && req.query.id) || "";
+    if (!id) return res.status(400).json({ error: "ID em falta" });
+    const action = (req.body && req.body.action) || "";
+    const exists = getCommentById(id);
+    if (!exists) return res.status(404).json({ error: "Comentário não encontrado" });
+    if (action === "report") {
+      flagCommentById(id);
+      return res.status(200).json({ ok: true });
+    }
+    if (action === "unflag") {
+      // Acção de admin: remove a marca de reportado ("Manter").
+      const token = req.headers["x-admin-token"] || "";
+      const adminToken = process.env.ADMIN_TOKEN;
+      if (!adminToken || token !== adminToken) {
+        return res.status(403).json({ error: "Não autorizado" });
+      }
+      unflagCommentById(id);
+      return res.status(200).json({ ok: true });
+    }
+    return res.status(400).json({ error: "Acção inválida" });
   }
 
   if (req.method === "DELETE") {

@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const geoip = require("geoip-lite");
 const { openSqliteDb } = require(path.join(__dirname, "..", "lib", "open-sqlite.js"));
 
 const dbDir = path.join(__dirname, "..", "data");
@@ -45,35 +46,22 @@ function isLoopback(ip) {
   return ip === '::1' || ip === '127.0.0.1' || ip.startsWith('::ffff:127.');
 }
 
-async function recordVisitorLocation(ip) {
+function recordVisitorLocation(ip) {
   if (!sqliteDb || !ip || ip === 'unknown' || isLoopback(ip)) return;
   if (_ipCache.has(ip)) {
     const loc = _ipCache.get(ip);
     if (loc) incrementLocation(loc.city, loc.country_code, loc.country_name);
     return;
   }
-  if (_pending.has(ip)) {
-    _pending.set(ip, _pending.get(ip) + 1); // queue visit; applied when lookup resolves
-    return;
+  const geo = geoip.lookup(ip);
+  if (geo && geo.country) {
+    const loc = { city: geo.city || geo.region || '?', country_code: geo.country, country_name: geo.country };
+    if (_ipCache.size >= 50000) _ipCache.clear();
+    _ipCache.set(ip, loc);
+    incrementLocation(loc.city, loc.country_code, loc.country_name);
+  } else {
+    _ipCache.set(ip, null);
   }
-  _pending.set(ip, 1);
-  try {
-    // Plano gratuito ip-api: apenas HTTP (HTTPS falha sem API paga).
-    const r = await fetch(
-      `http://ip-api.com/json/${encodeURIComponent(ip)}?fields=status,city,regionName,country,countryCode`,
-      { signal: AbortSignal.timeout(5000) }
-    );
-    const d = await r.json();
-    if (d.status === 'success') {
-      const loc = { city: d.city || d.regionName || '?', country_code: d.countryCode, country_name: d.country };
-      if (_ipCache.size >= 50000) _ipCache.clear();
-      _ipCache.set(ip, loc);
-      incrementLocation(loc.city, loc.country_code, loc.country_name, _pending.get(ip));
-    } else {
-      _ipCache.set(ip, null);
-    }
-  } catch (e) { console.error("stats.js: recordVisitorLocation ip-api failed:", e.message); }
-  finally { _pending.delete(ip); }
 }
 
 function utcToday() {

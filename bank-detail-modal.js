@@ -45,7 +45,7 @@
         h("div",{style:{padding:"14px 18px 12px",borderBottom:"1px solid rgba(0,0,0,0.07)",display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexShrink:0}},
           h("div",{style:{display:"flex",alignItems:"center",gap:9,minWidth:0}},
             h("div",{style:{width:32,height:28,borderRadius:5,background:"rgba(0,0,0,0.05)",border:"1px solid "+(b.color||"#999")+"55",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,overflow:"hidden"}},
-              h("img",{src:"https://www.google.com/s2/favicons?domain="+(BANK_DOMAINS[b.s]||"bank.pt")+"&sz=32",width:22,height:22,style:{objectFit:"contain",display:"block"},alt:b.s,
+              h("img",{src:"/api/favicon?domain="+(BANK_DOMAINS[b.s]||"bank.pt")+"&sz=32",width:22,height:22,style:{objectFit:"contain",display:"block"},alt:b.s,
                 onError:function(e){var d=e.currentTarget.parentElement;d.innerHTML='<span style="font-size:8px;font-weight:700;font-family:monospace;color:'+(b.color||"#666")+'">'+b.s+'</span>';e.currentTarget.onError=null;}})
             ),
             h("div",{style:{minWidth:0}},

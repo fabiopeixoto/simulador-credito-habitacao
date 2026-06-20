@@ -1,4 +1,4 @@
-const CACHE = "simulador-v133";
+const CACHE = "simulador-v139";
 
 /** URLs exactas referenciadas em index.html / quanto-posso-pedir.html / historico.html (incl. query ?v=). */
 const PRECACHE = [
@@ -19,7 +19,7 @@ const PRECACHE = [
   "/js/components/slider-input.js?v=1",
   "/js/components/ref-badge.js?v=1",
   "/js/components/hist-modal.js?v=1",
-  "/js/views/header-bar.js?v=1",
+  "/js/views/header-bar.js?v=2",
   "/js/views/params-panel.js?v=1",
   "/js/views/view-comp.js?v=1",
   "/js/views/view-seguros.js?v=2",
@@ -36,14 +36,14 @@ const PRECACHE = [
   "/cen-table-mobile.js?v=2",
   "/index-mount.js?v=5",
   "/inversa-bootstrap.js?v=6",
-  "/comments-modal.js?v=5",
-  "/page-header.js?v=20",
+  "/comments-modal.js?v=8",
+  "/page-header.js?v=23",
   "/glossario-modal.js?v=5",
   "/transferencia.html",
   "/transf-table-mobile.js?v=2",
   "/transferencia-page.js?v=15",
   "/transferencia-mount.js?v=6",
-  "/reverse-calc-page.js?v=21",
+  "/reverse-calc-page.js?v=22",
   "/inversa-mount.js?v=7",
   "/historico-page.js?v=12",
   "/historico-mount.js?v=5",

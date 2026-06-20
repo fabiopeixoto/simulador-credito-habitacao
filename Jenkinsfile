@@ -10,10 +10,12 @@ pipeline {
   }
 
   environment {
+    // Apenas valores não-sensíveis aqui. As credenciais NÃO são bindadas
+    // globalmente: ao usar `credentials(...)` no environment de topo, o Jenkins
+    // injecta um `withEnv` com os valores secretos à volta de TODAS as stages,
+    // o que dispara o aviso "insecure interpolation of sensitive variables".
+    // Em vez disso, cada secret é bindada com `withCredentials` só onde é usada.
     DEPLOY_IMAGE = "simulador-credito-habitacao:${env.GIT_COMMIT ?: 'latest'}"
-    GEMINI_API_KEY = credentials('gemini-api-key')
-    ADMIN_TOKEN = credentials('admin-token')
-    DEBUG_SECRET = credentials('debug-secret')
     PUBLIC_APP_URL = 'https://simulador-credito.tiagomartins.pt/'
   }
 
@@ -33,7 +35,8 @@ pipeline {
       when { triggeredBy 'TimerTrigger' }
       agent any
       steps {
-        sh '''
+        withCredentials([string(credentialsId: 'admin-token', variable: 'ADMIN_TOKEN')]) {
+          sh '''
           APP_URL="http://localhost:3999"
           echo "A submeter actualização de spreads..."
           curl -sf -X POST "${APP_URL}/api/spreads" \
@@ -53,7 +56,8 @@ pipeline {
             -H "x-admin-token: ${ADMIN_TOKEN}" \
             -H "x-spreads-action: approve" \
             --max-time 10 || echo "Aprovação falhou (pode não haver dados pendentes)"
-        '''
+          '''
+        }
       }
     }
 
@@ -64,23 +68,29 @@ pipeline {
       agent any
       steps {
         sh 'docker build -t "${DEPLOY_IMAGE}" .'
-        sh '''
-          docker rm -f simulador-credito-habitacao || true
+        withCredentials([
+          string(credentialsId: 'gemini-api-key', variable: 'GEMINI_API_KEY'),
+          string(credentialsId: 'admin-token', variable: 'ADMIN_TOKEN'),
+          string(credentialsId: 'debug-secret', variable: 'DEBUG_SECRET')
+        ]) {
+          sh '''
+            docker rm -f simulador-credito-habitacao || true
 
-          # Ensure the data volume is owned by the node user (UID 1000) so the
-          # container (USER node) can read/write the SQLite files.
-          # No-op on fresh volumes; fixes existing root-owned ones.
-          docker run --rm \
-            -v simulador-credito-habitacao-data:/data \
-            alpine chown -R 1000:1000 /data
+            # Ensure the data volume is owned by the node user (UID 1000) so the
+            # container (USER node) can read/write the SQLite files.
+            # No-op on fresh volumes; fixes existing root-owned ones.
+            docker run --rm \
+              -v simulador-credito-habitacao-data:/data \
+              alpine chown -R 1000:1000 /data
 
-          docker run -d --name simulador-credito-habitacao -p 3999:3000 \
-            -v simulador-credito-habitacao-data:/usr/src/app/data \
-            -e GEMINI_API_KEY="${GEMINI_API_KEY}" \
-            -e ADMIN_TOKEN="${ADMIN_TOKEN}" \
-            -e DEBUG_SECRET="${DEBUG_SECRET}" \
-            "${DEPLOY_IMAGE}"
-        '''
+            docker run -d --name simulador-credito-habitacao -p 3999:3000 \
+              -v simulador-credito-habitacao-data:/usr/src/app/data \
+              -e GEMINI_API_KEY="${GEMINI_API_KEY}" \
+              -e ADMIN_TOKEN="${ADMIN_TOKEN}" \
+              -e DEBUG_SECRET="${DEBUG_SECRET}" \
+              "${DEPLOY_IMAGE}"
+          '''
+        }
       }
     }
   }

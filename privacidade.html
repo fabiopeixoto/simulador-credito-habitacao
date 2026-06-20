@@ -6,9 +6,7 @@
 <title>Política de Privacidade — Simulador Crédito Habitação</title>
 <meta name="description" content="Política de privacidade do Simulador Crédito Habitação. Informação sobre recolha e tratamento de dados."/>
 <link rel="canonical" href="/privacidade.html"/>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/fonts/inter.css"/>
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/favicon.png">
 <meta name="theme-color" content="#2563eb">
@@ -35,7 +33,7 @@
   <a class="back" href="/">← Voltar ao simulador</a>
 
   <h1>Política de Privacidade</h1>
-  <p class="updated">Última actualização: Maio de 2026</p>
+  <p class="updated">Última actualização: Junho de 2026</p>
 
   <div class="card">
     <h2>1. Quem somos</h2>
@@ -50,8 +48,8 @@
     <p>A nossa recolha de dados é mínima e limita-se ao necessário para o funcionamento da plataforma:</p>
     <ul>
       <li><strong>Registos de acesso (logs):</strong> endereço IP, data/hora, página visitada e browser. Mantidos no servidor por 30 dias para fins de diagnóstico e segurança.</li>
-      <li><strong>Estatísticas agregadas de visitas:</strong> número de visitantes por dia e localização aproximada por cidade. Para determinar a cidade, o teu endereço IP é enviado temporariamente ao serviço <strong>ip-api.com</strong> — apenas a cidade resultante é armazenada; o IP não é guardado. Os dados de visitas são <em>agrupados e anonimizados</em> — não identificamos utilizadores individuais.</li>
-      <li><strong>Comentários (opcional):</strong> se publicares um comentário, guardamos o nome/alcunha que indicares, o texto e a data/hora. Opcionalmente, também são guardados o banco seleccionado, a prestação simulada e a prestação real, caso os preenchas. Não pedimos email nem criação de conta. Podes usar um nome fictício.</li>
+      <li><strong>Estatísticas agregadas de visitas:</strong> número de visitantes por dia e localização aproximada por cidade. A geolocalização é determinada localmente nos nossos servidores com base numa base de dados MaxMind GeoLite2 — o teu endereço IP nunca sai dos nossos servidores para este fim; apenas a cidade resultante é armazenada. Os dados de visitas são <em>agrupados e anonimizados</em> — não identificamos utilizadores individuais.</li>
+      <li><strong>Comentários (opcional):</strong> se publicares um comentário, guardamos o nome/alcunha que indicares, o texto e a data/hora. Opcionalmente, também são guardados o banco seleccionado, a prestação simulada e a prestação real, caso os preenchas. Não pedimos email nem criação de conta. Podes usar um nome fictício. Qualquer utilizador pode reportar um comentário inadequado ao administrador.</li>
       <li><strong>Dados da simulação:</strong> os parâmetros que introduzes no simulador (capital, prazo, rendimento, etc.) são processados exclusivamente no teu browser e/ou enviados para os nossos servidores apenas para efectuar o cálculo — <strong>não são armazenados</strong> de forma permanente.</li>
     </ul>
   </div>
@@ -79,11 +77,12 @@
     <h2>5. Partilha de dados com terceiros</h2>
     <p>Não vendemos nem cedemos dados pessoais a terceiros. Os únicos terceiros envolvidos são:</p>
     <ul>
-      <li><strong>ip-api.com (geolocalização):</strong> o teu endereço IP é enviado a este serviço para determinar a cidade de origem da visita. Apenas a cidade é guardada nos nossos servidores; o IP não é retido. Consulta a <a href="https://ip-api.com/docs/legal" target="_blank" rel="noopener">política de privacidade do ip-api.com</a>.</li>
       <li><strong>Banco Central Europeu (BCE):</strong> consultamos a API pública do BCE para obter valores Euribor actualizados. Nenhum dado teu é transmitido ao BCE.</li>
-      <li><strong>Google Fonts:</strong> este site carrega a fonte Inter a partir de <code>fonts.googleapis.com</code> e <code>fonts.gstatic.com</code>. O teu endereço IP é enviado ao Google aquando do carregamento da fonte. Consulta a <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">política de privacidade da Google</a>.</li>
       <li><strong>Fornecedor de alojamento:</strong> o servidor está alojado numa infraestrutura cloud. Os logs de acesso podem estar sujeitos às políticas do fornecedor.</li>
     </ul>
+    <div class="highlight">
+      A fonte Inter e os logótipos dos bancos são servidos directamente pelos nossos servidores — o teu endereço IP nunca é transmitido ao Google ou a outros terceiros para carregamento de recursos visuais.
+    </div>
   </div>
 
   <div class="card">
@@ -132,7 +131,7 @@
 </div>
 
 <div id="cookie-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#fff;border-top:1px solid #e5e7eb;padding:12px 20px;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;font-size:13px;color:#374151;font-family:'Inter',system-ui,sans-serif;box-shadow:0 -2px 8px rgba(0,0,0,0.08)">
-  <span>Este site utiliza armazenamento local para guardar as tuas preferências e carrega fontes do Google Fonts.</span>
+  <span>Este site utiliza armazenamento local para guardar as tuas preferências.</span>
   <a href="/privacidade.html" style="color:#2563eb;font-size:13px;text-decoration:underline;white-space:nowrap">Política de Privacidade</a>
   <button onclick="localStorage.setItem('cookie_consent','1');document.getElementById('cookie-banner').style.display='none';" style="background:#2563eb;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">Aceitar</button>
 </div>
