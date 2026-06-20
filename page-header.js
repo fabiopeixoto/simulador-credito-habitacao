@@ -114,7 +114,7 @@
 
 
   // Set to null to disable the notice banner sitewide
-  var NOTICE = "Alguns spreads bancários estão a ser atualizados — os valores podem não estar completos.";
+  var NOTICE = "Dados sempre em manutenção — os valores são indicativos e podem não estar completos.";
 
   function NoticeBanner(){
     var _s=React.useState(false),dismissed=_s[0],setDismissed=_s[1];
