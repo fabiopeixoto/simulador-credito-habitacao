@@ -75,14 +75,116 @@ A fronteira exacta entre patamares está entre imóvel **222 000 €** e **223
 
 ---
 
+## 3.1 Esquema da API da CGD (referência)
+
+> **Estado:** `simuladorch.cgd.pt` é o **único** simulador oficial que (à data da evidência) expunha um endpoint JSON conduzível por programação. Os restantes bancos são SPAs com proteção anti-bot (HTTP 403 a acesso automatizado). Esta secção fixa o que se sabe da forma da API; **os nomes exactos dos campos marcados `⚠️ verificar` precisam de reconfirmação** via DevTools → Network numa sessão real (não estão guardados no código).
+
+### Endpoint
+
+| Item | Valor |
+|------|-------|
+| **Host** | `simuladorch.cgd.pt` (**c**rédito **h**abitação) |
+| **Método** | `POST` |
+| **Caminho** | `/calculate` |
+| **Content-Type** | `application/json` (⚠️ verificar) |
+| **Acesso** | Bloqueia user-agents automatizados (403); inspeccionar via browser real |
+
+### Request (payload) — campos conhecidos
+
+| Campo (semântico) | Tipo | Notas | Estado |
+|-------------------|------|-------|--------|
+| Medida Jovem | bool | `IsMedidaJovem` — confirmado na evidência 2026-05-10 | ✅ |
+| Capital pedido | número (€) | montante do empréstimo | ⚠️ nome |
+| Valor do imóvel | número (€) | usado para derivar o LTV e o patamar de spread | ⚠️ nome |
+| Prazo | inteiro (anos) | | ⚠️ nome |
+| Tipo de taxa | enum | variável / mista / fixa | ⚠️ nome |
+| Indexante | enum | Euribor 3m / 6m / 12m | ⚠️ nome |
+| Titulares / idades | array | nº de titulares e idade(s) | ⚠️ nome |
+| Produtos associados | bool/flags | distingue cartão Base (sem) de Reduzida (com) | ⚠️ nome |
+
+### Response — estrutura conhecida
+
+A resposta vem **por «cartão»** (produto comercial):
+
+- **Cartão Base** — sem produtos vinculados
+- **Cartão Reduzida** — com produtos vinculados
+
+Cada cartão devolve:
+
+| Campo | Significado | Estado |
+|-------|-------------|--------|
+| Spread | spread aplicado (%) | ✅ |
+| TAN | taxa anual nominal (%) | ✅ |
+| Prestação | mensalidade capital+juros (€) | ✅ |
+| TAEG | taxa anual de encargos efectiva global (%) | ✅ |
+| MTIC | montante total imputado ao consumidor (€) | ✅ |
+| Indexante usado | valor da Euribor fixado pela CGD (ex.: 6m = 2,454 % em 2026-05-10; **diverge do BCE** com o tempo) | ✅ |
+
+### Regra de patamares de spread por LTV (Medida Jovem, HPP)
+
+Comportamento observado na API (2026-05-10), replicado em `app.js` (`b.s==="CGD" && modoJovem && finalidade==="hpp"`):
+
+| LTV (capital / valor de referência) | Spread Base (sem prod.) | Spread Reduzida (com prod.) |
+|-------------------------------------|------------------------:|----------------------------:|
+| **> 90 %** | 2,35 % | 1,65 % |
+| **≤ 90 %** | 1,35 % | 0,65 % |
+
+- Fronteira exacta verificada: imóvel entre **222 000 €** e **223 000 €** para crédito **200 000 €**.
+- Nestes patamares **não se soma** o escalão LTV genérico do preçário (`getLTVAddon` é forçado a 0 — `app.js:241`).
+
+### Como capturar uma sessão real (para revalidar)
+
+1. Abrir `simuladorch.cgd.pt` num browser; DevTools → separador **Network**.
+2. Preencher o wizard e simular.
+3. Localizar o pedido **`POST /calculate`**: copiar **Payload** (request) e **Response**.
+4. Colar na próxima sessão de auditoria → comparar `calcP` / `calcTAEG` / `calcMTIC` cêntimo a cêntimo e preencher os nomes de campo `⚠️ verificar` acima.
+
+---
+
 ## 4. Outros bancos (tabela a preencher)
 
 | Banco | URL oficial | Prestação (interno) | Prestação (oficial) | Desvio % | TAEG (interno) | TAEG (oficial) | Dif. p.p. | MTIC (interno) | MTIC (oficial) | Desvio % | Resultado |
 |-------|---------------|--------------------:|--------------------:|---------:|---------------:|---------------:|----------:|----------------:|---------------:|---------:|-------------|
-| Millennium BCP | https://www.millenniumbcp.pt/credito/credito-habitacao/simulador | | | | | | | | | | |
-| Santander | https://www.santander.pt/credito-habitacao/simulador-credito-habitacao | | | | | | | | | | |
-| BPI | https://www.bancobpi.pt/particulares/credito-habitacao/simulador | | | | | | | | | | |
-| Novo Banco | https://www.novobanco.pt/particulares/credito-habitacao | | | | | | | | | | |
+| Millennium BCP | https://www.millenniumbcp.pt/credito/credito-habitacao/simulador | 720,80 € | 720,80 € | 0,000 % | 4,6 % | 4,7 % | −0,1 | — | — | — | ✅ dentro de tolerância |
+| Santander | https://www.santander.pt/credito-habitacao/simulador-credito-habitacao | | | | | | | | | | ⚠️ simulador bloqueia acesso automático |
+| BPI | https://www.bancobpi.pt/particulares/credito-habitacao/simulador | | | | | | | | | | ⚠️ simulador bloqueia acesso automático |
+| Novo Banco | https://www.novobanco.pt/particulares/credito-habitacao | | | | | | | | | | ⚠️ simulador bloqueia acesso automático |
+
+---
+
+## 4-bis. Sessão de auditoria — 2026-06-20 (UTC)
+
+> **Nota de método:** os simuladores interactivos dos bancos (BCP, Santander, BPI, Novo Banco, CGD) bloqueiam acesso automatizado (HTTP 403 / proteção anti-bot) e são SPAs que não se conseguem conduzir por fetch a partir do ambiente. Em alternativa, validou-se o motor interno contra os **exemplos representativos oficiais (FINE / preçário SECÇÃO 18)** publicados pelos bancos — que fixam `(capital, TAN, prazo) → prestação` e TAEG, sendo a referência verificável mais próxima do simulador oficial.
+
+**Euribor live (17-jun-2026):** 3m **2,417 %** · 6m **2,607 %** · 12m **2,759 %**.
+
+### Teste 1 — Prestação (anuidade) vs FINE oficial (match exacto de TAN)
+
+| Fonte oficial | Capital | TAN | Prazo | Prest. oficial | Prest. interna (`calcP`) | Desvio |
+|---------------|--------:|----:|------:|---------------:|-------------------------:|-------:|
+| BCP FINE — sem produtos (E12m 2,804 % + spread 1,25 %) | 150 000 € | 4,054 % | 30 a | 720,80 € | **720,80 €** | **0,000 %** |
+| BCP FINE — com produtos (E12m 2,804 % + spread 0,70 %) | 150 000 € | 3,504 % | 30 a | 673,90 € | **673,90 €** | **0,000 %** |
+| CGD FINE — Regime Geral (E6m 2,454 % + spread 1,35 %) | 150 000 € | 3,804 % | 35 a | 646,64 € | **646,64 €** | **0,000 %** |
+
+→ A anuidade interna coincide **ao cêntimo** com os exemplos oficiais quando a TAN coincide. Motor de prestação validado.
+
+### Teste 2 — TAEG vs FINE oficial (BCP sem produtos, mesmos inputs)
+
+Inputs oficiais: comissões iniciais 748,80 €; seguro de vida 20,88 €/mês.
+
+| Stack de encargos alimentado ao `calcTAEG` | TAEG interna | TAEG oficial | Dif. |
+|--------------------------------------------|-------------:|-------------:|-----:|
+| Só seguro de vida | 4,3 % | 4,7 % | −0,4 p.p. |
+| Vida + multirriscos | 4,5 % | 4,7 % | −0,2 p.p. |
+| Vida + multirriscos + conta (stack completo da app) | **4,6 %** | 4,7 % | **−0,1 p.p.** ✅ |
+
+→ O `calcTAEG` está correcto; só converge para o valor oficial quando alimentado com **todo** o encargo mensal (vida + multirriscos + conta), que é o que a app já faz. Dentro de ±0,30 p.p.
+
+### Observações sobre dados de seed (`api/banks.js`)
+
+- **BCP, spread com produtos:** seed `sCom = 0,70 %` = FINE **exacto**. ✅
+- **BCP, spread sem produtos:** seed `sSem = 1,50 %` vs FINE **1,25 %** → seed **0,25 p.p. mais conservador**. Candidato a actualização.
+- **Indexante dos FINE está desfasado** do BCE: BCP usa E12m 2,804 % (mai-2026), CGD usa E6m 2,454 % (abr-2026); ambos divergem do live (12m 2,759 % / 6m 2,607 %). Comparar sempre com a Euribor da mesma data do exemplo.
 
 ---
 
@@ -101,6 +203,7 @@ A fronteira exacta entre patamares está entre imóvel **222 000 €** e **223
 - Após **alteração relevante** em `api/banks.js` (seeds / reconciliação), `app.js` (regras BdP, IMT, TAEG) ou preçários BdP.
 - **Trimestralmente** ou quando o **BCE** ou os **simuladores oficiais** mudarem spreads/TAN de referência.
 - **Última revisão estrutural do modelo:** **2026-05-24** (UTC).
+- **Última sessão de auditoria:** **2026-06-20** (UTC) — ver §4-bis.
 
 ---
 
