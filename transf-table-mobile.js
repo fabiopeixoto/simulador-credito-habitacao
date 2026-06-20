@@ -56,7 +56,7 @@
         h("div",{style:{padding:"14px 18px 12px",borderBottom:"1px solid rgba(0,0,0,0.07)",display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexShrink:0}},
           h("div",{style:{display:"flex",alignItems:"center",gap:9,minWidth:0}},
             h("div",{style:{width:32,height:28,borderRadius:5,background:"rgba(0,0,0,0.05)",border:"1px solid "+(d.color||"#999")+"55",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,overflow:"hidden"}},
-              h("img",{src:"https://www.google.com/s2/favicons?domain="+(BANK_DOMAINS[d.code]||"bank.pt")+"&sz=32",width:22,height:22,style:{objectFit:"contain",display:"block"},alt:d.code,
+              h("img",{src:"/api/favicon?domain="+(BANK_DOMAINS[d.code]||"bank.pt")+"&sz=32",width:22,height:22,style:{objectFit:"contain",display:"block"},alt:d.code,
                 onError:function(e){var t=e.currentTarget.parentElement;t.innerHTML='<span style="font-size:8px;font-weight:700;font-family:monospace;color:'+(d.color||"#666")+'">'+d.code+'</span>';e.currentTarget.onError=null;}})
             ),
             h("div",{style:{minWidth:0}},
@@ -137,7 +137,7 @@
             h("td",{style:Object.assign({},tdM,{verticalAlign:"middle",background:bg})},
               h("div",{style:{display:"flex",alignItems:"center",gap:4}},
                 h("div",{style:{width:20,height:20,borderRadius:4,background:"rgba(0,0,0,0.05)",border:"1px solid "+d.color+"55",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,overflow:"hidden"}},
-                  h("img",{src:"https://www.google.com/s2/favicons?domain="+(BANK_DOMAINS[d.code]||"bank.pt")+"&sz=32",width:16,height:16,style:{objectFit:"contain",display:"block"},alt:d.code,onError:function(e){var t=e.currentTarget.parentElement;t.innerHTML='<span style="font-size:8px;font-weight:700;font-family:monospace;color:'+d.color+'">'+d.code+'</span>';e.currentTarget.onError=null;}})),
+                  h("img",{src:"/api/favicon?domain="+(BANK_DOMAINS[d.code]||"bank.pt")+"&sz=32",width:16,height:16,style:{objectFit:"contain",display:"block"},alt:d.code,onError:function(e){var t=e.currentTarget.parentElement;t.innerHTML='<span style="font-size:8px;font-weight:700;font-family:monospace;color:'+d.color+'">'+d.code+'</span>';e.currentTarget.onError=null;}})),
                 h("div",null,
                   h("span",{style:{fontWeight:700,color:top?"#2563eb":"#111827",fontSize:11}},d.name),
                   d.refMismatch&&h("span",{style:{fontSize:9,color:"#b45309",marginLeft:3}},"("+d.useRef+")")))),

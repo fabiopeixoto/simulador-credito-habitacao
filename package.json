@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@google/genai": "^1.52.0",
-    "better-sqlite3": "^12.9.0"
+    "better-sqlite3": "^12.9.0",
+    "geoip-lite": "^1.4.10"
   }
 }

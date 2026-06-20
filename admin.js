@@ -1,4 +1,4 @@
-/** Domínios para favicon (Google s2) — alinhado com o simulador */
+/** Domínios para favicon (proxy local /api/favicon) — alinhado com o simulador */
 const BANK_DOMAINS = {
   CA: 'creditoagricola.pt', CTT: 'ctt.pt', BNKTR: 'bankinter.pt', ABANCA: 'abanca.com',
   BCP: 'millenniumbcp.pt', ACTVO: 'activobank.pt', BPI: 'bpi.pt', MNTPO: 'bancomontepio.pt',
@@ -233,11 +233,13 @@ function renderCommentsAdminTree(items) {
         + (c.realPt != null ? escapeHtml(String(c.realPt)) : '—')
         + ' €/mês</div>'
       : '';
+    const flagged = c.flagged ? 'border-left:3px solid #ef4444;background:rgba(239,68,68,0.08)' : 'border-left:3px solid rgba(59,130,246,0.45)';
+    const flagBadge = c.flagged ? '<span style="font-size:10px;background:#ef4444;color:#fff;border-radius:4px;padding:1px 6px;margin-left:6px;font-weight:700;">REPORTADO</span>' : '';
     return `
-      <div style="margin-left:${depth * 14}px;margin-bottom:10px;padding:12px 14px;background:rgba(0,0,0,0.2);border-radius:8px;border-left:3px solid rgba(59,130,246,0.45);">
+      <div style="margin-left:${depth * 14}px;margin-bottom:10px;padding:12px 14px;background:rgba(0,0,0,0.2);border-radius:8px;${flagged}">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
           <div style="flex:1;min-width:220px;font-size:13px;">
-            <strong>${escapeHtml(c.name || 'Anónimo')}</strong><span style="color:var(--muted);">${bankLine}</span>
+            <strong>${escapeHtml(c.name || 'Anónimo')}</strong>${flagBadge}<span style="color:var(--muted);">${bankLine}</span>
             <span style="color:var(--muted);font-size:12px;"> · ${dt}</span>
             ${nums}
             <div style="margin-top:8px;color:var(--text);white-space:pre-wrap;line-height:1.45;">${escapeHtml(c.text)}</div>
@@ -627,7 +629,7 @@ function renderBanks() {
     const domain = BANK_DOMAINS[b.code] || 'bank.pt';
     const hex = (b.color && String(b.color).startsWith('#')) ? b.color : '#64748b';
     const borderTint = hex.length === 7 ? hex + '55' : hex;
-    const favUrl = 'https://www.google.com/s2/favicons?sz=32&amp;domain=' + encodeURIComponent(domain);
+    const favUrl = '/api/favicon?domain=' + encodeURIComponent(domain);
     const refsArr = b.refs || [];
     const refOk = refsArr.includes(ref);
     const t1 = eur != null && Number.isFinite(Number(eur)) && s.sCom != null ? Number(eur) + Number(s.sCom) : null;

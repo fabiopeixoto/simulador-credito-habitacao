@@ -281,7 +281,7 @@
                             isTop&&h("span",{style:{fontSize:12,color:Au,fontWeight:700,fontFamily:"monospace",whiteSpace:"nowrap"}},"★ "),
                             h("div",{style:{width:30,height:26,borderRadius:5,background:"rgba(0,0,0,0.04)",border:"1px solid "+row.color+"55",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,overflow:"hidden"}},
                               h("img",{
-                                src:"https://www.google.com/s2/favicons?domain="+(BANK_DOMAINS[row.code]||"bank.pt")+"&sz=32",
+                                src:"/api/favicon?domain="+(BANK_DOMAINS[row.code]||"bank.pt")+"&sz=32",
                                 width:22,height:22,
                                 style:{objectFit:"contain",display:"block"},
                                 alt:row.code,
