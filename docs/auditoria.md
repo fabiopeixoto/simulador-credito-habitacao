@@ -361,7 +361,7 @@ Com vendas associadas. Financiamento **180 000 €** (capital implícito da pres
 ### Observações sobre dados de seed (`api/banks.js`)
 
 - **BCP, spread com produtos:** seed `sCom = 0,70 %` = FINE **exacto**. ✅
-- **BCP, spread sem produtos:** seed `sSem = 1,50 %` vs FINE **1,25 %** → seed **0,25 p.p. mais conservador**. Candidato a actualização.
+- **BCP, spread sem produtos:** seed `sSem = 1,50 %` vs FINE **1,25 %** → **✅ aplicado** (`sSem → 1,25`).
 - **Indexante dos FINE está desfasado** do BCE: BCP usa E12m 2,804 % (mai-2026), CGD usa E6m 2,454 % (abr-2026); ambos divergem do live (12m 2,759 % / 6m 2,607 %). Comparar sempre com a Euribor da mesma data do exemplo.
 - **Seguros — calibração é por banco (`vRef`/`mAno`), NÃO do modelo.** O modelo `sVida`/multirriscos está correcto: onde o seed está certo, acerta (BPI vida 1,03×, Santander multi exacto). Os desvios são valores de seed banco-a-banco. Tabela consolidada (4 bancos, prémio mensal para 200 000 € / imóvel 200 000 €):
 
@@ -374,7 +374,12 @@ Com vendas associadas. Financiamento **180 000 €** (capital implícito da pres
   | ActivoBank | `vRef 19,84` → 23,81 € | 17,27 € | 1,38× | `mAno 256` → 21,33 € | 20,70 € | ↓ `vRef`~14,4 (multi ok) |
 
   Não mexer no modelo. (Conclusão revista após Teste 4/5 — antes suspeitava-se de factor sistémico.) Notar que os simuladores da CGD/Santander/NB não pediram idade do titular.
-- **✅ Correcções aplicadas (2026-06-20):** `api/banks.js` (+ exemplo em `api/spreads.js`) — CGD `vRef 12,54` / `mAno 135,36` / `minutas 202,80`; Santander `vRef 10,58`; Novo Banco `vRef 11,51` / `mAno 148,09`; ActivoBank `vRef 14,39`; CTT `vRef 16,13`; UCI `vRef 16,88` / `mAno 205,22`. Com estes valores o cálculo de seguros reproduz o prémio oficial. BPI e Bankinter ficaram inalterados (já próximos).
+- **✅ Correcções de seguros aplicadas (2026-06-20):** `api/banks.js` (+ exemplo em `api/spreads.js`) — CGD `vRef 12,54` / `mAno 135,36` / `minutas 202,80`; Santander `vRef 10,58`; Novo Banco `vRef 11,51` / `mAno 148,09`; ActivoBank `vRef 14,39`; CTT `vRef 16,13`; UCI `vRef 16,88` / `mAno 205,22`. Com estes valores o cálculo de seguros reproduz o prémio oficial. BPI e Bankinter ficaram inalterados (já próximos).
+- **✅ Correcções de spread/LTV aplicadas (2026-06-20):** `api/banks.js` + fallback `inversa-bootstrap.js` —
+  - **BCP** `sSem 1,50 → 1,25` (FINE sem produtos).
+  - **CTT** `sCom 0,85 → 0,75`, `sSem 1,45 → 1,35` (simulador 20/06/2026: com produtos 0,750 %; base sem produtos 1,350 % via pack −0,6 p.p.; diverge do §18.1 citado) + escalão LTV → **sem prémio** `[{max:100,add:0}]` (a LTV 100 % o spread é o base, sem addon).
+  - **ActivoBank** escalão LTV: `{max:90,add:0,05}` → `{max:90,add:0}` (a LTV 90 % aplica spread base; mantém-se `{max:100,add:0,10}`).
+  - Resultado: CTT @LTV100 e ActivoBank @LTV90 passam a dar **0,750 %** (= oficial); BCP sem produtos **1,25 %** (= FINE).
 - **Cobertura da auditoria:** **11 de 13 bancos** validados contra simuladores/FINE oficiais, todos com prestação a **0,000 %**: CGD, Santander, BCP, BPI, Novo Banco, ActivoBank, Crédito Agrícola, Banco CTT, Bankinter, Montepio, UCI. **Não auditáveis** (sem simulador público): **Abanca** e **BNI Europa**. **Banco Best removido** do produto (era intermediário do Novo Banco — mesmo simulador/seguros; ver `DROPPED_BANK_CODES`).
 
 ---
