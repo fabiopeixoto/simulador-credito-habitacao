@@ -343,6 +343,21 @@ Com vendas associadas. Financiamento **180 000 €** (capital implícito da pres
 
 - Prestação **ao cêntimo**. Spread 0,70 % confirma `sCom 0,70` **+ sem addon de LTV** (`SEED_LTV_BRACKETS.MNTPO` é tudo 0) — correcto, ao contrário do CTT. O MTIC bater dentro de −1,02 % com os seguros do seed (`vRef 8,006` @100k, `mAno 62,88` @100k) é indício de que estão razoáveis (não verificável directo — screenshot sem seguros).
 
+### Teste 11 — UCI (simulador, screenshot 2026-06-20)
+
+200 000 € / imóvel 200 000 €, 30 anos, variável, Euribor 6m **2,536 %**, spread 1,990 %. (Seguros do seed marcados «(est.)».)
+
+| Métrica | Interno | UCI | Desvio | Veredito |
+|---------|--------:|----:|-------:|----------|
+| TAN | 4,526 % | 4,526 % | exacto | ✅ |
+| **Prestação** | **1 016,46 €** | 1 016,46 € | **0,000 %** | ✅ |
+| Seguro de vida (seed `vRef 19,00` → 25,33 €) | 25,33 € | 22,50 € | 1,13× → `vRef 16,88` | ✅ corrigido |
+| Multirriscos (seed `mAno 150` → 12,50 €) | 12,50 € | 17,10 € | 0,73× → `mAno 205,22` | ✅ corrigido |
+| TAEG | 5,0 % | 5,227 % | −0,23 p.p. | ✅ (±0,30) |
+
+- **✅ Aplicado:** `UCI.vRef 19,00 → 16,88` e `mAno 150 → 205,22` (estavam marcados «(est.)»; agora leitura directa: vida mensal 22,50 €, imóvel semestral 102,61 € → 17,10 €/mês).
+- **Spread:** oficial **1,990 %** fica entre o seed `sCom 1,43` e `sSem 2,30` — coerente com a gama, mas não mapeia exactamente (UCI é mutuante pequeno; spreads do seed aproximados). Prestação validada com o spread oficial.
+
 ### Observações sobre dados de seed (`api/banks.js`)
 
 - **BCP, spread com produtos:** seed `sCom = 0,70 %` = FINE **exacto**. ✅
