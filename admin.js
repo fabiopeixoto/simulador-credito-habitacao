@@ -145,13 +145,20 @@ async function loadStatsAdmin() {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const d = await r.json();
     if (grid) {
+      const sinceFmt = (() => {
+        if (d.resetAt) {
+          try { return new Date(d.resetAt).toLocaleString('pt-PT', { dateStyle: 'short', timeStyle: 'short' }); } catch (_) { return d.resetAt; }
+        }
+        return d.recordedSince || '—';
+      })();
+      const sinceLabel = d.resetAt ? 'Contagem desde (após reset)' : 'Primeiro dia nos registos (UTC)';
       grid.innerHTML = `
         <div class="stat-card"><div class="label">Visitas página inicial (total)</div><div class="value">${fmtNum(d.homepageTotal)}</div></div>
         <div class="stat-card"><div class="label">Visitas hoje · início</div><div class="value">${fmtNum(d.today && d.today.homepage)}</div></div>
         <div class="stat-card"><div class="label">Visitas painel admin (total)</div><div class="value">${fmtNum(d.adminTotal)}</div></div>
         <div class="stat-card"><div class="label">Visitas hoje · admin</div><div class="value">${fmtNum(d.today && d.today.admin)}</div></div>
         <div class="stat-card"><div class="label">Linhas comentários (BD)</div><div class="value">${d.commentsTotal != null ? fmtNum(d.commentsTotal) : '—'}</div></div>
-        <div class="stat-card"><div class="label">Primeiro dia nos registos (UTC)</div><div class="value" style="font-size:1rem">${escapeHtml(d.recordedSince || '—')}</div></div>
+        <div class="stat-card"><div class="label">${escapeHtml(sinceLabel)}</div><div class="value" style="font-size:0.9rem;line-height:1.3">${escapeHtml(sinceFmt)}</div></div>
       `;
     }
     if (t7 && d.last7Days && d.last7Days.length) {
@@ -166,10 +173,15 @@ async function loadStatsAdmin() {
         const flag = cc => cc && cc.length === 2
           ? String.fromCodePoint(...[...cc.toUpperCase()].map(c => 0x1F1E6 - 65 + c.charCodeAt(0)))
           : '';
-        const rows = d.locations.map(l =>
-          `<tr><td>${flag(l.country_code)} ${escapeHtml(l.city)}</td><td style="color:var(--muted)">${escapeHtml(l.country_name || l.country_code)}</td><td>${fmtNum(l.count)}</td></tr>`
+        const INITIAL = 5;
+        const rows = d.locations.map((l, i) =>
+          `<tr${i >= INITIAL ? ' class="loc-extra" style="display:none"' : ''}><td>${flag(l.country_code)} ${escapeHtml(l.city)}</td><td style="color:var(--muted)">${escapeHtml(l.country_name || l.country_code)}</td><td>${fmtNum(l.count)}</td></tr>`
         ).join('');
-        locEl.innerHTML = `<h3 style="font-size:13px;font-weight:600;margin:0 0 8px;color:var(--text)">🌍 Localização dos visitantes</h3><div class="stats-admin-7d"><table><thead><tr><th>Cidade</th><th>País</th><th>Visitas</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+        const extra = d.locations.length - INITIAL;
+        const moreBtn = extra > 0
+          ? `<div style="text-align:center;margin-top:8px;"><button class="btn-sm btn-history" onclick="showMoreLocations(this)">Ver mais (${extra} localização${extra !== 1 ? 'ões' : ''})</button></div>`
+          : '';
+        locEl.innerHTML = `<h3 style="font-size:13px;font-weight:600;margin:0 0 8px;color:var(--text)">🌍 Localização dos visitantes</h3><div class="stats-admin-7d"><table><thead><tr><th>Cidade</th><th>País</th><th>Visitas</th></tr></thead><tbody>${rows}</tbody></table></div>${moreBtn}`;
       } else {
         locEl.innerHTML = '<p class="status" style="margin:4px 0;font-size:12px;">Sem dados de localização ainda.</p>';
       }
@@ -177,6 +189,26 @@ async function loadStatsAdmin() {
   } catch (e) {
     if (grid) grid.innerHTML = '<p class="status error">Não foi possível carregar estatísticas: ' + escapeHtml(e.message.slice(0, 120)) + '</p>';
     if (t7) t7.innerHTML = '';
+  }
+}
+
+function showMoreLocations(btn) {
+  document.querySelectorAll('.loc-extra').forEach(tr => { tr.style.display = ''; });
+  btn.closest('div').remove();
+}
+
+async function resetStatsAdmin() {
+  if (!adminUnlocked) return;
+  if (!confirm('Tem a certeza que quer apagar TODAS as estatísticas (visitas e localizações)?\n\nEsta acção não pode ser revertida.')) return;
+  try {
+    const r = await fetch('/api/stats', {
+      method: 'DELETE',
+      headers: { 'x-admin-token': getToken().trim() }
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    await loadStatsAdmin();
+  } catch (e) {
+    alert('Erro ao fazer reset das estatísticas: ' + e.message);
   }
 }
 

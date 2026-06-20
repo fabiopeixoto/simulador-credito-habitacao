@@ -22,6 +22,10 @@ const STATS_SCHEMA = `
       count        INTEGER NOT NULL DEFAULT 0,
       PRIMARY KEY (city, country_code)
     );
+    CREATE TABLE IF NOT EXISTS stats_config (
+      key   TEXT PRIMARY KEY,
+      value TEXT NOT NULL DEFAULT ''
+    );
   `;
 
 const { db: sqliteDb } = openSqliteDb(dbPath, { label: "stats.js", schema: STATS_SCHEMA });
@@ -110,6 +114,21 @@ function recordAdminPageView() {
   bumpMeta("admin_total");
 }
 
+function resetStats() {
+  if (!sqliteDb) return;
+  sqliteDb.prepare('DELETE FROM daily').run();
+  sqliteDb.prepare('DELETE FROM meta').run();
+  sqliteDb.prepare('DELETE FROM visitor_locations').run();
+  _ipCache.clear();
+  _pending.clear();
+  const now = new Date().toISOString();
+  sqliteDb.prepare(`
+    INSERT INTO stats_config(key, value) VALUES ('reset_at', ?)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value
+  `).run(now);
+  return now;
+}
+
 function metaNum(key) {
   if (!sqliteDb) return 0;
   const row = sqliteDb.prepare("SELECT value FROM meta WHERE key = ?").get(key);
@@ -169,11 +188,17 @@ function getSnapshot() {
     ? sqliteDb.prepare(`SELECT city, country_code, country_name, count FROM visitor_locations ORDER BY count DESC LIMIT 100`).all()
     : [];
 
+  const resetAtRow = sqliteDb
+    ? sqliteDb.prepare("SELECT value FROM stats_config WHERE key = 'reset_at'").get()
+    : null;
+  const resetAt = resetAtRow ? resetAtRow.value : null;
+
   return {
     homepageTotal: metaNum("homepage_total"),
     adminTotal: metaNum("admin_total"),
     today: { date: today, homepage: todayRow.homepage, admin: todayRow.admin },
     recordedSince,
+    resetAt,
     last7Days,
     commentsTotal: countCommentsReadonly(),
     locations,
@@ -183,11 +208,11 @@ function getSnapshot() {
 
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-admin-token");
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  if (req.method !== "GET") {
+  if (req.method !== "GET" && req.method !== "DELETE") {
     return res.status(405).json({ error: "Método não suportado" });
   }
 
@@ -197,9 +222,15 @@ module.exports = async function handler(req, res) {
     return res.status(403).json({ error: "Não autorizado" });
   }
 
+  if (req.method === "DELETE") {
+    const resetAt = resetStats();
+    return res.status(200).json({ ok: true, resetAt });
+  }
+
   return res.status(200).json(getSnapshot());
 };
 
 module.exports.recordHomepageView = recordHomepageView;
 module.exports.recordAdminPageView = recordAdminPageView;
 module.exports.recordVisitorLocation = recordVisitorLocation;
+module.exports.resetStats = resetStats;
