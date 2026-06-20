@@ -274,7 +274,7 @@
                       var poupTotal=row.poupancaTotal;
                       var eqM=row.equilibrioMeses;
                       var eqColor=breakEvenColor(eqM,remainingMonths);
-                      var eqLabel=!isFinite(eqM)||eqM>=remainingMonths?"Não compensa":(eqM<12?eqM+" meses":(Math.ceil(eqM/12))+"a "+((eqM%12)>0?(eqM%12)+"m":""));
+                      var eqLabel=!isFinite(eqM)||eqM>=remainingMonths?"Não compensa":(eqM<12?eqM+" meses":(Math.floor(eqM/12))+"a "+((eqM%12)>0?(eqM%12)+"m":""));
                       return h("tr",{key:row.code,style:{background:rowBg,outline:rowBorder?rowBorder:"none",position:"relative"}},
                         h("td",{style:tdSL},
                           h("div",{style:{display:"flex",alignItems:"center",gap:8}},

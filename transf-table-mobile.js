@@ -14,7 +14,7 @@
   function eqLabelFor(eqM,remainingMonths){
     if(!isFinite(eqM)||eqM>=remainingMonths)return "Não compensa";
     if(eqM<12)return eqM+" meses";
-    return Math.ceil(eqM/12)+"a "+((eqM%12)>0?(eqM%12)+"m":"");
+    return Math.floor(eqM/12)+"a "+((eqM%12)>0?(eqM%12)+"m":"");
   }
 
   // ── Detalhe de uma proposta de transferência (popup, telemóvel) ───────────
