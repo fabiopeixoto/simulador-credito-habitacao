@@ -266,6 +266,20 @@ Cenário com **Garantia do Estado DL44/24** (jovem; garantia 15 % / 30 000 €) 
 
 → Prestação **ao cêntimo**. Seguros desafinados nos dois sentidos: vida alto, multirriscos baixo.
 
+### Teste 6 — ActivoBank (simulador, screenshot 2026-06-20)
+
+Inputs **diferentes**: financiamento **180 000 €** / imóvel 200 000 € (**LTV 90 %**), 30 anos, variável, **com produtos**, Euribor 6m 2,536 %, spread **0,750 %**, campanha spread 0 % nos 1.ºs 24 meses.
+
+| Métrica | Interno | ActivoBank | Nota |
+|---------|--------:|-----------:|------|
+| TAN | 3,286 % | 3,286 % | ✅ exacto (spread 0,750 + E 2,536) |
+| Prestação 1.º ano / 11.º ano | — | 677,81 € / 826,25 € | ⚠️ **não replicável** (ver abaixo) |
+| Seguro de vida (seed `vRef 19,84`→ 23,81 €) | 23,81 € | 17,27 € | 1,38× → `vRef` ~14,39 |
+| Multirriscos (seed `mAno 256`→ 21,33 €) | 21,33 € | 20,70 € | 1,03× (ok) |
+
+- **Prestação por curva forward.** As prestações sobem ao longo da vida (677,81 € → 826,25 €) com taxas implícitas de **2,138 %** e **3,678 %** — o ActivoBank **projecta uma curva forward da Euribor**, ao contrário do modelo interno (Euribor spot fixa). Não é comparável ao cêntimo; é metodologia diferente, não erro de motor (já validado em 5 bancos).
+- **Fronteira LTV 90 %.** O ActivoBank aplica o spread **base** 0,750 % a LTV 90 % (sem addon). O `getLTVAddon` interno somaria **0,05** a `ltv ≤ 90` (`SEED_LTV_BRACKETS.ACTVO` tem `{max:90,add:0.05}`) → app mostraria 0,800 %. **Candidato a rever a semântica do escalão** (≤ 90 inclusivo vs exclusivo) — afecta vários bancos, não alterado aqui.
+
 ### Observações sobre dados de seed (`api/banks.js`)
 
 - **BCP, spread com produtos:** seed `sCom = 0,70 %` = FINE **exacto**. ✅
@@ -279,9 +293,10 @@ Cenário com **Garantia do Estado DL44/24** (jovem; garantia 15 % / 30 000 €) 
   | Santander | `vRef 22,55` → 30,07 € | 14,11 € | 2,1× | `mAno 246` → 20,50 € | 20,50 € ✅ | ↓ `vRef`~10,5 |
   | CGD | `vRef 29,82` → 39,76 € | 16,72 € | 2,4× | `mAno 110` → 9,17 € | 11,28 € | ↓ `vRef`~12,5; ↑ `mAno`~135 |
   | Novo Banco | `vRef 17,55` → 23,40 € | 15,35 € | 1,52× | `mAno 98` → 8,17 € | 12,34 € | ↓ `vRef`~11,5; ↑ `mAno`~148 |
+  | ActivoBank | `vRef 19,84` → 23,81 € | 17,27 € | 1,38× | `mAno 256` → 21,33 € | 20,70 € | ↓ `vRef`~14,4 (multi ok) |
 
   Não mexer no modelo. (Conclusão revista após Teste 4/5 — antes suspeitava-se de factor sistémico.) Notar que os simuladores da CGD/Santander/NB não pediram idade do titular.
-- **✅ Correcções aplicadas (2026-06-20):** `api/banks.js` (+ exemplo em `api/spreads.js`) — CGD `vRef 12,54` / `mAno 135,36` / `minutas 202,80`; Santander `vRef 10,58`; Novo Banco `vRef 11,51` / `mAno 148,09`. Com estes valores o cálculo de vida **e** multirriscos reproduz **exactamente** o prémio oficial dos três bancos. BPI ficou inalterado (já estava certo).
+- **✅ Correcções aplicadas (2026-06-20):** `api/banks.js` (+ exemplo em `api/spreads.js`) — CGD `vRef 12,54` / `mAno 135,36` / `minutas 202,80`; Santander `vRef 10,58`; Novo Banco `vRef 11,51` / `mAno 148,09`; ActivoBank `vRef 14,39`. Com estes valores o cálculo de seguros reproduz o prémio oficial. BPI ficou inalterado (já estava certo).
 
 ---
 
