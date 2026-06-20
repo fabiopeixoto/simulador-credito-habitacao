@@ -181,9 +181,9 @@ async function loadStatsAdmin() {
         const moreBtn = extra > 0
           ? `<div style="text-align:center;margin-top:8px;"><button class="btn-sm btn-history" onclick="showMoreLocations(this)">Ver mais (${extra} localização${extra !== 1 ? 'ões' : ''})</button></div>`
           : '';
-        locEl.innerHTML = `<h3 style="font-size:13px;font-weight:600;margin:0 0 8px;color:var(--text)">🌍 Localização dos visitantes</h3><div class="stats-admin-7d"><table><thead><tr><th>Cidade</th><th>País</th><th>Visitas</th></tr></thead><tbody>${rows}</tbody></table></div>${moreBtn}`;
+        locEl.innerHTML = `<div class="stats-admin-col-table"><h3 style="font-size:13px;font-weight:600;margin:0 0 8px;color:var(--text)">🌍 Localização dos visitantes</h3><div class="stats-admin-7d"><table><thead><tr><th>Cidade</th><th>País</th><th>Visitas</th></tr></thead><tbody>${rows}</tbody></table></div>${moreBtn}</div>`;
       } else {
-        locEl.innerHTML = '<p class="status" style="margin:4px 0;font-size:12px;">Sem dados de localização ainda.</p>';
+        locEl.innerHTML = '<div class="stats-admin-col-table"><p class="status" style="margin:4px 0;font-size:12px;">Sem dados de localização ainda.</p></div>';
       }
     }
   } catch (e) {
