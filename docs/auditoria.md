@@ -161,7 +161,7 @@ fetch("https://simuladorch.cgd.pt/calculate",{method:"POST",headers:{"Content-Ty
 | Banco | URL oficial | Prestação (interno) | Prestação (oficial) | Desvio % | TAEG (interno) | TAEG (oficial) | Dif. p.p. | MTIC (interno) | MTIC (oficial) | Desvio % | Resultado |
 |-------|---------------|--------------------:|--------------------:|---------:|---------------:|---------------:|----------:|----------------:|---------------:|---------:|-------------|
 | Millennium BCP | https://www.millenniumbcp.pt/credito/credito-habitacao/simulador | 720,80 € | 720,80 € | 0,000 % | 4,6 % | 4,7 % | −0,1 | — | — | — | ✅ dentro de tolerância |
-| Santander | https://www.santander.pt/credito-habitacao/simulador-credito-habitacao | | | | | | | | | | ⚠️ simulador bloqueia acesso automático |
+| Santander | https://simulador-credito-habitacao.santander.pt | 847,10 € | 847,10 € | 0,000 % | 3,7 % | 3,9 % | −0,19 | 330 845 € | 335 110 € | −1,27 % | ✅ dentro de tolerância (ver Teste 3) |
 | BPI | https://www.bancobpi.pt/particulares/credito-habitacao/simulador | | | | | | | | | | ⚠️ simulador bloqueia acesso automático |
 | Novo Banco | https://www.novobanco.pt/particulares/credito-habitacao | | | | | | | | | | ⚠️ simulador bloqueia acesso automático |
 
@@ -217,11 +217,31 @@ Inputs oficiais: comissões iniciais 748,80 €; seguro de vida 20,88 €/mês.
 
 → O `calcTAEG` está correcto; só converge para o valor oficial quando alimentado com **todo** o encargo mensal (vida + multirriscos + conta), que é o que a app já faz. Dentro de ±0,30 p.p.
 
+### Teste 3 — Santander (simulador client-side, screenshot 2026-06-20)
+
+O simulador do Santander é uma **SPA com cálculo client-side** (`simulador-credito-habitacao.santander.pt`): a pesquisa por valor no DevTools → Network **não devolve nada** (a prestação nunca passa pela rede). Fonte = página de resultados (FINE no ecrã). Inputs: HPP, 200 000 € / imóvel 200 000 €, 30 anos, variável, **com produtos**, Euribor 6m **2,536 %**, promo spread **0,5 % nos 1.ºs 3 anos** depois **0,8 %**.
+
+| Métrica | Interno | Santander | Desvio | Veredito |
+|---------|--------:|----------:|-------:|----------|
+| TAN promo / pós | 3,036 % / 3,336 % | 3,036 % / 3,336 % | exacto | ✅ |
+| **Prestação fase promo** (1.ºs 3 a) | **847,10 €** | 847,10 € | **0,000 %** | ✅ |
+| **Capital em dívida após 36 m** | **187 160,80 €** | 187 160,79 € | **1 cêntimo** | ✅ |
+| **Prestação após 3 anos** | **877,10 €** | 877,10 € | **0,000 %** | ✅ |
+| Multirriscos (`mAno = 246`) | 20,50 € | 20,50 € | exacto | ✅ |
+| TAEG (IRR sobre as 2 fases) | 3,7 % | 3,9 % | −0,19 p.p. | ✅ (±0,30) |
+| MTIC | 330 845 € | 335 110 € | −1,27 % | ✅ (±5 %) |
+
+→ O motor reproduz **as duas fases da promoção e o capital em dívida entre fases ao cêntimo**. Spreads do seed (`promoSpread = 0,50` / `sCom = 0,80`) **exactos**.
+
+**Nota de produto:** a app mostra a prestação ao **spread normal** (`calcP(200k; 3,336 %; 30) = 879,88 €`), não a prestação **promocional** de 847,10 € — apesar de o seed do Santander já ter `promoPeriodo = 36` e `promoSpread = 0,50`. A fase promocional não está reflectida na prestação principal (candidato a melhoria).
+
 ### Observações sobre dados de seed (`api/banks.js`)
 
 - **BCP, spread com produtos:** seed `sCom = 0,70 %` = FINE **exacto**. ✅
 - **BCP, spread sem produtos:** seed `sSem = 1,50 %` vs FINE **1,25 %** → seed **0,25 p.p. mais conservador**. Candidato a actualização.
 - **Indexante dos FINE está desfasado** do BCE: BCP usa E12m 2,804 % (mai-2026), CGD usa E6m 2,454 % (abr-2026); ambos divergem do live (12m 2,759 % / 6m 2,607 %). Comparar sempre com a Euribor da mesma data do exemplo.
+- **Seguro de vida sobrestimado ~2× — sistemático.** O modelo `sVida` dá ~2× o prémio oficial em **dois** bancos independentes: CGD 39,76 € vs 16,72 € (**2,4×**) e Santander 30,07 € vs 14,11 € (**2,1×**). Não é ruído de um banco — é o `vRef`/escala do modelo de vida. **Candidato a recalibração transversal** (afecta a prestação total e a TAEG de todos os cartões). Notar que nem a CGD nem o Santander pediram idade na simulação.
+- **Multirriscos do Santander exacto:** seed `mAno = 246` → 20,50 € = oficial. O modelo de multirriscos está bem calibrado; o desvio está só no seguro de **vida**.
 
 ---
 
