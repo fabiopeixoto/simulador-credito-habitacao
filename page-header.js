@@ -143,6 +143,14 @@
   function PageFooter(){
     return h("footer",{style:{textAlign:"center",padding:"18px 16px 28px",fontSize:12,color:"#6b7280",fontFamily:"'Inter',system-ui,sans-serif"}},
       "© 2026 simhabitacao.pt · ",
+      h("a",{href:"https://www.instagram.com/simulador.habitacao/",target:"_blank",rel:"noopener noreferrer","aria-label":"Instagram",title:"Segue-nos no Instagram",style:{color:"#4b5563",display:"inline-flex",alignItems:"center",verticalAlign:"middle"}},
+        h("svg",{width:15,height:15,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:2,strokeLinecap:"round",strokeLinejoin:"round","aria-hidden":"true"},
+          h("rect",{x:2,y:2,width:20,height:20,rx:5,ry:5}),
+          h("path",{d:"M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"}),
+          h("line",{x1:17.5,y1:6.5,x2:17.51,y2:6.5})
+        )
+      ),
+      " · ",
       h("a",{href:"/privacidade.html",style:{color:"#4b5563",textDecoration:"underline"}},"Política de Privacidade"),
       " · ",
       h("a",{href:"/LICENSE",target:"_blank",style:{color:"#4b5563",textDecoration:"underline"}},"Licença")
