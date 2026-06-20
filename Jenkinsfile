@@ -99,20 +99,23 @@ pipeline {
       when { expression { return params.APPLY_OVERRIDES } }
       agent any
       steps {
-        sh '''
-          DRY=""
-          [ "${OVERRIDES_DRY_RUN}" = "true" ] && DRY="--dry-run"
+        withCredentials([string(credentialsId: 'admin-token', variable: 'OVR_ADMIN_TOKEN')]) {
+          sh '''
+            set +x
+            DRY=""
+            [ "${OVERRIDES_DRY_RUN}" = "true" ] && DRY="--dry-run"
 
-          echo "A aguardar a app responder (máx ~60s)..."
-          for i in $(seq 1 30); do
-            curl -sf http://localhost:3999/api/banks >/dev/null 2>&1 && break
-            sleep 2
-          done
+            echo "A aguardar a API dentro do container (máx ~60s)..."
+            for i in $(seq 1 30); do
+              docker exec simulador-credito-habitacao node -e "fetch('http://localhost:3000/api/banks').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" >/dev/null 2>&1 && break
+              sleep 2
+            done
 
-          echo "A correr apply-overrides.js ${DRY}..."
-          docker exec -e BASE_URL=http://localhost:3000 -e ADMIN_TOKEN="${ADMIN_TOKEN}" \
-            simulador-credito-habitacao node scripts/apply-overrides.js ${DRY}
-        '''
+            echo "A correr apply-overrides.js ${DRY}..."
+            docker exec -e BASE_URL=http://localhost:3000 -e ADMIN_TOKEN="${OVR_ADMIN_TOKEN}" \
+              simulador-credito-habitacao node scripts/apply-overrides.js ${DRY}
+          '''
+        }
       }
     }
   }
