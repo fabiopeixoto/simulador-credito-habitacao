@@ -280,6 +280,24 @@ Inputs **diferentes**: financiamento **180 000 €** / imóvel 200 000 € (**LT
 - **Prestação por curva forward.** As prestações sobem ao longo da vida (677,81 € → 826,25 €) com taxas implícitas de **2,138 %** e **3,678 %** — o ActivoBank **projecta uma curva forward da Euribor**, ao contrário do modelo interno (Euribor spot fixa). Não é comparável ao cêntimo; é metodologia diferente, não erro de motor (já validado em 5 bancos).
 - **Fronteira LTV 90 %.** O ActivoBank aplica o spread **base** 0,750 % a LTV 90 % (sem addon). O `getLTVAddon` interno somaria **0,05** a `ltv ≤ 90` (`SEED_LTV_BRACKETS.ACTVO` tem `{max:90,add:0.05}`) → app mostraria 0,800 %. **Candidato a rever a semântica do escalão** (≤ 90 inclusivo vs exclusivo) — afecta vários bancos, não alterado aqui.
 
+### Teste 7 — Crédito Agrícola (simulador, screenshot 2026-06-20)
+
+LTV 100 % (200 000 € / imóvel 200 000 €), 30 anos, variável, Euribor 6m **2,536 %**, com promo (spread 0,500 % nos 1.ºs 24 meses, depois 0,875 %).
+
+| Métrica | Interno | Créd. Agrícola | Desvio | Veredito |
+|---------|--------:|---------------:|-------:|----------|
+| TAN promo / remanescente | 3,036 % / 3,411 % | 3,036 % / 3,411 % | exacto | ✅ |
+| **Prestação promo (24 m)** | **847,10 €** | 847,10 € | **0,000 %** | ✅ |
+| **Prestação remanescente (336 m)** | **885,87 €** | 885,87 € | **0,000 %** | ✅ |
+| TAEG (IRR 2 fases) | 3,7 % | 3,8 % | −0,1 p.p. | ✅ |
+| MTIC | 332 355 € | 332 096 € | +0,08 % | ✅ |
+
+→ Prestação **ao cêntimo nas duas fases** (a remanescente re-amortizada sobre o capital de 191 570,94 € após 24 m). MTIC quase exacto.
+
+**Notas de seed (CA):**
+- `promoSpread 0,50` **exacto** ✅; spread normal seed `sCom 0,75` + LTV 0,10 = **0,85 %** vs oficial **0,875 %** (seed −0,025 p.p.; base poderia ser 0,775).
+- **Seguros reportados como «média mensal»** (média na vida do crédito, capital decrescente) — base diferente do prémio inicial usado nos outros bancos. O **MTIC bate** porque a média é a base correcta para o total. Para calibração do seed: vida (média 23,58 € vs inicial 30,24 €) é consistente com a base média; **multirriscos parece ~2,6× alto no seed** (`mAno 160` → 13,33 € vs média 5,18 €; multirriscos não decresce → implícito `mAno ~62`). **A rever** (não alterado — base de medição diferente da dos restantes).
+
 ### Observações sobre dados de seed (`api/banks.js`)
 
 - **BCP, spread com produtos:** seed `sCom = 0,70 %` = FINE **exacto**. ✅
