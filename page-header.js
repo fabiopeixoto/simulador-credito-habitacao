@@ -143,11 +143,21 @@
   function PageFooter(){
     return h("footer",{style:{textAlign:"center",padding:"18px 16px 28px",fontSize:12,color:"#6b7280",fontFamily:"'Inter',system-ui,sans-serif"}},
       "© 2026 simhabitacao.pt · ",
-      h("a",{href:"https://www.instagram.com/simulador.habitacao/",target:"_blank",rel:"noopener noreferrer","aria-label":"Instagram",title:"Segue-nos no Instagram",style:{color:"#4b5563",display:"inline-flex",alignItems:"center",verticalAlign:"middle"}},
-        h("svg",{width:15,height:15,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:2,strokeLinecap:"round",strokeLinejoin:"round","aria-hidden":"true"},
-          h("rect",{x:2,y:2,width:20,height:20,rx:5,ry:5}),
-          h("path",{d:"M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"}),
-          h("line",{x1:17.5,y1:6.5,x2:17.51,y2:6.5})
+      h("a",{href:"https://www.instagram.com/simulador.habitacao/",target:"_blank",rel:"noopener noreferrer","aria-label":"Instagram",title:"Segue-nos no Instagram",style:{display:"inline-flex",alignItems:"center",verticalAlign:"middle"}},
+        h("svg",{width:16,height:16,viewBox:"0 0 24 24","aria-hidden":"true"},
+          h("defs",null,
+            h("radialGradient",{id:"igGrad",cx:"30%",cy:"107%",r:"150%"},
+              h("stop",{offset:"0%",stopColor:"#fdf497"}),
+              h("stop",{offset:"5%",stopColor:"#fdf497"}),
+              h("stop",{offset:"45%",stopColor:"#fd5949"}),
+              h("stop",{offset:"60%",stopColor:"#d6249f"}),
+              h("stop",{offset:"90%",stopColor:"#285AEB"})
+            )
+          ),
+          h("rect",{x:2,y:2,width:20,height:20,rx:6,fill:"url(#igGrad)"}),
+          h("rect",{x:6,y:6,width:12,height:12,rx:4,fill:"none",stroke:"#fff",strokeWidth:1.6}),
+          h("circle",{cx:12,cy:12,r:3.2,fill:"none",stroke:"#fff",strokeWidth:1.6}),
+          h("circle",{cx:16.4,cy:7.6,r:1,fill:"#fff"})
         )
       ),
       " · ",
