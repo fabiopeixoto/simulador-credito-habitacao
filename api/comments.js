@@ -127,6 +127,13 @@ function flagCommentById(id) {
   return info.changes > 0;
 }
 
+function unflagCommentById(id) {
+  if (!hasSqlite()) return false;
+  const info = sqliteDb.prepare("UPDATE comments SET flagged = 0 WHERE id = ?").run(id);
+  if (info.changes > 0) invalidateTreeCache();
+  return info.changes > 0;
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
@@ -203,11 +210,23 @@ module.exports = async function handler(req, res) {
     const id = (req.query && req.query.id) || "";
     if (!id) return res.status(400).json({ error: "ID em falta" });
     const action = (req.body && req.body.action) || "";
-    if (action !== "report") return res.status(400).json({ error: "Acção inválida" });
     const exists = getCommentById(id);
     if (!exists) return res.status(404).json({ error: "Comentário não encontrado" });
-    flagCommentById(id);
-    return res.status(200).json({ ok: true });
+    if (action === "report") {
+      flagCommentById(id);
+      return res.status(200).json({ ok: true });
+    }
+    if (action === "unflag") {
+      // Acção de admin: remove a marca de reportado ("Manter").
+      const token = req.headers["x-admin-token"] || "";
+      const adminToken = process.env.ADMIN_TOKEN;
+      if (!adminToken || token !== adminToken) {
+        return res.status(403).json({ error: "Não autorizado" });
+      }
+      unflagCommentById(id);
+      return res.status(200).json({ ok: true });
+    }
+    return res.status(400).json({ error: "Acção inválida" });
   }
 
   if (req.method === "DELETE") {

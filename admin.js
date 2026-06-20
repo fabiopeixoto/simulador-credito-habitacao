@@ -233,8 +233,9 @@ function renderCommentsAdminTree(items) {
         + (c.realPt != null ? escapeHtml(String(c.realPt)) : '—')
         + ' €/mês</div>'
       : '';
-    const flagged = c.flagged ? 'border-left:3px solid #ef4444;background:rgba(239,68,68,0.08)' : 'border-left:3px solid rgba(59,130,246,0.45)';
+    const flagged = c.flagged ? 'border:2px solid #ef4444;background:rgba(239,68,68,0.14)' : 'border:1px solid rgba(59,130,246,0.25);border-left:3px solid rgba(59,130,246,0.45)';
     const flagBadge = c.flagged ? '<span style="font-size:10px;background:#ef4444;color:#fff;border-radius:4px;padding:1px 6px;margin-left:6px;font-weight:700;">REPORTADO</span>' : '';
+    const keepBtn = c.flagged ? `<button type="button" class="btn-sm" data-cid="${idEsc}" onclick="unflagCommentAdmin(this.dataset.cid)" title="Remover marca de reportado" style="background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.5);color:#16a34a;">Manter</button>` : '';
     return `
       <div style="margin-left:${depth * 14}px;margin-bottom:10px;padding:12px 14px;background:rgba(0,0,0,0.2);border-radius:8px;${flagged}">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
@@ -244,7 +245,10 @@ function renderCommentsAdminTree(items) {
             ${nums}
             <div style="margin-top:8px;color:var(--text);white-space:pre-wrap;line-height:1.45;">${escapeHtml(c.text)}</div>
           </div>
-          <button type="button" class="btn-sm btn-delete" data-cid="${idEsc}" onclick="deleteCommentAdmin(this.dataset.cid)">Apagar</button>
+          <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
+            ${keepBtn}
+            <button type="button" class="btn-sm btn-delete" data-cid="${idEsc}" onclick="deleteCommentAdmin(this.dataset.cid)">Apagar</button>
+          </div>
         </div>
         ${replies}
       </div>`;
@@ -278,6 +282,24 @@ async function deleteCommentAdmin(id) {
     const r = await fetch('/api/comments?id=' + encodeURIComponent(id), {
       method: 'DELETE',
       headers: { 'x-admin-token': getToken().trim() },
+    });
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      throw new Error(d.error || 'HTTP ' + r.status);
+    }
+    await loadCommentsAdmin();
+  } catch (e) {
+    alert('Erro: ' + e.message);
+  }
+}
+
+async function unflagCommentAdmin(id) {
+  if (!adminUnlocked || !id) return;
+  try {
+    const r = await fetch('/api/comments?id=' + encodeURIComponent(id), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'x-admin-token': getToken().trim() },
+      body: JSON.stringify({ action: 'unflag' }),
     });
     if (!r.ok) {
       const d = await r.json().catch(() => ({}));
