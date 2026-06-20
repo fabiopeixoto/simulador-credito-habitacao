@@ -233,7 +233,7 @@ O simulador do Santander é uma **SPA com cálculo client-side** (`simulador-cre
 
 → O motor reproduz **as duas fases da promoção e o capital em dívida entre fases ao cêntimo**. Spreads do seed (`promoSpread = 0,50` / `sCom = 0,80`) **exactos**.
 
-**Nota de produto:** a app mostra a prestação ao **spread normal** (`calcP(200k; 3,336 %; 30) = 879,88 €`), não a prestação **promocional** de 847,10 € — apesar de o seed do Santander já ter `promoPeriodo = 36` e `promoSpread = 0,50`. A fase promocional não está reflectida na prestação principal (candidato a melhoria).
+**Nota de produto (decisão 2026-06-20):** a app mostra a prestação ao **spread normal** (`calcP(200k; 3,336 %; 30) = 879,88 €`), não a promocional de 847,10 € — apesar de o seed do Santander ter `promoPeriodo = 36` / `promoSpread = 0,50`. **Decidido manter** este comportamento: para um comparador de **longo prazo** o spread normal é a base justa; mostrar a fase promocional (2–3 anos) como prestação principal favoreceria artificialmente os bancos com campanha e distorceria a ordenação. Os campos `promoPeriodo`/`promoSpread` ficam como dados informativos (bullets de promo), sem entrar no cálculo.
 
 ### Teste 4 — BPI (simulador, screenshot 2026-06-20)
 
