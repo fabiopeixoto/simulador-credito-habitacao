@@ -330,6 +330,19 @@ Com vendas associadas. Financiamento **180 000 €** (capital implícito da pres
 - Prestação **ao cêntimo**; multirriscos **exacto**; vida só 1,11× (seed em bom estado — **não alterado**, sobretudo porque a idade da simulação não é conhecida e o `vAge` do Bankinter é 36).
 - **MTIC o maior desvio até agora (−4,70 %).** Causa provável: o Bankinter mostra **prémio de vida crescente** (Média Anual 296,02 € > 1.º Ano 232,29 € — sobe com a idade ao longo do crédito), enquanto o modelo interno usa prémio de idade fixa; e o MTIC oficial parece incluir mais despesas/impostos (campo «Despesas e Impostos» 6.672,92 €). Prestação (núcleo) intacta.
 
+### Teste 10 — Banco Montepio (simulador, screenshot 2026-06-20)
+
+**Crédito Habitação Jovem** (garantia pública). 200 000 € / imóvel 200 000 € (LTV 100 %), 30 anos, variável, Euribor 6m **2,536 %**, spread 0,70 %. (Screenshot não mostra os seguros.)
+
+| Métrica | Interno | Montepio | Desvio | Veredito |
+|---------|--------:|---------:|-------:|----------|
+| TAN | 3,236 % | 3,236 % | exacto | ✅ |
+| **Prestação** | **868,88 €** | 868,88 € | **0,000 %** | ✅ |
+| TAEG | 3,6 % | 3,7 % | −0,1 p.p. | ✅ |
+| MTIC (c/ seguros do seed) | 325 680 € | 329 027 € | −1,02 % | ✅ |
+
+- Prestação **ao cêntimo**. Spread 0,70 % confirma `sCom 0,70` **+ sem addon de LTV** (`SEED_LTV_BRACKETS.MNTPO` é tudo 0) — correcto, ao contrário do CTT. O MTIC bater dentro de −1,02 % com os seguros do seed (`vRef 8,006` @100k, `mAno 62,88` @100k) é indício de que estão razoáveis (não verificável directo — screenshot sem seguros).
+
 ### Observações sobre dados de seed (`api/banks.js`)
 
 - **BCP, spread com produtos:** seed `sCom = 0,70 %` = FINE **exacto**. ✅
