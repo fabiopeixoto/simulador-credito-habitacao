@@ -298,6 +298,22 @@ LTV 100 % (200 000 € / imóvel 200 000 €), 30 anos, variável, Euribor 6m **
 - `promoSpread 0,50` **exacto** ✅; spread normal seed `sCom 0,75` + LTV 0,10 = **0,85 %** vs oficial **0,875 %** (seed −0,025 p.p.; base poderia ser 0,775).
 - **Seguros reportados como «média mensal»** (média na vida do crédito, capital decrescente) — base diferente do prémio inicial usado nos outros bancos. O **MTIC bate** porque a média é a base correcta para o total. Para calibração do seed: vida (média 23,58 € vs inicial 30,24 €) é consistente com a base média; **multirriscos parece ~2,6× alto no seed** (`mAno 160` → 13,33 € vs média 5,18 €; multirriscos não decresce → implícito `mAno ~62`). **A rever** (não alterado — base de medição diferente da dos restantes).
 
+### Teste 8 — Banco CTT (simulador, screenshot 2026-06-20)
+
+Com vendas associadas. 200 000 € / imóvel 200 000 €, 30 anos, variável, **Euribor 12M 2,804 %** (não 6m), spread 0,750 %.
+
+| Métrica | Interno | Banco CTT | Desvio | Veredito |
+|---------|--------:|----------:|-------:|----------|
+| TAN | 3,554 % | 3,554 % | exacto | ✅ |
+| **Prestação** | **904,13 €** | 904,13 € | **0,000 %** | ✅ |
+| Multirriscos (seed `mAno 207,12`) | 17,26 € | 17,26 € | **exacto** | ✅ |
+| Seguro de vida (seed `vRef 21,51` → 28,68 €) | 28,68 € | 21,51 € | 1,33× → `vRef 16,13` | ⚠️→✅ corrigido |
+| TAEG | 4,0 % | 4,1 % | −0,1 p.p. | ✅ |
+| MTIC | 342 757 € | 342 493 € | +0,08 % | ✅ |
+
+- **✅ Aplicado:** `CTT.vRef 21,51 → 16,13` (multirriscos já exacto, inalterado).
+- **⚠️ Spread a rever (não alterado).** Com produtos a LTV 100 % o CTT mostra spread **0,750 %** (base sem produtos implícita 1,350 %, dado o pack de −0,6 p.p.). O seed tem `sCom 0,85` / `sSem 1,45`, e o `getLTVAddon` somaria +0,10 a LTV 100 % → app mostraria **0,95 % / 1,55 %**, ~0,20 p.p. acima do oficial. Candidato a baixar `sCom`/`sSem` do CTT e/ou rever o LTV addon. (Engine validado com o spread oficial — o desvio é de seed.)
+
 ### Observações sobre dados de seed (`api/banks.js`)
 
 - **BCP, spread com produtos:** seed `sCom = 0,70 %` = FINE **exacto**. ✅
