@@ -170,7 +170,7 @@ Variável obrigatória no servidor: **`GEMINI_API_KEY`**. Opcional: **`SPREADS_A
 
 #### Origem dos dados de spreads
 
-O refresh lê os **preçários oficiais em PDF** de cada banco (taxas §18.1 + comissões §18.2) configurados em `BANK_SOURCES` (`api/spreads.js`). A *URL context tool* do Gemini busca os PDFs do lado dos servidores Google, evitando bloqueios de IP; bancos cujo site bloqueia o fetcher (ex.: ABANCA, BEST) usam o preçário combinado do **Portal do Cliente Bancário (BdP)**.
+O refresh lê os **preçários oficiais em PDF** de cada banco (taxas §18.1 + comissões §18.2) configurados em `BANK_SOURCES` (`api/spreads.js`). A *URL context tool* do Gemini busca os PDFs do lado dos servidores Google, evitando bloqueios de IP; bancos cujo site bloqueia o fetcher (ex.: ABANCA) usam o preçário combinado do **Portal do Cliente Bancário (BdP)**.
 
 Cada banco é classificado por **origem** (mostrada no admin e no detalhe por banco):
 

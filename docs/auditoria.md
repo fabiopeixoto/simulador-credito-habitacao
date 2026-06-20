@@ -280,6 +280,84 @@ Inputs **diferentes**: financiamento **180 000 €** / imóvel 200 000 € (**LT
 - **Prestação por curva forward.** As prestações sobem ao longo da vida (677,81 € → 826,25 €) com taxas implícitas de **2,138 %** e **3,678 %** — o ActivoBank **projecta uma curva forward da Euribor**, ao contrário do modelo interno (Euribor spot fixa). Não é comparável ao cêntimo; é metodologia diferente, não erro de motor (já validado em 5 bancos).
 - **Fronteira LTV 90 %.** O ActivoBank aplica o spread **base** 0,750 % a LTV 90 % (sem addon). O `getLTVAddon` interno somaria **0,05** a `ltv ≤ 90` (`SEED_LTV_BRACKETS.ACTVO` tem `{max:90,add:0.05}`) → app mostraria 0,800 %. **Candidato a rever a semântica do escalão** (≤ 90 inclusivo vs exclusivo) — afecta vários bancos, não alterado aqui.
 
+### Teste 7 — Crédito Agrícola (simulador, screenshot 2026-06-20)
+
+LTV 100 % (200 000 € / imóvel 200 000 €), 30 anos, variável, Euribor 6m **2,536 %**, com promo (spread 0,500 % nos 1.ºs 24 meses, depois 0,875 %).
+
+| Métrica | Interno | Créd. Agrícola | Desvio | Veredito |
+|---------|--------:|---------------:|-------:|----------|
+| TAN promo / remanescente | 3,036 % / 3,411 % | 3,036 % / 3,411 % | exacto | ✅ |
+| **Prestação promo (24 m)** | **847,10 €** | 847,10 € | **0,000 %** | ✅ |
+| **Prestação remanescente (336 m)** | **885,87 €** | 885,87 € | **0,000 %** | ✅ |
+| TAEG (IRR 2 fases) | 3,7 % | 3,8 % | −0,1 p.p. | ✅ |
+| MTIC | 332 355 € | 332 096 € | +0,08 % | ✅ |
+
+→ Prestação **ao cêntimo nas duas fases** (a remanescente re-amortizada sobre o capital de 191 570,94 € após 24 m). MTIC quase exacto.
+
+**Notas de seed (CA):**
+- `promoSpread 0,50` **exacto** ✅; spread normal seed `sCom 0,75` + LTV 0,10 = **0,85 %** vs oficial **0,875 %** (seed −0,025 p.p.; base poderia ser 0,775).
+- **Seguros reportados como «média mensal»** (média na vida do crédito, capital decrescente) — base diferente do prémio inicial usado nos outros bancos. O **MTIC bate** porque a média é a base correcta para o total. Para calibração do seed: vida (média 23,58 € vs inicial 30,24 €) é consistente com a base média; **multirriscos parece ~2,6× alto no seed** (`mAno 160` → 13,33 € vs média 5,18 €; multirriscos não decresce → implícito `mAno ~62`). **A rever** (não alterado — base de medição diferente da dos restantes).
+
+### Teste 8 — Banco CTT (simulador, screenshot 2026-06-20)
+
+Com vendas associadas. 200 000 € / imóvel 200 000 €, 30 anos, variável, **Euribor 12M 2,804 %** (não 6m), spread 0,750 %.
+
+| Métrica | Interno | Banco CTT | Desvio | Veredito |
+|---------|--------:|----------:|-------:|----------|
+| TAN | 3,554 % | 3,554 % | exacto | ✅ |
+| **Prestação** | **904,13 €** | 904,13 € | **0,000 %** | ✅ |
+| Multirriscos (seed `mAno 207,12`) | 17,26 € | 17,26 € | **exacto** | ✅ |
+| Seguro de vida (seed `vRef 21,51` → 28,68 €) | 28,68 € | 21,51 € | 1,33× → `vRef 16,13` | ⚠️→✅ corrigido |
+| TAEG | 4,0 % | 4,1 % | −0,1 p.p. | ✅ |
+| MTIC | 342 757 € | 342 493 € | +0,08 % | ✅ |
+
+- **✅ Aplicado:** `CTT.vRef 21,51 → 16,13` (multirriscos já exacto, inalterado).
+- **⚠️ Spread a rever (não alterado).** Com produtos a LTV 100 % o CTT mostra spread **0,750 %** (base sem produtos implícita 1,350 %, dado o pack de −0,6 p.p.). O seed tem `sCom 0,85` / `sSem 1,45`, e o `getLTVAddon` somaria +0,10 a LTV 100 % → app mostraria **0,95 % / 1,55 %**, ~0,20 p.p. acima do oficial. Candidato a baixar `sCom`/`sSem` do CTT e/ou rever o LTV addon. (Engine validado com o spread oficial — o desvio é de seed.)
+
+### Teste 9 — Bankinter (simulador, screenshot 2026-06-20)
+
+Com vendas associadas. Financiamento **180 000 €** (capital implícito da prestação) / imóvel 200 000 € (**LTV 90 %**), 30 anos, variável, **Euribor 6M 2,536 %**, spread 0,700 %.
+
+| Métrica | Interno | Bankinter | Desvio | Veredito |
+|---------|--------:|----------:|-------:|----------|
+| TAN | 3,236 % | 3,236 % | exacto | ✅ |
+| **Prestação** | **781,99 €** | 781,99 € | **0,000 %** | ✅ |
+| Multirriscos (seed `mAno 210`) | 17,50 € | 17,50 € | **exacto** | ✅ |
+| Seguro de vida 1.º ano (idade 30) | 21,39 € | 19,36 € | 1,11× | ✅ (próximo) |
+| TAEG (c/ produtos) | 3,8 % | 3,891 % | −0,09 p.p. | ✅ |
+| MTIC | 299 429 € | 314 189 € | −4,70 % | ✅ (no limite de ±5 %) |
+
+- Prestação **ao cêntimo**; multirriscos **exacto**; vida só 1,11× (seed em bom estado — **não alterado**, sobretudo porque a idade da simulação não é conhecida e o `vAge` do Bankinter é 36).
+- **MTIC o maior desvio até agora (−4,70 %).** Causa provável: o Bankinter mostra **prémio de vida crescente** (Média Anual 296,02 € > 1.º Ano 232,29 € — sobe com a idade ao longo do crédito), enquanto o modelo interno usa prémio de idade fixa; e o MTIC oficial parece incluir mais despesas/impostos (campo «Despesas e Impostos» 6.672,92 €). Prestação (núcleo) intacta.
+
+### Teste 10 — Banco Montepio (simulador, screenshot 2026-06-20)
+
+**Crédito Habitação Jovem** (garantia pública). 200 000 € / imóvel 200 000 € (LTV 100 %), 30 anos, variável, Euribor 6m **2,536 %**, spread 0,70 %. (Screenshot não mostra os seguros.)
+
+| Métrica | Interno | Montepio | Desvio | Veredito |
+|---------|--------:|---------:|-------:|----------|
+| TAN | 3,236 % | 3,236 % | exacto | ✅ |
+| **Prestação** | **868,88 €** | 868,88 € | **0,000 %** | ✅ |
+| TAEG | 3,6 % | 3,7 % | −0,1 p.p. | ✅ |
+| MTIC (c/ seguros do seed) | 325 680 € | 329 027 € | −1,02 % | ✅ |
+
+- Prestação **ao cêntimo**. Spread 0,70 % confirma `sCom 0,70` **+ sem addon de LTV** (`SEED_LTV_BRACKETS.MNTPO` é tudo 0) — correcto, ao contrário do CTT. O MTIC bater dentro de −1,02 % com os seguros do seed (`vRef 8,006` @100k, `mAno 62,88` @100k) é indício de que estão razoáveis (não verificável directo — screenshot sem seguros).
+
+### Teste 11 — UCI (simulador, screenshot 2026-06-20)
+
+200 000 € / imóvel 200 000 €, 30 anos, variável, Euribor 6m **2,536 %**, spread 1,990 %. (Seguros do seed marcados «(est.)».)
+
+| Métrica | Interno | UCI | Desvio | Veredito |
+|---------|--------:|----:|-------:|----------|
+| TAN | 4,526 % | 4,526 % | exacto | ✅ |
+| **Prestação** | **1 016,46 €** | 1 016,46 € | **0,000 %** | ✅ |
+| Seguro de vida (seed `vRef 19,00` → 25,33 €) | 25,33 € | 22,50 € | 1,13× → `vRef 16,88` | ✅ corrigido |
+| Multirriscos (seed `mAno 150` → 12,50 €) | 12,50 € | 17,10 € | 0,73× → `mAno 205,22` | ✅ corrigido |
+| TAEG | 5,0 % | 5,227 % | −0,23 p.p. | ✅ (±0,30) |
+
+- **✅ Aplicado:** `UCI.vRef 19,00 → 16,88` e `mAno 150 → 205,22` (estavam marcados «(est.)»; agora leitura directa: vida mensal 22,50 €, imóvel semestral 102,61 € → 17,10 €/mês).
+- **Spread:** oficial **1,990 %** fica entre o seed `sCom 1,43` e `sSem 2,30` — coerente com a gama, mas não mapeia exactamente (UCI é mutuante pequeno; spreads do seed aproximados). Prestação validada com o spread oficial.
+
 ### Observações sobre dados de seed (`api/banks.js`)
 
 - **BCP, spread com produtos:** seed `sCom = 0,70 %` = FINE **exacto**. ✅
@@ -296,7 +374,8 @@ Inputs **diferentes**: financiamento **180 000 €** / imóvel 200 000 € (**LT
   | ActivoBank | `vRef 19,84` → 23,81 € | 17,27 € | 1,38× | `mAno 256` → 21,33 € | 20,70 € | ↓ `vRef`~14,4 (multi ok) |
 
   Não mexer no modelo. (Conclusão revista após Teste 4/5 — antes suspeitava-se de factor sistémico.) Notar que os simuladores da CGD/Santander/NB não pediram idade do titular.
-- **✅ Correcções aplicadas (2026-06-20):** `api/banks.js` (+ exemplo em `api/spreads.js`) — CGD `vRef 12,54` / `mAno 135,36` / `minutas 202,80`; Santander `vRef 10,58`; Novo Banco `vRef 11,51` / `mAno 148,09`; ActivoBank `vRef 14,39`. Com estes valores o cálculo de seguros reproduz o prémio oficial. BPI ficou inalterado (já estava certo).
+- **✅ Correcções aplicadas (2026-06-20):** `api/banks.js` (+ exemplo em `api/spreads.js`) — CGD `vRef 12,54` / `mAno 135,36` / `minutas 202,80`; Santander `vRef 10,58`; Novo Banco `vRef 11,51` / `mAno 148,09`; ActivoBank `vRef 14,39`; CTT `vRef 16,13`; UCI `vRef 16,88` / `mAno 205,22`. Com estes valores o cálculo de seguros reproduz o prémio oficial. BPI e Bankinter ficaram inalterados (já próximos).
+- **Cobertura da auditoria:** **11 de 13 bancos** validados contra simuladores/FINE oficiais, todos com prestação a **0,000 %**: CGD, Santander, BCP, BPI, Novo Banco, ActivoBank, Crédito Agrícola, Banco CTT, Bankinter, Montepio, UCI. **Não auditáveis** (sem simulador público): **Abanca** e **BNI Europa**. **Banco Best removido** do produto (era intermediário do Novo Banco — mesmo simulador/seguros; ver `DROPPED_BANK_CODES`).
 
 ---
 
