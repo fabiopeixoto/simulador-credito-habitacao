@@ -9,13 +9,6 @@ pipeline {
     cron('H 3 * * 1') // Refresh semanal de spreads — segunda-feira ~3h UTC
   }
 
-  parameters {
-    booleanParam(name: 'APPLY_OVERRIDES', defaultValue: false,
-      description: 'Correr o override pontual de seguros/spreads/LTV (scripts/apply-overrides.js) após o deploy.')
-    booleanParam(name: 'OVERRIDES_DRY_RUN', defaultValue: true,
-      description: 'Se marcado, só pré-visualiza (--dry-run) sem gravar. Desmarca para aplicar a sério.')
-  }
-
   environment {
     // Apenas valores não-sensíveis aqui. As credenciais NÃO são bindadas
     // globalmente: ao usar `credentials(...)` no environment de topo, o Jenkins
@@ -96,34 +89,6 @@ pipeline {
               -e ADMIN_TOKEN="${ADMIN_TOKEN}" \
               -e DEBUG_SECRET="${DEBUG_SECRET}" \
               "${DEPLOY_IMAGE}"
-          '''
-        }
-      }
-    }
-
-    stage('Aplicar Overrides (pontual)') {
-      // Só corre quando marcas APPLY_OVERRIDES em "Build with Parameters".
-      // Aplica seguros/spreads/LTV da auditoria via scripts/apply-overrides.js,
-      // executado DENTRO do container já deployado (tem node + script + API + token).
-      // Mantém OVERRIDES_DRY_RUN marcado para pré-ver; desmarca para gravar.
-      when { expression { return params.APPLY_OVERRIDES } }
-      agent any
-      steps {
-        withCredentials([string(credentialsId: 'admin-token', variable: 'OVR_ADMIN_TOKEN')]) {
-          sh '''
-            set +x
-            DRY=""
-            [ "${OVERRIDES_DRY_RUN}" = "true" ] && DRY="--dry-run"
-
-            echo "A aguardar a API dentro do container (máx ~60s)..."
-            for i in $(seq 1 30); do
-              docker exec simulador-credito-habitacao node -e "fetch('http://localhost:3000/api/banks').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" >/dev/null 2>&1 && break
-              sleep 2
-            done
-
-            echo "A correr apply-overrides.js ${DRY}..."
-            docker exec -e BASE_URL=http://localhost:3000 -e ADMIN_TOKEN="${OVR_ADMIN_TOKEN}" \
-              simulador-credito-habitacao node scripts/apply-overrides.js ${DRY}
           '''
         }
       }
