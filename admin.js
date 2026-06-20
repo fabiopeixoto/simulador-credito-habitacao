@@ -3,7 +3,7 @@ const BANK_DOMAINS = {
   CA: 'creditoagricola.pt', CTT: 'ctt.pt', BNKTR: 'bankinter.pt', ABANCA: 'abanca.com',
   BCP: 'millenniumbcp.pt', ACTVO: 'activobank.pt', BPI: 'bpi.pt', MNTPO: 'bancomontepio.pt',
   SANTR: 'santander.pt', NB: 'novobanco.pt', CGD: 'cgd.pt', UCI: 'uci.es',
-  BNI: 'bnieuropa.pt', BEST: 'bancobest.pt'
+  BNI: 'bnieuropa.pt'
 };
 
 let banks = [];

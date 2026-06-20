@@ -374,7 +374,8 @@ Com vendas associadas. Financiamento **180 000 €** (capital implícito da pres
   | ActivoBank | `vRef 19,84` → 23,81 € | 17,27 € | 1,38× | `mAno 256` → 21,33 € | 20,70 € | ↓ `vRef`~14,4 (multi ok) |
 
   Não mexer no modelo. (Conclusão revista após Teste 4/5 — antes suspeitava-se de factor sistémico.) Notar que os simuladores da CGD/Santander/NB não pediram idade do titular.
-- **✅ Correcções aplicadas (2026-06-20):** `api/banks.js` (+ exemplo em `api/spreads.js`) — CGD `vRef 12,54` / `mAno 135,36` / `minutas 202,80`; Santander `vRef 10,58`; Novo Banco `vRef 11,51` / `mAno 148,09`; ActivoBank `vRef 14,39`. Com estes valores o cálculo de seguros reproduz o prémio oficial. BPI ficou inalterado (já estava certo).
+- **✅ Correcções aplicadas (2026-06-20):** `api/banks.js` (+ exemplo em `api/spreads.js`) — CGD `vRef 12,54` / `mAno 135,36` / `minutas 202,80`; Santander `vRef 10,58`; Novo Banco `vRef 11,51` / `mAno 148,09`; ActivoBank `vRef 14,39`; CTT `vRef 16,13`; UCI `vRef 16,88` / `mAno 205,22`. Com estes valores o cálculo de seguros reproduz o prémio oficial. BPI e Bankinter ficaram inalterados (já próximos).
+- **Cobertura da auditoria:** **11 de 13 bancos** validados contra simuladores/FINE oficiais, todos com prestação a **0,000 %**: CGD, Santander, BCP, BPI, Novo Banco, ActivoBank, Crédito Agrícola, Banco CTT, Bankinter, Montepio, UCI. **Não auditáveis** (sem simulador público): **Abanca** e **BNI Europa**. **Banco Best removido** do produto (era intermediário do Novo Banco — mesmo simulador/seguros; ver `DROPPED_BANK_CODES`).
 
 ---
 

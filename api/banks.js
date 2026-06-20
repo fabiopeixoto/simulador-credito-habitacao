@@ -6,7 +6,7 @@ const dbDir = path.join(__dirname, "..", "data");
 const dbPath = path.join(dbDir, "banks.sqlite");
 
 /** Códigos retirados do produto (podem persistir em bases antigas) — não expor na API. */
-const DROPPED_BANK_CODES = new Set(["BIC"]);
+const DROPPED_BANK_CODES = new Set(["BIC", "BEST"]);
 
 const BANKS_SCHEMA = `
     CREATE TABLE IF NOT EXISTS banks (
@@ -159,7 +159,6 @@ const SEED_LTV_BRACKETS = {
   CGD:   [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
   UCI:   [{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
   BNI:   [{max:80,add:0},{max:90,add:0.10}],
-  BEST:  [{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
 };
 
 const SEED_BANKS = [
@@ -175,9 +174,7 @@ const SEED_BANKS = [
   { code: "NB", name: "Novo Banco", color: "#00a651", refs: ["3m", "6m", "12m"], jOk: true, carenciaMax: 24, tipos: ["variável", "mista", "fixa"], promos: ["Euribor 3m · 6m · 12m", "Cashback 1%", "Mudum — multirriscos mais barato"], prod: "Pack 1.º Banco (dom.) + GamaLife + Mudum", jProd: "100% financiamento; cashback 1%" },
   { code: "CGD", name: "CGD", color: "#006633", refs: ["3m", "6m", "12m"], jOk: true, carenciaMax: 0, tipos: ["variável", "mista", "fixa"], promos: ["Banco público", "CH Reg. Geral: E6 + spread 0,65%–1,35% (FINE mai.2026)", "Medida Jovem: spreads no simulador CGD", "Cert. A/B: -0,15%"], prod: "Pack Vinculação + Pack Ligação (Fidelidade Vida + Multi)", jProd: "CH Normal: 0,65%/1,35% c/s prod.; Medida Jovem: 1,65%/2,35% c/s prod. (FINE mai.2026)" },
   { code: "UCI", name: "UCI", color: "#1a3a6b", refs: ["3m", "6m", "12m"], jOk: true, carenciaMax: 0, tipos: ["variável", "mista"], promos: ["CH variável: E6 + spread 1,43–2,30% (§18.1 mai.2026)", "Mista: TAN 4,09% (5a) / 4,29% (10a fixo + E6)", "Fixa até 10a (prazo máx): TAN 4,39% — não simulada (prazo curto)", "Montante 12,5k–1M€", "Sem conta obrigatória"], prod: "Seg. Vida + Multirriscos", jProd: "100% c/ garantia Estado (ver condições UCI)" },
-  { code: "BNI", name: "BNI Europa", color: "#4a235a", refs: ["3m", "6m", "12m"], jOk: false, carenciaMax: 0, tipos: ["variável", "mista", "fixa"], promos: ["CH garantia hipotecária: spread 2,0–3,1% (Euribor 3/6/12m; §18.1 mai.2026)", "Mista: TAN fixa ilustr. 24m + fase var. (notas TAEG)", "Estudo processo 0,5% (mín. 750€) + avaliação 200€"], prod: "Domiciliação + Seguros", jProd: "Quadro sem CH Jovem dedicado no §18.1 analisado" },
-  { code: "BEST", name: "Banco Best", color: "#e85520", refs: ["3m", "6m", "12m"], jOk: false, carenciaMax: 24, tipos: ["variável", "mista", "fixa"], promos: ["Intermediário de crédito Novo Banco (entidade mutuante NB)", "CH variável: E3/E6/E12m + spread 0,90–1,90% (mai.2026)", "Mista e taxa fixa disponíveis", "GamaLife + Mudum (mesmos seguros que NB)"], prod: "Conta 360° + Dom. ordenado + Seg. Vida GamaLife + Multirriscos Mudum", jProd: "Sem linha de CH Jovem dedicada" },
-];
+  { code: "BNI", name: "BNI Europa", color: "#4a235a", refs: ["3m", "6m", "12m"], jOk: false, carenciaMax: 0, tipos: ["variável", "mista", "fixa"], promos: ["CH garantia hipotecária: spread 2,0–3,1% (Euribor 3/6/12m; §18.1 mai.2026)", "Mista: TAN fixa ilustr. 24m + fase var. (notas TAEG)", "Estudo processo 0,5% (mín. 750€) + avaliação 200€"], prod: "Domiciliação + Seguros", jProd: "Quadro sem CH Jovem dedicado no §18.1 analisado" },];
 
 /** Valores canónicos servidos via GET /api/banks (SQLite). Actualizar aqui + deploy; `reconcileSeedSpreadsToDb` insere linha nova se divergirem. */
 const SEED_SPREADS = {
@@ -193,9 +190,7 @@ const SEED_SPREADS = {
   NB:    { sCom:0.75,sSem:1.70,mCom:3.65,mSem:4.60,fCom:3.71,fSem:5.99,jsCom:0.65,jsSem:1.60,promoPeriodo:0,promoSpread:null,dossier:333,avaliacao:322,contaMes:8.22,contaNota:"Conta Pacote (fam. 100%) 7,90€/mês + IS 4% ≈ 8,22€ (PRE-FC fev.2026)",capMin:10000,capMax:3000000,vRef:11.51,mAno:148.09,insV:"GamaLife",insM:"Mudum",minutas:0,jovemIsenta:true,jovemSameSpread:false,jovemIsentaAval:false,jmCom:null,jmSem:null,jfCom:null,jfSem:null,vCap:150000,vAge:30,pRef:200000 },
   CGD:   { sCom:0.65,sSem:1.35,mCom:3.80,mSem:4.50,fCom:4.65,fSem:5.35,jsCom:1.65,jsSem:2.35,promoPeriodo:24,promoSpread:null,dossier:226.20,avaliacao:239.20,contaMes:6.55,contaNota:"Conta Caixa M 6,30€/mês + IS 4% = 6,55€/mês (FINE mai.2026)",capMin:5000,capMax:3000000,vRef:12.54,mAno:135.36,insV:"Fidelidade",insM:"Fidelidade Casa",minutas:202.80,jovemIsenta:false,jovemSameSpread:false,jovemIsentaAval:false,jmCom:4.80,jmSem:5.50,jfCom:5.65,jfSem:6.35,vCap:150000,vAge:30,pRef:200000 },
   UCI:   { sCom:1.43,sSem:2.30,mCom:4.09,mSem:4.09,fCom:4.39,fSem:4.39,jsCom:1.43,jsSem:2.30,promoPeriodo:0,promoSpread:null,dossier:600,avaliacao:225,contaMes:0,contaNota:"Sem conta obrigatória",capMin:12500,capMax:1000000,vRef:16.88,mAno:205.22,insV:"(est.)",insM:"(est.)",minutas:400,jovemIsenta:false,jovemSameSpread:false,jovemIsentaAval:false,jmCom:null,jmSem:null,jfCom:null,jfSem:null,vCap:150000,vAge:30,pRef:200000 },
-  BNI:   { sCom:2.00,sSem:3.10,mCom:4.45,mSem:5.55,fCom:5.30,fSem:6.20,jsCom:2.00,jsSem:3.10,promoPeriodo:0,promoSpread:null,dossier:750,avaliacao:200,contaMes:3.00,contaNota:"Conta DO (estimativa; fora do quadro §18.1)",capMin:25000,capMax:1000000,vRef:19.00,mAno:150,insV:"(est.)",insM:"(est.)",minutas:0,jovemIsenta:false,jovemSameSpread:false,jovemIsentaAval:false,jmCom:null,jmSem:null,jfCom:null,jfSem:null,vCap:150000,vAge:30,pRef:200000 },
-  BEST:  { sCom:0.90,sSem:1.90,mCom:3.65,mSem:4.60,fCom:4.41,fSem:5.99,jsCom:0.90,jsSem:1.90,promoPeriodo:0,promoSpread:null,dossier:333,avaliacao:322,contaMes:8.84,contaNota:"Conta 360° 8,84€/mês IS incluído (est.; intermediário NB)",capMin:10000,capMax:1800000,vRef:17.55,mAno:123,insV:"GamaLife",insM:"Mudum",minutas:0,jovemIsenta:false,jovemSameSpread:false,jovemIsentaAval:false,jmCom:null,jmSem:null,jfCom:null,jfSem:null,vCap:150000,vAge:30,pRef:200000 },
-};
+  BNI:   { sCom:2.00,sSem:3.10,mCom:4.45,mSem:5.55,fCom:5.30,fSem:6.20,jsCom:2.00,jsSem:3.10,promoPeriodo:0,promoSpread:null,dossier:750,avaliacao:200,contaMes:3.00,contaNota:"Conta DO (estimativa; fora do quadro §18.1)",capMin:25000,capMax:1000000,vRef:19.00,mAno:150,insV:"(est.)",insM:"(est.)",minutas:0,jovemIsenta:false,jovemSameSpread:false,jovemIsentaAval:false,jmCom:null,jmSem:null,jfCom:null,jfSem:null,vCap:150000,vAge:30,pRef:200000 },};
 
 function seedIfEmpty() {
   if (!sqliteDb) return;

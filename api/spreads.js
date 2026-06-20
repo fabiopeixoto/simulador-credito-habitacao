@@ -69,7 +69,7 @@ const MEM = { data: null, fetchedAt: 0, callsToday: 0, dayKey: "" };
 function utcDayKey() { return new Date().toISOString().slice(0, 10); }
 
 // ── Google Gemini API ─────────────────────────────────────────────────────
-const BANK_CODES = ["CA", "CTT", "BNKTR", "ABANCA", "BCP", "ACTVO", "BPI", "MNTPO", "SANTR", "NB", "CGD", "UCI", "BNI", "BEST"];
+const BANK_CODES = ["CA", "CTT", "BNKTR", "ABANCA", "BCP", "ACTVO", "BPI", "MNTPO", "SANTR", "NB", "CGD", "UCI", "BNI"];
 
 const GEMINI_MODEL  = process.env.GEMINI_MODEL || "gemini-2.5-pro";
 // A URL context tool aceita no máximo 20 URLs por pedido. Mantemos os lotes
@@ -87,7 +87,7 @@ const SPREADS_AUTO_APPLY = process.env.SPREADS_AUTO_APPLY === "1";
 // Preçários oficiais por banco: [taxas §18.1, comissões §18.2].
 // A URL context tool do Gemini lê estes URLs directamente (servidores Google
 // evitam bloqueios de IP e gerem cookies). Bancos cujo site bloqueia o fetcher
-// (ABANCA, BEST) usam o preçário combinado do Portal do Cliente Bancário (BdP).
+// (ABANCA) usa o preçário combinado do Portal do Cliente Bancário (BdP).
 const BANK_SOURCES = {
   CA:     ["https://www.creditoagricola.pt/-/media/files/precario/documents-site/taxas-de-juro-_aviso-8-2009-do-bdp/pre-ft-202605.pdf",
            "https://www.creditoagricola.pt/-/media/files/precario/documents-site/comissoes-e-despesas-_aviso-8-2009-do-bdp/pre-fc-20260501.pdf"],
@@ -118,8 +118,6 @@ const BANK_SOURCES = {
            "https://www.uci.pt/-/media/Files/Portugal/precario/PRE-FC-20260301.pdf"],
   BNI:    ["https://bnieuropa.pt/wp-content/themes/responsive/pdf/precario/taxas-juro-particulares-credito-habitacao-e-contratos-conexos.pdf",
            "https://bnieuropa.pt/wp-content/themes/responsive/pdf/precario/particulares-credito-habitacao-e-contratos-conexos.pdf"],
-  // bancobest.pt bloqueia o fetcher; usamos o preçário combinado do BdP (código 0065).
-  BEST:   ["https://clientebancario.bportugal.pt/sites/default/files/precario/0065_/0065_PRE.pdf"],
 };
 
 // JSON schema para structured outputs — garante a forma exacta da resposta.
@@ -218,7 +216,6 @@ Bancos a apurar (código = nome oficial):
 - CGD = Caixa Geral de Depósitos
 - UCI = UCI Portugal
 - BNI = BNI Europa
-- BEST = Banco Best
 
 Regras de apuramento:
 - sCom é SEMPRE o spread contratual em vigor FORA do período promocional — nunca o spread reduzido da campanha. O spread de campanha vai em promoSpread.

@@ -12,10 +12,10 @@ Antes de tocar no código, reúne:
 
 | Campo | Descrição |
 |---|---|
-| `code` | Código único 2–10 chars maiúsculas/números (ex: `BEST`) |
-| `name` | Nome completo (ex: `"Banco Best"`) |
+| `code` | Código único 2–10 chars maiúsculas/números (ex: `XPTO`) |
+| `name` | Nome completo (ex: `"Banco XPTO"`) |
 | `color` | Cor da marca em hex (ex: `"#e85520"`) |
-| `domain` | Domínio para favicon (ex: `"bancobest.pt"`) |
+| `domain` | Domínio para favicon (ex: `"bancoxpto.pt"`) |
 | `refs` | Indexantes Euribor suportados: `["3m","6m","12m"]` |
 | `tipos` | Tipos de taxa: `["variável","mista","fixa"]` |
 | `jOk` | Suporta CH Jovem? `true`/`false` |
@@ -125,7 +125,7 @@ A IA usa este prompt para actualizar spreads automaticamente via painel de admin
 
 1. Adicionar `XXXX` à lista de códigos no início do prompt:
    ```
-   (CA, CTT, ..., BNI, BEST, XXXX)
+   (CA, CTT, ..., BNI, XXXX)
    ```
 
 2. Adicionar entrada de exemplo no JSON no final do prompt:
