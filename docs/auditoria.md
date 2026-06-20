@@ -75,6 +75,72 @@ A fronteira exacta entre patamares está entre imóvel **222 000 €** e **223
 
 ---
 
+## 3.1 Esquema da API da CGD (referência)
+
+> **Estado:** `simuladorch.cgd.pt` é o **único** simulador oficial que (à data da evidência) expunha um endpoint JSON conduzível por programação. Os restantes bancos são SPAs com proteção anti-bot (HTTP 403 a acesso automatizado). Esta secção fixa o que se sabe da forma da API; **os nomes exactos dos campos marcados `⚠️ verificar` precisam de reconfirmação** via DevTools → Network numa sessão real (não estão guardados no código).
+
+### Endpoint
+
+| Item | Valor |
+|------|-------|
+| **Host** | `simuladorch.cgd.pt` (**c**rédito **h**abitação) |
+| **Método** | `POST` |
+| **Caminho** | `/calculate` |
+| **Content-Type** | `application/json` (⚠️ verificar) |
+| **Acesso** | Bloqueia user-agents automatizados (403); inspeccionar via browser real |
+
+### Request (payload) — campos conhecidos
+
+| Campo (semântico) | Tipo | Notas | Estado |
+|-------------------|------|-------|--------|
+| Medida Jovem | bool | `IsMedidaJovem` — confirmado na evidência 2026-05-10 | ✅ |
+| Capital pedido | número (€) | montante do empréstimo | ⚠️ nome |
+| Valor do imóvel | número (€) | usado para derivar o LTV e o patamar de spread | ⚠️ nome |
+| Prazo | inteiro (anos) | | ⚠️ nome |
+| Tipo de taxa | enum | variável / mista / fixa | ⚠️ nome |
+| Indexante | enum | Euribor 3m / 6m / 12m | ⚠️ nome |
+| Titulares / idades | array | nº de titulares e idade(s) | ⚠️ nome |
+| Produtos associados | bool/flags | distingue cartão Base (sem) de Reduzida (com) | ⚠️ nome |
+
+### Response — estrutura conhecida
+
+A resposta vem **por «cartão»** (produto comercial):
+
+- **Cartão Base** — sem produtos vinculados
+- **Cartão Reduzida** — com produtos vinculados
+
+Cada cartão devolve:
+
+| Campo | Significado | Estado |
+|-------|-------------|--------|
+| Spread | spread aplicado (%) | ✅ |
+| TAN | taxa anual nominal (%) | ✅ |
+| Prestação | mensalidade capital+juros (€) | ✅ |
+| TAEG | taxa anual de encargos efectiva global (%) | ✅ |
+| MTIC | montante total imputado ao consumidor (€) | ✅ |
+| Indexante usado | valor da Euribor fixado pela CGD (ex.: 6m = 2,454 % em 2026-05-10; **diverge do BCE** com o tempo) | ✅ |
+
+### Regra de patamares de spread por LTV (Medida Jovem, HPP)
+
+Comportamento observado na API (2026-05-10), replicado em `app.js` (`b.s==="CGD" && modoJovem && finalidade==="hpp"`):
+
+| LTV (capital / valor de referência) | Spread Base (sem prod.) | Spread Reduzida (com prod.) |
+|-------------------------------------|------------------------:|----------------------------:|
+| **> 90 %** | 2,35 % | 1,65 % |
+| **≤ 90 %** | 1,35 % | 0,65 % |
+
+- Fronteira exacta verificada: imóvel entre **222 000 €** e **223 000 €** para crédito **200 000 €**.
+- Nestes patamares **não se soma** o escalão LTV genérico do preçário (`getLTVAddon` é forçado a 0 — `app.js:241`).
+
+### Como capturar uma sessão real (para revalidar)
+
+1. Abrir `simuladorch.cgd.pt` num browser; DevTools → separador **Network**.
+2. Preencher o wizard e simular.
+3. Localizar o pedido **`POST /calculate`**: copiar **Payload** (request) e **Response**.
+4. Colar na próxima sessão de auditoria → comparar `calcP` / `calcTAEG` / `calcMTIC` cêntimo a cêntimo e preencher os nomes de campo `⚠️ verificar` acima.
+
+---
+
 ## 4. Outros bancos (tabela a preencher)
 
 | Banco | URL oficial | Prestação (interno) | Prestação (oficial) | Desvio % | TAEG (interno) | TAEG (oficial) | Dif. p.p. | MTIC (interno) | MTIC (oficial) | Desvio % | Resultado |
