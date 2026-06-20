@@ -34,11 +34,11 @@
 
   var LTV_BRACKETS = {
     CA:    [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
-    CTT:   [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
+    CTT:   [{max:100,add:0}],
     BNKTR: [{max:75,add:0},{max:80,add:0.05},{max:90,add:0.10},{max:100,add:0.15}],
     ABANCA:[{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
     BCP:   [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
-    ACTVO: [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
+    ACTVO: [{max:70,add:0},{max:80,add:0},{max:90,add:0},{max:100,add:0.10}],
     BPI:   [{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
     MNTPO: [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
     SANTR: [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
