@@ -22,6 +22,7 @@
     var _sre = useState("");         var replyErr = _sre[0]; var setReplyErr = _sre[1];
     var _srok = useState(null);      var replyOk = _srok[0]; var setReplyOk = _srok[1];
     var _srsu = useState(false);     var replySubmit = _srsu[0]; var setReplySubmit = _srsu[1];
+    var _srep = useState(new Set()); var reported = _srep[0]; var setReported = _srep[1];
 
     useEffect(function () {
       if (comments.length > 0) return;
@@ -45,6 +46,13 @@
         })
         .catch(function () { setCommentErr("Erro ao publicar. Tenta novamente."); })
         .finally(function () { setCommentSubmit(false); });
+    }
+
+    function reportComment(id) {
+      if (reported.has(id)) return;
+      fetch("/api/comments?id="+encodeURIComponent(id), {method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"report"})})
+        .then(function(r){ if(r.ok) setReported(function(prev){ var s=new Set(prev); s.add(id); return s; }); })
+        .catch(function(){});
     }
 
     function submitReply(e, parentId) {
@@ -120,7 +128,8 @@
               h("div", {style:{fontSize:13,color:"#374151",lineHeight:1.5}}, c.text),
               h("div", {style:{display:"flex",alignItems:"center",gap:8,marginTop:8}},
                 h("button", {type:"button",className:"btn-mini",onClick:function(){setReplyTo(replyTo===c.id?null:c.id);setReplyErr("");setReplyForm({name:"",text:""});},style:{background:"rgba(37,99,235,0.08)",border:"1px solid rgba(37,99,235,0.18)",borderRadius:6,color:"#2563eb",fontSize:10,fontWeight:600,padding:"2px 7px",cursor:"pointer",fontFamily:"sans-serif"}}, replyTo===c.id?"Cancelar":"Responder"),
-                replyOk===c.id&&h("span", {style:{fontSize:11,color:"#059669"}}, "Resposta publicada!")
+                replyOk===c.id&&h("span", {style:{fontSize:11,color:"#059669"}}, "Resposta publicada!"),
+                h("button", {type:"button",onClick:function(){reportComment(c.id);},disabled:reported.has(c.id),title:"Reportar comentário inapropriado",style:{background:"none",border:"none",color:reported.has(c.id)?"#9ca3af":"#9ca3af",fontSize:10,cursor:reported.has(c.id)?"default":"pointer",padding:"2px 4px",fontFamily:"sans-serif",marginLeft:"auto"}}, reported.has(c.id)?"✓ Reportado":"Reportar")
               ),
               replyTo===c.id&&h("form", {onSubmit:function(e){submitReply(e,c.id);},style:{marginTop:8,background:"rgba(37,99,235,0.04)",border:"1px solid rgba(37,99,235,0.14)",borderRadius:8,padding:10}},
                 h("div", {style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:8,marginBottom:8}},
@@ -136,7 +145,10 @@
                     h("span", {style:{fontWeight:700,fontSize:12,color:"#111827"}}, reply.name),
                     h("span", {style:{fontSize:10,color:"#6b7280",marginLeft:"auto"}}, new Date(reply.ts).toLocaleDateString("pt-PT"))
                   ),
-                  h("div", {style:{fontSize:12,color:"#374151",lineHeight:1.5}}, reply.text)
+                  h("div", {style:{fontSize:12,color:"#374151",lineHeight:1.5}}, reply.text),
+                  h("div", {style:{marginTop:4}},
+                    h("button", {type:"button",onClick:function(){reportComment(reply.id);},disabled:reported.has(reply.id),title:"Reportar resposta inapropriada",style:{background:"none",border:"none",color:"#9ca3af",fontSize:10,cursor:reported.has(reply.id)?"default":"pointer",padding:"2px 4px",fontFamily:"sans-serif"}}, reported.has(reply.id)?"✓ Reportado":"Reportar")
+                  )
                 );
               }))
             );
