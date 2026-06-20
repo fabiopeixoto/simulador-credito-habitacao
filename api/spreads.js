@@ -197,8 +197,8 @@ function schemaContractText() {
 const SCHEMA_EXAMPLE = JSON.stringify({
   codigo: "CGD", sCom: 0.65, sSem: 1.35, mCom: 3.80, mSem: 4.50, fCom: 4.65, fSem: 5.35,
   jsCom: 0.65, jsSem: 1.35, promoPeriodo: 0, promoSpread: null, dossier: 226.20,
-  avaliacao: 239.20, contaMes: 6.55, capMin: 5000, capMax: 3000000, vRef: 29.82, mAno: 110,
-  insV: "Fidelidade", insM: "Fidelidade Casa", contaNota: "Preçário mai.2026", minutas: 0,
+  avaliacao: 239.20, contaMes: 6.55, capMin: 5000, capMax: 3000000, vRef: 12.54, mAno: 135.36,
+  insV: "Fidelidade", insM: "Fidelidade Casa", contaNota: "Preçário mai.2026", minutas: 202.80,
   jovemIsenta: false,
 });
 
