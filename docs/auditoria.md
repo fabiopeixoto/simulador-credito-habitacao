@@ -163,7 +163,7 @@ fetch("https://simuladorch.cgd.pt/calculate",{method:"POST",headers:{"Content-Ty
 | Millennium BCP | https://www.millenniumbcp.pt/credito/credito-habitacao/simulador | 720,80 € | 720,80 € | 0,000 % | 4,6 % | 4,7 % | −0,1 | — | — | — | ✅ dentro de tolerância |
 | Santander | https://simulador-credito-habitacao.santander.pt | 847,10 € | 847,10 € | 0,000 % | 3,7 % | 3,9 % | −0,19 | 330 845 € | 335 110 € | −1,27 % | ✅ dentro de tolerância (ver Teste 3) |
 | BPI | https://www.bancobpi.pt/particulares/credito-habitacao/simulador | 970,58 € | 970,58 € | 0,000 % | 4,5 % | 4,7 % | −0,2 | 364 719 € | 366 856 € | −0,58 % | ✅ dentro de tolerância (ver Teste 4) |
-| Novo Banco | https://www.novobanco.pt/particulares/credito-habitacao | | | | | | | | | | ⚠️ simulador bloqueia acesso automático |
+| Novo Banco | https://www.novobanco.pt/particulares/credito-habitacao | 964,77 € | 964,77 € | 0,000 % | 4,5 % | 4,6 % | −0,1 | 361 861 € | 364 190 € | −0,64 % | ✅ dentro de tolerância (ver Teste 5) |
 
 ---
 
@@ -251,13 +251,36 @@ Cartão **base** (sem vendas associadas facultativas). Inputs: HPP, 200 000 € 
 
 → Prestação **ao cêntimo**. **Seguro de vida do BPI bem calibrado** (1,03×) — ao contrário da CGD/Santander.
 
+### Teste 5 — Novo Banco (simulador, screenshot 2026-06-20)
+
+Cenário com **Garantia do Estado DL44/24** (jovem; garantia 15 % / 30 000 €) → spread **1,550 % único** (igual com/sem vendas associadas). Inputs: 200 000 € / imóvel 200 000 €, 30 anos, variável, Euribor 6m **2,536 %**.
+
+| Métrica | Interno | Novo Banco | Desvio | Veredito |
+|---------|--------:|-----------:|-------:|----------|
+| TAN (E + spread 1,550 %) | 4,086 % | 4,086 % | exacto | ✅ |
+| **Prestação** | **964,77 €** | 964,77 € | **0,000 %** | ✅ |
+| Seguro de vida (seed `vRef 17,55`) | 23,40 € | 15,35 € | 1,52× | ⚠️ |
+| Multirriscos (seed `mAno 98`) | 8,17 € | 12,34 € | 0,66× | ⚠️ |
+| TAEG | 4,5 % | 4,6 % | −0,1 p.p. | ✅ (±0,30) |
+| MTIC | 361 861 € | 364 190 € | −0,64 % | ✅ (±5 %) |
+
+→ Prestação **ao cêntimo**. Seguros desafinados nos dois sentidos: vida alto, multirriscos baixo.
+
 ### Observações sobre dados de seed (`api/banks.js`)
 
 - **BCP, spread com produtos:** seed `sCom = 0,70 %` = FINE **exacto**. ✅
 - **BCP, spread sem produtos:** seed `sSem = 1,50 %` vs FINE **1,25 %** → seed **0,25 p.p. mais conservador**. Candidato a actualização.
 - **Indexante dos FINE está desfasado** do BCE: BCP usa E12m 2,804 % (mai-2026), CGD usa E6m 2,454 % (abr-2026); ambos divergem do live (12m 2,759 % / 6m 2,607 %). Comparar sempre com a Euribor da mesma data do exemplo.
-- **Seguro de vida — problema é de `vRef` por banco, NÃO do modelo.** O modelo `sVida` está correcto: com o `vRef` certo acerta (BPI `vRef 13,12` → 17,49 € vs 16,99 € oficial, **1,03×**). Os desvios são em bancos com `vRef` inflacionado: **CGD `vRef 29,82`** → 39,76 € vs 16,72 € (**2,4×**) e **Santander `vRef 22,55`** → 30,07 € vs 14,11 € (**2,1×**). **Acção: baixar `vRef` da CGD (~12,5) e do Santander (~10,5)**; não mexer no modelo nem na BPI. (Conclusão revista após o Teste 4 — antes suspeitava-se de um factor sistémico do modelo.)
-- **Multirriscos bem calibrado** em todos: Santander `mAno 246` → 20,50 € (exacto); BPI `mAno 195` → 16,25 € (vs 16,50 €). O desvio de seguros está só no **vida** de CGD/Santander.
+- **Seguros — calibração é por banco (`vRef`/`mAno`), NÃO do modelo.** O modelo `sVida`/multirriscos está correcto: onde o seed está certo, acerta (BPI vida 1,03×, Santander multi exacto). Os desvios são valores de seed banco-a-banco. Tabela consolidada (4 bancos, prémio mensal para 200 000 € / imóvel 200 000 €):
+
+  | Banco | Vida seed → calc | Vida oficial | Factor | Multi seed → calc | Multi oficial | Acção |
+  |-------|-----------------:|-------------:|-------:|------------------:|--------------:|-------|
+  | BPI | `vRef 13,12` → 17,49 € | 16,99 € | 1,03× ✅ | `mAno 195` → 16,25 € | 16,50 € | ok |
+  | Santander | `vRef 22,55` → 30,07 € | 14,11 € | 2,1× | `mAno 246` → 20,50 € | 20,50 € ✅ | ↓ `vRef`~10,5 |
+  | CGD | `vRef 29,82` → 39,76 € | 16,72 € | 2,4× | `mAno 110` → 9,17 € | 11,28 € | ↓ `vRef`~12,5; ↑ `mAno`~135 |
+  | Novo Banco | `vRef 17,55` → 23,40 € | 15,35 € | 1,52× | `mAno 98` → 8,17 € | 12,34 € | ↓ `vRef`~11,5; ↑ `mAno`~148 |
+
+  Não mexer no modelo. (Conclusão revista após Teste 4/5 — antes suspeitava-se de factor sistémico.) Notar que os simuladores da CGD/Santander/NB não pediram idade do titular.
 
 ---
 
