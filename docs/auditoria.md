@@ -314,6 +314,22 @@ Com vendas associadas. 200 000 € / imóvel 200 000 €, 30 anos, variável, **
 - **✅ Aplicado:** `CTT.vRef 21,51 → 16,13` (multirriscos já exacto, inalterado).
 - **⚠️ Spread a rever (não alterado).** Com produtos a LTV 100 % o CTT mostra spread **0,750 %** (base sem produtos implícita 1,350 %, dado o pack de −0,6 p.p.). O seed tem `sCom 0,85` / `sSem 1,45`, e o `getLTVAddon` somaria +0,10 a LTV 100 % → app mostraria **0,95 % / 1,55 %**, ~0,20 p.p. acima do oficial. Candidato a baixar `sCom`/`sSem` do CTT e/ou rever o LTV addon. (Engine validado com o spread oficial — o desvio é de seed.)
 
+### Teste 9 — Bankinter (simulador, screenshot 2026-06-20)
+
+Com vendas associadas. Financiamento **180 000 €** (capital implícito da prestação) / imóvel 200 000 € (**LTV 90 %**), 30 anos, variável, **Euribor 6M 2,536 %**, spread 0,700 %.
+
+| Métrica | Interno | Bankinter | Desvio | Veredito |
+|---------|--------:|----------:|-------:|----------|
+| TAN | 3,236 % | 3,236 % | exacto | ✅ |
+| **Prestação** | **781,99 €** | 781,99 € | **0,000 %** | ✅ |
+| Multirriscos (seed `mAno 210`) | 17,50 € | 17,50 € | **exacto** | ✅ |
+| Seguro de vida 1.º ano (idade 30) | 21,39 € | 19,36 € | 1,11× | ✅ (próximo) |
+| TAEG (c/ produtos) | 3,8 % | 3,891 % | −0,09 p.p. | ✅ |
+| MTIC | 299 429 € | 314 189 € | −4,70 % | ✅ (no limite de ±5 %) |
+
+- Prestação **ao cêntimo**; multirriscos **exacto**; vida só 1,11× (seed em bom estado — **não alterado**, sobretudo porque a idade da simulação não é conhecida e o `vAge` do Bankinter é 36).
+- **MTIC o maior desvio até agora (−4,70 %).** Causa provável: o Bankinter mostra **prémio de vida crescente** (Média Anual 296,02 € > 1.º Ano 232,29 € — sobe com a idade ao longo do crédito), enquanto o modelo interno usa prémio de idade fixa; e o MTIC oficial parece incluir mais despesas/impostos (campo «Despesas e Impostos» 6.672,92 €). Prestação (núcleo) intacta.
+
 ### Observações sobre dados de seed (`api/banks.js`)
 
 - **BCP, spread com produtos:** seed `sCom = 0,70 %` = FINE **exacto**. ✅
