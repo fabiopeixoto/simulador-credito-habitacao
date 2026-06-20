@@ -8,7 +8,7 @@ Aplicação web para **simular e comparar** crédito habitação em Portugal: pr
 
 ## Funcionalidades (utilizador)
 
-- Comparação entre **14 bancos** (dados editáveis na base com valores seed).
+- Comparação entre **13 bancos** (dados editáveis na base com valores seed).
 - Modos **crédito normal** e **crédito jovem** (regras BdP, LTV, finalidade HPP / 2.ª habitação / arrendamento).
 - Taxa **variável, mista ou fixa**; vários indexantes Euribor onde aplicável.
 - **Euribor** (3m / 6m / 12m) com origem na **API do BCE** (CSV); a página pública lê o valor **da base de dados** (`GET /api/banks`) — o BCE só é consultado no refresh do admin. O histórico (`/historico.html`) usa `GET /api/euribor-history`.
@@ -206,6 +206,7 @@ Requer **`x-admin-token`**. Devolve:
   "adminTotal": 42,
   "today": { "date": "2025-05-17", "homepage": 80, "admin": 2 },
   "recordedSince": "2025-01-01",
+  "resetAt": "2025-06-20T15:32:00.000Z",
   "last7Days": [ { "day": "…", "homepage": 0, "admin": 0 } ],
   "commentsTotal": 99,
   "locations": [ { "city": "Lisboa", "country_code": "PT", "country_name": "Portugal", "count": 500 } ],
@@ -213,7 +214,13 @@ Requer **`x-admin-token`**. Devolve:
 }
 ```
 
-`locations` mostra as cidades de origem dos visitantes da página inicial (top 100 por contagem), obtidas via [ip-api.com](http://ip-api.com) em background. Os IPs nunca são persistidos — apenas cidade + código do país ficam em `stats.sqlite`.
+- `resetAt` — ISO timestamp do último reset das estatísticas (ausente se nunca houve reset).
+- `recordedSince` — primeiro dia com registo na tabela `daily` (pode ser `null` após um reset antes de haver visitas).
+- `locations` mostra as cidades de origem dos visitantes da página inicial (top 100 por contagem), obtidas via [ip-api.com](http://ip-api.com) em background. Os IPs nunca são persistidos — apenas cidade + código do país ficam em `stats.sqlite`.
+
+### `DELETE /api/stats`
+
+Requer **`x-admin-token`**. Apaga todas as estatísticas de visitas (`daily`, `meta`, `visitor_locations`) e guarda o momento do reset em `stats_config`. Limpa também a cache de IPs em memória. Devolve `{ ok: true, resetAt: "…" }`.
 
 ---
 
@@ -223,7 +230,7 @@ Requer **`x-admin-token`**. Devolve:
 |----------|-----|
 | `PORT` | Porta HTTP (defeito **3000**) |
 | `GEMINI_API_KEY` | Activa `POST /api/spreads` (Gemini + URL context tool) |
-| `ADMIN_TOKEN` | Admin: `GET /api/stats`, `POST/DELETE /api/banks`, `DELETE /api/comments`, e **todo** o `POST /api/spreads` (disparar extração + aprovar/rejeitar) |
+| `ADMIN_TOKEN` | Admin: `GET/DELETE /api/stats`, `POST/DELETE /api/banks`, `DELETE /api/comments`, e **todo** o `POST /api/spreads` (disparar extração + aprovar/rejeitar) |
 | `SPREADS_AUTO_APPLY` | `=1` publica o resultado da AI sem revisão (por defeito fica pendente) |
 | `GEMINI_MODEL` | Modelo Gemini a usar (defeito **`gemini-2.5-pro`**) |
 | `DEBUG_SECRET` | Endpoint de diagnóstico dos comentários |
@@ -236,7 +243,8 @@ Requer **`x-admin-token`**. Devolve:
 - Botão **Actualizar spreads via AI** chama `POST /api/spreads` com o token introduzido na página (único ponto que consome o Gemini + BCE).
 - **Revisão pendente**: tabela com **uma linha por banco** e, para cada campo, o valor **antigo → novo** (campos sem alteração aparecem repetidos; alterados destacados). Badge de origem por banco (📄 Preçário / ≈ Estimativa / ✍ Manual / ◆ Canónico) e **aprovação selectiva** por banco antes de publicar.
 - Operações sensíveis enviam **`x-admin-token`** no header.
-- **Estatísticas** (`GET /api/stats`): visitas cumulativas e por dia (UTC); tabela dos últimos 7 dias; contagem de comentários; tabela **"🌍 Localização dos visitantes"** com cidade, país e número de visitas.
+- **Estatísticas** (`GET /api/stats`): visitas cumulativas e por dia (UTC); tabela dos últimos 7 dias; contagem de comentários; caixa **"🌍 Localização dos visitantes"** com cidade, país e número de visitas (mostra as primeiras 5, botão "Ver mais" expande as restantes); card "Contagem desde" mostra data e hora exactas do último reset ou o primeiro dia registado.
+- **Reset de estatísticas** (`DELETE /api/stats`): botão "🗑 Reset estatísticas" com confirmação apaga visitas e localizações e regista o timestamp de reinício.
 - **Moderação de comentários** (`DELETE /api/comments`): lista e apagar na própria página admin.
 
 ---
@@ -294,7 +302,7 @@ O ambiente de exemplo publica com **`-p 3999:3000`** (host 3999 → app 3000). A
 | `banks.sqlite` | Tabelas `banks`, `spreads` (histórico por `fetched_at`), `kv_store` (cache Euribor + histórico BCE) |
 | `spreads.sqlite` | Cache KV do endpoint Gemini (resultado publicado) |
 | `comments.sqlite` | Comentários e respostas |
-| `stats.sqlite` | Visitas diárias (`daily`), totais (`meta`), localização por cidade (`visitor_locations`) |
+| `stats.sqlite` | Visitas diárias (`daily`), totais (`meta`), localização por cidade (`visitor_locations`), configuração de resets (`stats_config`) |
 
 ---
 
