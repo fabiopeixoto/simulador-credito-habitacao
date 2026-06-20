@@ -75,9 +75,9 @@ A fronteira exacta entre patamares está entre imóvel **222 000 €** e **223
 
 ---
 
-## 3.1 Esquema da API da CGD (referência)
+## 3.1 Esquema da API da CGD (referência — **confirmado 2026-06-20**)
 
-> **Estado:** `simuladorch.cgd.pt` é o **único** simulador oficial que (à data da evidência) expunha um endpoint JSON conduzível por programação. Os restantes bancos são SPAs com proteção anti-bot (HTTP 403 a acesso automatizado). Esta secção fixa o que se sabe da forma da API; **os nomes exactos dos campos marcados `⚠️ verificar` precisam de reconfirmação** via DevTools → Network numa sessão real (não estão guardados no código).
+> **Estado:** `simuladorch.cgd.pt` é o **único** simulador oficial conduzível por programação. O esquema abaixo foi **capturado e confirmado** numa sessão real (DevTools → Network, 2026-06-20). Os restantes bancos são SPAs com proteção anti-bot (HTTP 403 a acesso automatizado).
 
 ### Endpoint
 
@@ -86,58 +86,73 @@ A fronteira exacta entre patamares está entre imóvel **222 000 €** e **223
 | **Host** | `simuladorch.cgd.pt` (**c**rédito **h**abitação) |
 | **Método** | `POST` |
 | **Caminho** | `/calculate` |
-| **Content-Type** | `application/json` (⚠️ verificar) |
-| **Acesso** | Bloqueia user-agents automatizados (403); inspeccionar via browser real |
+| **Content-Type** | `application/x-www-form-urlencoded; charset=UTF-8` ✅ (não é JSON) |
+| **Headers** | exige `X-Requested-With: XMLHttpRequest`, `Origin`/`Referer` de `simuladorch.cgd.pt` e cookie de sessão (`ASP.NET_SessionId`). Bloqueia user-agents automatizados (403) |
+| **Resposta** | `application/json` |
 
-### Request (payload) — campos conhecidos
+### Request (body `x-www-form-urlencoded`) — confirmado
 
-| Campo (semântico) | Tipo | Notas | Estado |
-|-------------------|------|-------|--------|
-| Medida Jovem | bool | `IsMedidaJovem` — confirmado na evidência 2026-05-10 | ✅ |
-| Capital pedido | número (€) | montante do empréstimo | ⚠️ nome |
-| Valor do imóvel | número (€) | usado para derivar o LTV e o patamar de spread | ⚠️ nome |
-| Prazo | inteiro (anos) | | ⚠️ nome |
-| Tipo de taxa | enum | variável / mista / fixa | ⚠️ nome |
-| Indexante | enum | Euribor 3m / 6m / 12m | ⚠️ nome |
-| Titulares / idades | array | nº de titulares e idade(s) | ⚠️ nome |
-| Produtos associados | bool/flags | distingue cartão Base (sem) de Reduzida (com) | ⚠️ nome |
+Exemplo real: `…&IsMedidaJovem=true&PropertyValue=200000&Loan=200000&tax=2&Years=30&IndexRate=1&IndexFixedRate=9`
 
-### Response — estrutura conhecida
+| Campo | Exemplo | Significado | Estado |
+|-------|---------|-------------|--------|
+| `Loan` | `200000` | montante do empréstimo | ✅ |
+| `PropertyValue` | `200000` | valor do imóvel (→ LTV) | ✅ |
+| `Years` | `30` | prazo (anos) | ✅ |
+| `IsMedidaJovem` | `true` | Medida Jovem (+ `IsMedidaJovemCheckBox=on`) | ✅ |
+| `tax` | `2` | tipo de taxa — **`2` = variável** | ✅ |
+| `IndexRate` | `1` | indexante Euribor (`1` devolveu `IndexValue=2,536` → Euribor 6m fixado pela CGD) | ✅ |
+| `Purpose` / `ProductPurpose` | `1` / `1` | finalidade / sub-finalidade (aquisição) | ◻️ enum por mapear |
+| `SimulationSubOriginID` | `1` | canal/origem da simulação | ◻️ |
+| `Code` | (vazio) | código promocional | ◻️ |
+| `IndexFixedRate` | `9` | parâmetro de taxa fixa/mista (ignorado em variável) | ◻️ |
 
-A resposta vem **por «cartão»** (produto comercial):
+### Response (JSON) — confirmado
 
-- **Cartão Base** — sem produtos vinculados
-- **Cartão Reduzida** — com produtos vinculados
+Estrutura: `{ success, data: { BaseResult, DiscountedResult, Fees } }`
 
-Cada cartão devolve:
+- **`BaseResult`** = cartão **Base** (sem produtos vinculados)
+- **`DiscountedResult`** = cartão **Reduzida** (com produtos vinculados)
+- **`Fees`** = encargos partilhados pelos dois cartões
 
-| Campo | Significado | Estado |
-|-------|-------------|--------|
-| Spread | spread aplicado (%) | ✅ |
-| TAN | taxa anual nominal (%) | ✅ |
-| Prestação | mensalidade capital+juros (€) | ✅ |
-| TAEG | taxa anual de encargos efectiva global (%) | ✅ |
-| MTIC | montante total imputado ao consumidor (€) | ✅ |
-| Indexante usado | valor da Euribor fixado pela CGD (ex.: 6m = 2,454 % em 2026-05-10; **diverge do BCE** com o tempo) | ✅ |
+Campos por cartão (`Base`/`Discounted`):
+
+| Campo JSON | Significado | Exemplo (Base) |
+|------------|-------------|----------------|
+| `CardInstalment` / `Instalment` | prestação mensal capital+juros (€) | `1 059,75` |
+| `CardSpread` / `Spread` | spread (%) | `2,350` |
+| `CardIndexRate` / `IndexValue` | Euribor fixado pela CGD (%) | `2,536` |
+| `CardAnualNominalRate` / `AnualNominalRate` | TAN (%) | `4,886` |
+| `APR` | **TAEG** (%) | `5,5` |
+| `TotalPayableAmount` | **MTIC** (€) | `401 154,01` |
+| `IndexType` | tipo de taxa | `Variável` |
+| `AccountMonthlyFee` | comissão mensal de conta (€) | `6,55` |
+| `CardDurationMonths` / `TotalDurationMonths` | prazo em meses | `360` |
+| `UtilizationPeriodInstalment` | prestação no período de utilização (só juros) | `814,33` |
+
+`Fees` (€): `LifeInsurance` (16,72), `MultiriskInsurance` (11,28), `AnalysisFee` (226,20 = dossier), `AppraisalFee` (239,20 = avaliação), `FormalizationFee` (202,80 = minutas/formalização).
 
 ### Regra de patamares de spread por LTV (Medida Jovem, HPP)
 
-Comportamento observado na API (2026-05-10), replicado em `app.js` (`b.s==="CGD" && modoJovem && finalidade==="hpp"`):
+Confirmado pela API (2026-06-20): com `Loan=PropertyValue=200000` (LTV 100 % > 90 %), spread Base **2,350 %** / Reduzida **1,650 %**. Replicado em `app.js` (`b.s==="CGD" && modoJovem && finalidade==="hpp"`):
 
 | LTV (capital / valor de referência) | Spread Base (sem prod.) | Spread Reduzida (com prod.) |
 |-------------------------------------|------------------------:|----------------------------:|
 | **> 90 %** | 2,35 % | 1,65 % |
 | **≤ 90 %** | 1,35 % | 0,65 % |
 
-- Fronteira exacta verificada: imóvel entre **222 000 €** e **223 000 €** para crédito **200 000 €**.
-- Nestes patamares **não se soma** o escalão LTV genérico do preçário (`getLTVAddon` é forçado a 0 — `app.js:241`).
+- Fronteira verificada (2026-05-10): imóvel entre **222 000 €** e **223 000 €** para crédito **200 000 €**.
+- Nestes patamares **não se soma** o escalão LTV genérico do preçário (`getLTVAddon` forçado a 0 — `app.js:241`).
 
-### Como capturar uma sessão real (para revalidar)
+### Como capturar uma sessão real (recomendado: `fetch` na Console)
 
-1. Abrir `simuladorch.cgd.pt` num browser; DevTools → separador **Network**.
-2. Preencher o wizard e simular.
-3. Localizar o pedido **`POST /calculate`**: copiar **Payload** (request) e **Response**.
-4. Colar na próxima sessão de auditoria → comparar `calcP` / `calcTAEG` / `calcMTIC` cêntimo a cêntimo e preencher os nomes de campo `⚠️ verificar` acima.
+A allowlist de egress do ambiente cloud **não inclui** `simuladorch.cgd.pt`, por isso a captura é manual. O método mais robusto (corre na origem do site, com cookies de sessão, sem escaping):
+
+```js
+fetch("https://simuladorch.cgd.pt/calculate",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded; charset=UTF-8","X-Requested-With":"XMLHttpRequest"},body:"SimulationSubOriginID=1&Code=&IsMedidaJovemCheckBox=on&IsMedidaJovem=true&Purpose=1&ProductPurpose=1&PropertyValue=200000&Loan=200000&tax=2&Years=30&IndexRate=1&IndexFixedRate=9"}).then(r=>r.text()).then(t=>prompt("Copia:",t));
+```
+
+(DevTools → Console → colar → `Enter` → copiar o JSON da caixa.)
 
 ---
 
@@ -154,9 +169,31 @@ Comportamento observado na API (2026-05-10), replicado em `app.js` (`b.s==="CGD"
 
 ## 4-bis. Sessão de auditoria — 2026-06-20 (UTC)
 
-> **Nota de método:** os simuladores interactivos dos bancos (BCP, Santander, BPI, Novo Banco, CGD) bloqueiam acesso automatizado (HTTP 403 / proteção anti-bot) e são SPAs que não se conseguem conduzir por fetch a partir do ambiente. Em alternativa, validou-se o motor interno contra os **exemplos representativos oficiais (FINE / preçário SECÇÃO 18)** publicados pelos bancos — que fixam `(capital, TAN, prazo) → prestação` e TAEG, sendo a referência verificável mais próxima do simulador oficial.
+> **Nota de método:** os simuladores dos bancos bloqueiam acesso automatizado a partir do ambiente cloud (allowlist de egress + anti-bot). Validou-se o motor por duas vias: **(A)** contra a **API real da CGD** (`POST /calculate`, captura manual via `fetch` na Console — ver §3.1); **(B)** contra os **exemplos representativos oficiais (FINE / preçário SECÇÃO 18)** do BCP, que fixam `(capital, TAN, prazo) → prestação` e TAEG.
 
 **Euribor live (17-jun-2026):** 3m **2,417 %** · 6m **2,607 %** · 12m **2,759 %**.
+
+### Teste 0 — API real da CGD (`POST /calculate`, captura 2026-06-20)
+
+Inputs: Medida Jovem, `Loan=200000`, `PropertyValue=200000` (LTV 100 %), 30 anos, variável, `IndexValue=2,536 %` (Euribor 6m fixado pela CGD). Comparação cêntimo a cêntimo com o motor interno alimentado pelos **mesmos** fees/seguros devolvidos pela API:
+
+| Métrica | Cartão | Interno | CGD (API) | Desvio | Veredito |
+|---------|--------|--------:|----------:|-------:|----------|
+| TAN | Base / Reduzida | 4,886 % / 4,186 % | 4,886 % / 4,186 % | exacto | ✅ |
+| **Prestação** | Base | **1 059,75 €** | 1 059,75 € | **0,000 %** | ✅ |
+| **Prestação** | Reduzida | **976,40 €** | 976,40 € | **0,000 %** | ✅ |
+| TAEG | Base / Reduzida | 5,3 % / 4,6 % | 5,5 % / 4,8 % | −0,2/−0,3 p.p. | ✅ (±0,30) |
+| MTIC | Base / Reduzida | 395 816 € / 365 810 € | 401 154 € / 370 714 € | −1,33 % | ✅ (±5 %) |
+
+→ **Prestação coincide ao cêntimo.** TAEG e MTIC dentro de tolerância (consistentemente ~0,2 p.p. / ~1,3 % abaixo — a CGD imputa ligeiramente mais encargos no MTIC do que o nosso stack).
+
+#### Discrepâncias de seed reveladas pela API (`api/banks.js`, código `CGD`)
+
+| Campo seed | Valor seed | Implícito na API | Acção sugerida |
+|------------|-----------:|-----------------:|----------------|
+| `minutas` (formalização) | 0 € | **202,80 €** (`FormalizationFee`) | **corrigir** → 202,80 |
+| seguro vida (`vRef`) | 29,82 → 39,76 €/mês p/ 200 k | **16,72 €** (`LifeInsurance`) | rever `vRef` (~12,5); nota: a simulação CGD **não pediu idade** |
+| multirriscos (`mAno`) | 110 → 9,17 €/mês p/ 200 k | **11,28 €** (`MultiriskInsurance`) | rever `mAno` (~135) |
 
 ### Teste 1 — Prestação (anuidade) vs FINE oficial (match exacto de TAN)
 
