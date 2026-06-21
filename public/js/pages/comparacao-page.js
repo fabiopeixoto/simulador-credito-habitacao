@@ -80,9 +80,8 @@
     var _hz=useState(10);
     var horizonte=_hz[0]; var setHorizonte=_hz[1];
 
-    // ── Estado dos acordeões (qual secção de inputs está aberta) ──
-    // Em desktop começam todos abertos; em mobile só o primeiro para poupar espaço.
-    var _acc=useState({compra:true,custos:!IS_MOBILE,arrend:!IS_MOBILE});
+    // ── Estado dos acordeões (só usados em mobile; começam todos fechados) ──
+    var _acc=useState({compra:false,custos:false,arrend:false});
     var acc=_acc[0]; var setAcc=_acc[1];
     function toggleAcc(k){ setAcc(function(p){var n=Object.assign({},p);n[k]=!n[k];return n;}); }
 
@@ -178,19 +177,27 @@
 
     function inputField(label,node){ return h("div",{key:label,style:fieldS},h("div",{style:labelS},label),node); }
 
-    // Acordeão: cabeçalho clicável + corpo colapsável. `k` é a chave em `acc`.
+    // Secção de inputs. Em desktop é um cartão simples (como antes dos acordeões).
+    // Em mobile é um acordeão com as cores do cabeçalho da página principal
+    // (texto branco sobre fundo Au, seta › que roda). `k` é a chave em `acc`.
     function Accordion(k,title,bodyChildren){
+      if(!IS_MOBILE){
+        return h("div",{style:cardS},
+          h("div",{style:secTitleS},title),
+          bodyChildren
+        );
+      }
       var open=!!acc[k];
       return h("div",{style:cardS},
-        h("button",{
+        h("div",{
           onClick:function(){toggleAcc(k);},
-          "aria-expanded":open?"true":"false",
-          style:{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,background:"none",border:"none",padding:0,cursor:"pointer",textAlign:"left"}
+          role:"button","aria-expanded":open?"true":"false",
+          style:{fontSize:11,letterSpacing:3,color:"#fff",background:Au,borderRadius:7,padding:"10px 12px",fontFamily:"monospace",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",WebkitTapHighlightColor:"transparent",marginBottom:open?12:0}
         },
-          h("span",{style:Object.assign({},secTitleS,{marginBottom:0})},title),
-          h("span",{style:{fontSize:13,color:Au,fontWeight:700,transition:"transform .15s",transform:open?"rotate(180deg)":"none",flexShrink:0}},"▾")
+          h("span",null,title),
+          h("span",{style:{fontSize:14,fontWeight:800,lineHeight:1,color:"#fff",transform:open?"rotate(90deg)":"none",transition:"transform 0.2s",flexShrink:0}},"›")
         ),
-        open&&h("div",{style:{marginTop:12}},bodyChildren)
+        open&&h("div",null,bodyChildren)
       );
     }
 
