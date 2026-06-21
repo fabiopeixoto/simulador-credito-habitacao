@@ -792,3 +792,4 @@ module.exports.bulkInsertSpreads = bulkInsertSpreads;
 module.exports.getLatestSpreads = getLatestSpreads;
 module.exports.getAllBanks = getAllBanks;
 module.exports.setEuribor = setEuribor;
+module.exports.getEuribor = getEuribor;
