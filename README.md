@@ -20,31 +20,6 @@ Ferramenta gratuita para **simular e comparar** crédito habitação em Portugal
 
 ---
 
-## Desenvolvimento local
-
-```bash
-npm install
-npm start
-# http://localhost:3000
-```
-
-Requer Node.js 20+. A base de dados SQLite é criada automaticamente em `data/` na primeira execução.
-
----
-
-## Docker
-
-```bash
-docker build -t simulador-credito-habitacao .
-docker run -d -p 3000:3000 \
-  -v simulador-credito-habitacao-data:/usr/src/app/data \
-  -e GEMINI_API_KEY="..." \
-  -e ADMIN_TOKEN="..." \
-  simulador-credito-habitacao:latest
-```
-
----
-
 ## Licença / aviso legal
 
 Este projecto é disponibilizado como ferramenta de apoio à decisão. Os valores são **estimativas** com base em dados públicos e não constituem aconselhamento financeiro.
