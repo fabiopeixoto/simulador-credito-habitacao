@@ -171,11 +171,11 @@ async function loadStatsAdmin() {
     if (locEl) {
       if (d.locations && d.locations.length) {
         const flag = cc => cc && cc.length === 2
-          ? String.fromCodePoint(...[...cc.toUpperCase()].map(c => 0x1F1E6 - 65 + c.charCodeAt(0)))
+          ? `<img src="https://flagcdn.com/16x12/${escapeHtml(cc.toLowerCase())}.png" width="16" height="12" alt="${escapeHtml(cc.toUpperCase())}" style="vertical-align:middle;margin-right:5px;border-radius:1px">`
           : '';
         const INITIAL = 5;
         const rows = d.locations.map((l, i) =>
-          `<tr${i >= INITIAL ? ' class="loc-extra" style="display:none"' : ''}><td>${flag(l.country_code)} ${escapeHtml(l.city)}</td><td style="color:var(--muted)">${escapeHtml(l.country_name || l.country_code)}</td><td>${fmtNum(l.count)}</td></tr>`
+          `<tr${i >= INITIAL ? ' class="loc-extra" style="display:none"' : ''}><td>${flag(l.country_code)}${escapeHtml(!l.city || l.city === '?' ? '—' : l.city)}</td><td style="color:var(--muted)">${escapeHtml(l.country_name || l.country_code)}</td><td>${fmtNum(l.count)}</td></tr>`
         ).join('');
         const extra = d.locations.length - INITIAL;
         const moreBtn = extra > 0

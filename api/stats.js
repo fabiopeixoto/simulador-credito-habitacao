@@ -55,7 +55,7 @@ function recordVisitorLocation(ip) {
   }
   const geo = geoip.lookup(ip);
   if (geo && geo.country) {
-    const loc = { city: geo.city || geo.region || '?', country_code: geo.country, country_name: geo.country };
+    const loc = { city: geo.city || geo.region || '—', country_code: geo.country, country_name: geo.country };
     if (_ipCache.size >= 50000) _ipCache.clear();
     _ipCache.set(ip, loc);
     incrementLocation(loc.city, loc.country_code, loc.country_name);
