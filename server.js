@@ -5,12 +5,12 @@ const zlib = require("zlib");
 const { URL } = require("url");
 
 const root = path.join(__dirname, "public");
-const spreadsHandler = require(path.join(root, "api", "spreads.js"));
-const commentsHandler = require(path.join(root, "api", "comments.js"));
-const banksHandler = require(path.join(root, "api", "banks.js"));
-const statsHandler = require(path.join(root, "api", "stats.js"));
-const euriborHistoryHandler = require(path.join(root, "api", "euribor-history.js"));
-const faviconHandler = require(path.join(root, "api", "favicon.js"));
+const spreadsHandler = require(path.join(__dirname, "api", "spreads.js"));
+const commentsHandler = require(path.join(__dirname, "api", "comments.js"));
+const banksHandler = require(path.join(__dirname, "api", "banks.js"));
+const statsHandler = require(path.join(__dirname, "api", "stats.js"));
+const euriborHistoryHandler = require(path.join(__dirname, "api", "euribor-history.js"));
+const faviconHandler = require(path.join(__dirname, "api", "favicon.js"));
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
