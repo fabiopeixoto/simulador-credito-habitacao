@@ -1,4 +1,4 @@
-const CACHE = "simulador-v140";
+const CACHE = "simulador-v141";
 
 /** URLs exactas referenciadas nos HTML (incl. query ?v=). */
 const PRECACHE = [
