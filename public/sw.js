@@ -1,4 +1,4 @@
-const CACHE = "simulador-v143";
+const CACHE = "simulador-v144";
 
 /** URLs exactas referenciadas nos HTML (incl. query ?v=). */
 const PRECACHE = [
@@ -13,7 +13,7 @@ const PRECACHE = [
   "/favicon.png",
   "/images/logo.png",
   "/js/vendor/react-runtime.js?v=1",
-  "/js/vendor/recharts-polyfill.js?v=1",
+  "/js/vendor/recharts-polyfill.js?v=2",
   "/js/shared/sim-shared-constants.js?v=2",
   "/js/shared/inversa-bootstrap.js?v=6",
   "/js/shared/page-header.js?v=24",
@@ -48,7 +48,7 @@ const PRECACHE = [
   "/js/pages/transferencia-mount.js?v=6",
   "/js/pages/reverse-calc-page.js?v=22",
   "/js/pages/inversa-mount.js?v=7",
-  "/js/pages/comparacao-page.js?v=2",
+  "/js/pages/comparacao-page.js?v=3",
   "/js/pages/comparacao-mount.js?v=1",
 ];
 
