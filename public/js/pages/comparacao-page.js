@@ -239,16 +239,16 @@
         ),
 
         // ── Gráfico ──
-        ResponsiveContainer&&h("div",{style:cardS},
-          h("div",{style:secTitleS},"📈 Custo acumulado ao longo dos anos"),
-          h("div",{style:{fontSize:12,color:"#6b7280",marginBottom:8}},"Linha mais baixa = opção mais barata. O cruzamento é o ponto de equilíbrio."),
-          h(ResponsiveContainer,{width:"100%",height:IS_MOBILE?240:300},
-            h(LineChart,{data:calc.serie,margin:{top:5,right:10,left:5,bottom:5}},
+        ResponsiveContainer&&h("div",{style:Object.assign({},cardS,{padding:"13px 0 13px",overflow:"hidden"})},
+          h("div",{style:Object.assign({},secTitleS,{paddingLeft:14,paddingRight:14})},"📈 Custo acumulado ao longo dos anos"),
+          h("div",{style:{fontSize:12,color:"#6b7280",marginBottom:8,paddingLeft:14,paddingRight:14}},"Linha mais baixa = opção mais barata. O cruzamento é o ponto de equilíbrio."),
+          h(ResponsiveContainer,{width:"100%",height:IS_MOBILE?260:400},
+            h(LineChart,{data:calc.serie,margin:IS_MOBILE?{top:5,right:5,left:-10,bottom:20}:{top:5,right:20,left:10,bottom:20}},
               h(CartesianGrid,{strokeDasharray:"3 3",stroke:"rgba(0,0,0,0.05)"}),
-              h(XAxis,{dataKey:"ano",tick:{fill:"#374151",fontSize:11},axisLine:false,tickLine:false,tickFormatter:function(v){return v+"a";}}),
-              h(YAxis,{tick:{fill:"#374151",fontSize:11},axisLine:false,tickLine:false,tickFormatter:function(v){return Math.round(v/1000)+"k€";}}),
+              h(XAxis,{dataKey:"ano",tick:{fill:"#374151",fontSize:IS_MOBILE?10:11},axisLine:false,tickLine:false,tickFormatter:function(v){return v+"a";}}),
+              h(YAxis,{width:IS_MOBILE?52:60,tick:{fill:"#374151",fontSize:IS_MOBILE?10:11},axisLine:false,tickLine:false,tickFormatter:function(v){return Math.round(v/1000)+"k€";}}),
               h(Tooltip,{formatter:function(v,n){return [fE(v),n];},contentStyle:{background:"#ffffff",border:"1px solid "+Au,borderRadius:8,color:"#111827",fontFamily:"sans-serif",fontSize:12},labelFormatter:function(l){return "Ano "+l;}}),
-              h(Legend,{wrapperStyle:{color:"#374151",fontSize:12,fontFamily:"sans-serif"}}),
+              h(Legend,{verticalAlign:"bottom",iconSize:10,wrapperStyle:{paddingTop:8,fontSize:IS_MOBILE?11:12,fontFamily:"sans-serif",color:"#374151"}}),
               h(Line,{type:"monotone",dataKey:"Arrendar",name:"Arrendar (renda paga)",stroke:R,strokeWidth:2,dot:false}),
               h(Line,{type:"monotone",dataKey:"Comprar",name:"Comprar (custo líquido)",stroke:G,strokeWidth:2.5,dot:false})
             )
