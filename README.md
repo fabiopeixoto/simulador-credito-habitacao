@@ -8,7 +8,7 @@ Aplicação web para **simular e comparar** crédito habitação em Portugal: pr
 
 ## Funcionalidades (utilizador)
 
-- Comparação entre **13 bancos** (dados editáveis na base com valores seed).
+- Comparação entre **12 bancos** (dados editáveis na base com valores seed).
 - Modos **crédito normal** e **crédito jovem** (regras BdP, LTV, finalidade HPP / 2.ª habitação / arrendamento).
 - Taxa **variável, mista ou fixa**; vários indexantes Euribor onde aplicável.
 - **Euribor** (3m / 6m / 12m) com origem na **API do BCE** (CSV); a página pública lê o valor **da base de dados** (`GET /api/banks`) — o BCE só é consultado no refresh do admin. O histórico (`/historico.html`) usa `GET /api/euribor-history`.
