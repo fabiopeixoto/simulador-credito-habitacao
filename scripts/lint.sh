@@ -11,37 +11,44 @@ lint_one() {
 
 for f in \
   server.js \
-  sw.js \
   lib/open-sqlite.js \
-  sim-shared-constants.js \
-  js/core/calc.js \
-  js/core/constants.js \
-  js/core/styles.js \
-  js/components/slider-input.js \
-  js/components/ref-badge.js \
-  js/components/hist-modal.js \
-  js/views/header-bar.js \
-  js/views/params-panel.js \
-  js/views/view-comp.js \
-  js/views/view-seguros.js \
-  js/views/view-custos.js \
-  js/views/view-viabilidade.js \
-  js/views/view-cenarios.js \
-  js/views/view-amortizacao.js \
-  app.js \
-  admin.js \
-  inversa-bootstrap.js \
-  page-header.js \
-  comments-modal.js \
-  glossario-modal.js \
-  bank-detail-modal.js \
-  reverse-calc-page.js \
-  transferencia-page.js \
-  historico-page.js \
-  index-mount.js \
-  inversa-mount.js \
-  transferencia-mount.js \
-  historico-mount.js \
+  public/sw.js \
+  public/admin.js \
+  public/js/shared/sim-shared-constants.js \
+  public/js/shared/inversa-bootstrap.js \
+  public/js/shared/page-header.js \
+  public/js/vendor/react-runtime.js \
+  public/js/core/calc.js \
+  public/js/core/constants.js \
+  public/js/core/styles.js \
+  public/js/components/slider-input.js \
+  public/js/components/ref-badge.js \
+  public/js/components/hist-modal.js \
+  public/js/components/comments-modal.js \
+  public/js/components/glossario-modal.js \
+  public/js/components/bank-detail-modal.js \
+  public/js/components/comp-table-mobile.js \
+  public/js/components/comp-table-desktop.js \
+  public/js/components/seg-table-mobile.js \
+  public/js/components/cust-table-mobile.js \
+  public/js/components/cen-table-mobile.js \
+  public/js/components/transf-table-mobile.js \
+  public/js/views/header-bar.js \
+  public/js/views/params-panel.js \
+  public/js/views/view-comp.js \
+  public/js/views/view-seguros.js \
+  public/js/views/view-custos.js \
+  public/js/views/view-viabilidade.js \
+  public/js/views/view-cenarios.js \
+  public/js/views/view-amortizacao.js \
+  public/js/pages/app.js \
+  public/js/pages/index-mount.js \
+  public/js/pages/inversa-mount.js \
+  public/js/pages/transferencia-mount.js \
+  public/js/pages/historico-mount.js \
+  public/js/pages/reverse-calc-page.js \
+  public/js/pages/transferencia-page.js \
+  public/js/pages/historico-page.js \
   api/banks.js \
   api/spreads.js \
   api/comments.js \
