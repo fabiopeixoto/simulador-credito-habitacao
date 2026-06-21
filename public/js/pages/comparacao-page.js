@@ -80,6 +80,12 @@
     var _hz=useState(10);
     var horizonte=_hz[0]; var setHorizonte=_hz[1];
 
+    // ── Estado dos acordeões (qual secção de inputs está aberta) ──
+    // Em desktop começam todos abertos; em mobile só o primeiro para poupar espaço.
+    var _acc=useState({compra:true,custos:!IS_MOBILE,arrend:!IS_MOBILE});
+    var acc=_acc[0]; var setAcc=_acc[1];
+    function toggleAcc(k){ setAcc(function(p){var n=Object.assign({},p);n[k]=!n[k];return n;}); }
+
     var tan=parseFloat(tanStr)||0;
     var capital=Math.round(valorImovel*pctFin/100);
     var entrada=valorImovel-capital;
@@ -170,7 +176,23 @@
       );
     }
 
-    function inputField(label,node){ return h("div",{style:fieldS},h("div",{style:labelS},label),node); }
+    function inputField(label,node){ return h("div",{key:label,style:fieldS},h("div",{style:labelS},label),node); }
+
+    // Acordeão: cabeçalho clicável + corpo colapsável. `k` é a chave em `acc`.
+    function Accordion(k,title,bodyChildren){
+      var open=!!acc[k];
+      return h("div",{style:cardS},
+        h("button",{
+          onClick:function(){toggleAcc(k);},
+          "aria-expanded":open?"true":"false",
+          style:{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,background:"none",border:"none",padding:0,cursor:"pointer",textAlign:"left"}
+        },
+          h("span",{style:Object.assign({},secTitleS,{marginBottom:0})},title),
+          h("span",{style:{fontSize:13,color:Au,fontWeight:700,transition:"transform .15s",transform:open?"rotate(180deg)":"none",flexShrink:0}},"▾")
+        ),
+        open&&h("div",{style:{marginTop:12}},bodyChildren)
+      );
+    }
 
     return h("div",{style:{background:N,minHeight:"100vh",fontFamily:"'Inter',system-ui,sans-serif",color:"#111827"}},
       h(window.PageHeader,{EUR:EUR,activePage:"comparacao",commentCount:commentCount,onOpenComments:onOpenComments,onOpenGlossario:onOpenGlossario,subtitle:"Comprar com crédito habitação vs arrendar · Prestação, seguros, IMI, valorização e o ano em que comprar compensa"}),
@@ -205,12 +227,11 @@
 
         // ── Inputs ──
         h("div",{style:{display:"grid",gridTemplateColumns:IS_MOBILE?"1fr":"repeat(auto-fit,minmax(300px,1fr))",gap:10,marginBottom:10}},
-          h("div",{style:cardS},
-            h("div",{style:secTitleS},"🏠 Compra"),
+          Accordion("compra","🏠 Compra",[
             inputField("Valor do imóvel",h(SliderInput,{min:50000,max:1000000,step:5000,value:valorImovel,onChange:setValorImovel,color:Au,prefix:"€",ariaLabel:"Valor do imóvel",formatFn:function(v){return Math.round(v).toLocaleString("pt-PT");}})),
             inputField("Financiamento ("+fP(pctFin)+" · entrada "+fE(entrada)+")",h(SliderInput,{min:10,max:100,step:1,value:pctFin,onChange:setPctFin,color:Au,suffix:"%",ariaLabel:"Percentagem de financiamento"})),
             inputField("Prazo do crédito",h(SliderInput,{min:10,max:40,step:1,value:prazo,onChange:setPrazo,color:Sky,suffix:"anos",ariaLabel:"Prazo do crédito"})),
-            h("div",{style:fieldS},
+            h("div",{key:"tan",style:fieldS},
               h("div",{style:labelS},"TAN anual (%)"),
               h("div",{style:{display:"flex",alignItems:"center",gap:8}},
                 h("input",{type:"number",step:"0.01",min:"0",max:"15",className:"val-compact",value:tanStr,onChange:function(e){setTanStr(e.target.value);},style:{width:90,padding:"6px 8px",border:"1px solid rgba(37,99,235,0.3)",borderRadius:6,fontSize:13}}),
@@ -218,24 +239,22 @@
               )
             ),
             inputField("Idade (para seguros)",h(SliderInput,{min:18,max:75,step:1,value:idade,onChange:setIdade,color:Au,suffix:"anos",ariaLabel:"Idade"}))
-          ),
-          h("div",{style:cardS},
-            h("div",{style:secTitleS},"💸 Custos correntes (compra)"),
+          ]),
+          Accordion("custos","💸 Custos correntes (compra)",[
             inputField("IMI anual ("+fE(calc.imiAno)+"/ano)",h(SliderInput,{min:0,max:1,step:0.05,value:imiPct,onChange:setImiPct,color:"#f97316",suffix:"%",ariaLabel:"IMI anual"})),
             inputField("Manutenção anual ("+fE(calc.manutAno)+"/ano)",h(SliderInput,{min:0,max:3,step:0.1,value:manutPct,onChange:setManutPct,color:"#f97316",suffix:"%",ariaLabel:"Manutenção anual"})),
             inputField("Condomínio",h(SliderInput,{min:0,max:500,step:5,value:condominio,onChange:setCondominio,color:"#f97316",suffix:"€/mês",ariaLabel:"Condomínio mensal"})),
-            h("div",{style:{fontSize:11,color:"#6b7280",marginTop:4,lineHeight:1.5}},
+            h("div",{key:"ci",style:{fontSize:11,color:"#6b7280",marginTop:4,lineHeight:1.5}},
               "Custos iniciais estimados: ",h("strong",null,fE(calc.custosIniciais)),
               " (IMT "+fE(calc.imt)+" · IS aquisição "+fE(calc.isAquisicao)+" · IS crédito "+fE(calc.isCredito)+" · escritura/registo "+fE(calc.custosFixos)+")"
             )
-          ),
-          h("div",{style:cardS},
-            h("div",{style:secTitleS},"🔑 Arrendamento & pressupostos"),
+          ]),
+          Accordion("arrend","🔑 Arrendamento & pressupostos",[
             inputField("Renda mensal",h(SliderInput,{min:200,max:5000,step:25,value:renda,onChange:setRenda,color:Sky,prefix:"€",ariaLabel:"Renda mensal",formatFn:function(v){return Math.round(v).toLocaleString("pt-PT");}})),
             inputField("Atualização anual da renda",h(SliderInput,{min:0,max:10,step:0.5,value:rendaAtualiz,onChange:setRendaAtualiz,color:Sky,suffix:"%",ariaLabel:"Atualização anual da renda"})),
             inputField("Valorização anual do imóvel",h(SliderInput,{min:-2,max:8,step:0.5,value:valorizacao,onChange:setValorizacao,color:G,suffix:"%",ariaLabel:"Valorização anual do imóvel"})),
             inputField("Horizonte de comparação",h(SliderInput,{min:3,max:40,step:1,value:horizonte,onChange:setHorizonte,color:Au,suffix:"anos",ariaLabel:"Horizonte de comparação"}))
-          )
+          ])
         ),
 
         // ── Gráfico ──
