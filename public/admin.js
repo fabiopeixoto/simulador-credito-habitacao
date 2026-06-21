@@ -171,7 +171,7 @@ async function loadStatsAdmin() {
     if (locEl) {
       if (d.locations && d.locations.length) {
         const flag = cc => cc && cc.length === 2
-          ? `<span style="display:inline-block;font-size:10px;font-weight:700;font-family:monospace;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:3px;padding:1px 4px;margin-right:4px;letter-spacing:0.5px">${escapeHtml(cc.toUpperCase())}</span>`
+          ? `<img src="https://flagcdn.com/16x12/${escapeHtml(cc.toLowerCase())}.png" width="16" height="12" alt="${escapeHtml(cc.toUpperCase())}" style="vertical-align:middle;margin-right:5px;border-radius:1px">`
           : '';
         const INITIAL = 5;
         const rows = d.locations.map((l, i) =>
