@@ -171,11 +171,11 @@ async function loadStatsAdmin() {
     if (locEl) {
       if (d.locations && d.locations.length) {
         const flag = cc => cc && cc.length === 2
-          ? String.fromCodePoint(...[...cc.toUpperCase()].map(c => 0x1F1E6 - 65 + c.charCodeAt(0)))
+          ? `<span style="display:inline-block;font-size:10px;font-weight:700;font-family:monospace;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:3px;padding:1px 4px;margin-right:4px;letter-spacing:0.5px">${escapeHtml(cc.toUpperCase())}</span>`
           : '';
         const INITIAL = 5;
         const rows = d.locations.map((l, i) =>
-          `<tr${i >= INITIAL ? ' class="loc-extra" style="display:none"' : ''}><td>${flag(l.country_code)} ${escapeHtml(!l.city || l.city === '?' ? '—' : l.city)}</td><td style="color:var(--muted)">${escapeHtml(l.country_name || l.country_code)}</td><td>${fmtNum(l.count)}</td></tr>`
+          `<tr${i >= INITIAL ? ' class="loc-extra" style="display:none"' : ''}><td>${flag(l.country_code)}${escapeHtml(!l.city || l.city === '?' ? '—' : l.city)}</td><td style="color:var(--muted)">${escapeHtml(l.country_name || l.country_code)}</td><td>${fmtNum(l.count)}</td></tr>`
         ).join('');
         const extra = d.locations.length - INITIAL;
         const moreBtn = extra > 0
