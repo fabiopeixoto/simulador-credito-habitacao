@@ -243,7 +243,7 @@
           h("div",{style:Object.assign({},secTitleS,{paddingLeft:14,paddingRight:14})},"📈 Custo acumulado ao longo dos anos"),
           h("div",{style:{fontSize:12,color:"#6b7280",marginBottom:8,paddingLeft:14,paddingRight:14}},"Linha mais baixa = opção mais barata. O cruzamento é o ponto de equilíbrio."),
           h(ResponsiveContainer,{width:"100%",height:IS_MOBILE?260:400},
-            h(LineChart,{data:calc.serie,margin:IS_MOBILE?{top:5,right:5,left:-10,bottom:20}:{top:5,right:20,left:10,bottom:20}},
+            h(LineChart,{data:calc.serie,margin:IS_MOBILE?{top:5,right:12,left:0,bottom:24}:{top:8,right:24,left:8,bottom:28}},
               h(CartesianGrid,{strokeDasharray:"3 3",stroke:"rgba(0,0,0,0.05)"}),
               h(XAxis,{dataKey:"ano",tick:{fill:"#374151",fontSize:IS_MOBILE?10:11},axisLine:false,tickLine:false,tickFormatter:function(v){return v+"a";}}),
               h(YAxis,{width:IS_MOBILE?52:60,tick:{fill:"#374151",fontSize:IS_MOBILE?10:11},axisLine:false,tickLine:false,tickFormatter:function(v){return Math.round(v/1000)+"k€";}}),
