@@ -4,7 +4,7 @@ const path = require("path");
 const zlib = require("zlib");
 const { URL } = require("url");
 
-const root = path.resolve(__dirname);
+const root = path.join(__dirname, "public");
 const spreadsHandler = require(path.join(root, "api", "spreads.js"));
 const commentsHandler = require(path.join(root, "api", "comments.js"));
 const banksHandler = require(path.join(root, "api", "banks.js"));
