@@ -206,32 +206,6 @@
       window.NoticeBanner&&h(window.NoticeBanner,null),
       h("div",{style:{maxWidth:1440,margin:"0 auto",padding:"14px 14px 40px"}},
 
-        // ── Veredicto ──
-        h("div",{style:{background:calc.comprarCompensa?"rgba(22,163,74,0.08)":"rgba(220,38,38,0.06)",border:"1px solid "+(calc.comprarCompensa?"rgba(22,163,74,0.35)":"rgba(220,38,38,0.3)"),borderRadius:11,padding:"14px 16px",marginBottom:12}},
-          h("div",{style:{fontSize:IS_MOBILE?16:19,fontWeight:800,color:veredictoColor(calc.comprarCompensa),marginBottom:4}},
-            calc.comprarCompensa?("✅ Ao fim de "+horizonte+" anos, COMPRAR compensa"):("⏳ Ao fim de "+horizonte+" anos, ARRENDAR ainda compensa")
-          ),
-          h("div",{style:{fontSize:13,color:"#374151"}},
-            calc.comprarCompensa
-              ?("Comprar fica "+fE(diff)+" mais barato (custo líquido, já a contar com a valorização e o capital amortizado).")
-              :("Arrendar fica "+fE(diff)+" mais barato neste horizonte — os custos iniciais de compra ainda não foram recuperados.")
-          ),
-          h("div",{style:{fontSize:13,color:"#374151",marginTop:4}},
-            calc.breakEven!==null
-              ?h("span",null,"Ponto de equilíbrio: comprar passa a compensar a partir do ",h("strong",{style:{color:G}},"ano "+calc.breakEven),".")
-              :h("span",null,"Dentro do prazo do crédito (",prazo," anos), comprar ",h("strong",{style:{color:R}},"nunca chega a compensar")," com estes pressupostos.")
-          )
-        ),
-
-        // ── Cards-resumo ──
-        h("div",{style:{display:"flex",flexWrap:"wrap",gap:10,marginBottom:12}},
-          ResumoCard({label:"Prestação mensal",value:fE(calc.prestacaoMensal),sub:"+ seguros "+fE(calc.segMensal)+"/mês",color:Au}),
-          ResumoCard({label:"Renda inicial",value:fE(renda),sub:"atualiza "+fP(rendaAtualiz)+"/ano",color:Sky}),
-          ResumoCard({label:"Custo líq. comprar ("+horizonte+"a)",value:fE(fim.Comprar),color:calc.comprarCompensa?G:"#111827",border:"rgba(22,163,74,0.3)"}),
-          ResumoCard({label:"Custo arrendar ("+horizonte+"a)",value:fE(fim.Arrendar),color:!calc.comprarCompensa?R:"#111827",border:"rgba(220,38,38,0.25)"}),
-          ResumoCard({label:"Património ao fim de "+horizonte+"a",value:fE(fim.equity),sub:"imóvel "+fE(fim.imovel)+" − dívida "+fE(fim.divida),color:G,border:"rgba(22,163,74,0.3)"})
-        ),
-
         // ── Inputs ──
         h("div",{style:{display:"grid",gridTemplateColumns:IS_MOBILE?"1fr":"repeat(auto-fit,minmax(300px,1fr))",gap:10,marginBottom:10}},
           Accordion("compra","🏠 Compra",[
@@ -262,6 +236,32 @@
             inputField("Valorização anual do imóvel",h(SliderInput,{min:-2,max:8,step:0.5,value:valorizacao,onChange:setValorizacao,color:G,suffix:"%",ariaLabel:"Valorização anual do imóvel"})),
             inputField("Horizonte de comparação",h(SliderInput,{min:3,max:40,step:1,value:horizonte,onChange:setHorizonte,color:Au,suffix:"anos",ariaLabel:"Horizonte de comparação"}))
           ])
+        ),
+
+        // ── Veredicto ──
+        h("div",{style:{background:calc.comprarCompensa?"rgba(22,163,74,0.08)":"rgba(220,38,38,0.06)",border:"1px solid "+(calc.comprarCompensa?"rgba(22,163,74,0.35)":"rgba(220,38,38,0.3)"),borderRadius:11,padding:"14px 16px",marginBottom:12}},
+          h("div",{style:{fontSize:IS_MOBILE?16:19,fontWeight:800,color:veredictoColor(calc.comprarCompensa),marginBottom:4}},
+            calc.comprarCompensa?("✅ Ao fim de "+horizonte+" anos, COMPRAR compensa"):("⏳ Ao fim de "+horizonte+" anos, ARRENDAR ainda compensa")
+          ),
+          h("div",{style:{fontSize:13,color:"#374151"}},
+            calc.comprarCompensa
+              ?("Comprar fica "+fE(diff)+" mais barato (custo líquido, já a contar com a valorização e o capital amortizado).")
+              :("Arrendar fica "+fE(diff)+" mais barato neste horizonte — os custos iniciais de compra ainda não foram recuperados.")
+          ),
+          h("div",{style:{fontSize:13,color:"#374151",marginTop:4}},
+            calc.breakEven!==null
+              ?h("span",null,"Ponto de equilíbrio: comprar passa a compensar a partir do ",h("strong",{style:{color:G}},"ano "+calc.breakEven),".")
+              :h("span",null,"Dentro do prazo do crédito (",prazo," anos), comprar ",h("strong",{style:{color:R}},"nunca chega a compensar")," com estes pressupostos.")
+          )
+        ),
+
+        // ── Cards-resumo ──
+        h("div",{style:{display:"flex",flexWrap:"wrap",gap:10,marginBottom:12}},
+          ResumoCard({label:"Prestação mensal",value:fE(calc.prestacaoMensal),sub:"+ seguros "+fE(calc.segMensal)+"/mês",color:Au}),
+          ResumoCard({label:"Renda inicial",value:fE(renda),sub:"atualiza "+fP(rendaAtualiz)+"/ano",color:Sky}),
+          ResumoCard({label:"Custo líq. comprar ("+horizonte+"a)",value:fE(fim.Comprar),color:calc.comprarCompensa?G:"#111827",border:"rgba(22,163,74,0.3)"}),
+          ResumoCard({label:"Custo arrendar ("+horizonte+"a)",value:fE(fim.Arrendar),color:!calc.comprarCompensa?R:"#111827",border:"rgba(220,38,38,0.25)"}),
+          ResumoCard({label:"Património ao fim de "+horizonte+"a",value:fE(fim.equity),sub:"imóvel "+fE(fim.imovel)+" − dívida "+fE(fim.divida),color:G,border:"rgba(22,163,74,0.3)"})
         ),
 
         // ── Gráfico ──
