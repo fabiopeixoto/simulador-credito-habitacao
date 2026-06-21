@@ -6,9 +6,12 @@ const cacheDir = path.join(__dirname, "..", "data", "favicons");
 // Allowlist of known bank domains to prevent SSRF abuse
 const ALLOWED_DOMAINS = new Set([
   "cgd.pt", "novobanco.pt", "millenniumbcp.pt", "bpi.pt", "santander.pt",
-  "abanca.com", "ucb.pt", "montepio.pt", "bbva.es", "deutsche-bank.pt",
+  "abanca.com", "ucb.pt", "bbva.es", "deutsche-bank.pt",
   "bnpparibas.pt", "caixabank.es", "bankinter.pt", "itau.com.br", "ing.pt",
-  "eurobic.pt", "bison.bank", "atlantico.pt", "credito-agricola.pt", "bi.pt",
+  "eurobic.pt", "bison.bank", "atlantico.pt", "bi.pt",
+  // bancos activos no simulador
+  "creditoagricola.pt", "ctt.pt", "activobank.pt", "bancomontepio.pt",
+  "uci.es", "bnieuropa.pt",
 ]);
 
 function safeDomain(raw) {
