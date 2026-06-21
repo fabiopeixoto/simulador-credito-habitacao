@@ -175,7 +175,7 @@ async function loadStatsAdmin() {
           : '';
         const INITIAL = 5;
         const rows = d.locations.map((l, i) =>
-          `<tr${i >= INITIAL ? ' class="loc-extra" style="display:none"' : ''}><td>${flag(l.country_code)} ${escapeHtml(l.city)}</td><td style="color:var(--muted)">${escapeHtml(l.country_name || l.country_code)}</td><td>${fmtNum(l.count)}</td></tr>`
+          `<tr${i >= INITIAL ? ' class="loc-extra" style="display:none"' : ''}><td>${flag(l.country_code)} ${escapeHtml(!l.city || l.city === '?' ? '—' : l.city)}</td><td style="color:var(--muted)">${escapeHtml(l.country_name || l.country_code)}</td><td>${fmtNum(l.count)}</td></tr>`
         ).join('');
         const extra = d.locations.length - INITIAL;
         const moreBtn = extra > 0
