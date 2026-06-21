@@ -5,6 +5,7 @@ const zlib = require("zlib");
 const { URL } = require("url");
 
 const root = path.join(__dirname, "public");
+const { fetchEuribor } = require(path.join(__dirname, "api", "euribor.js"));
 const spreadsHandler = require(path.join(__dirname, "api", "spreads.js"));
 const commentsHandler = require(path.join(__dirname, "api", "comments.js"));
 const banksHandler = require(path.join(__dirname, "api", "banks.js"));
@@ -246,7 +247,28 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
+const EURIBOR_REFRESH_MS = 24 * 60 * 60 * 1000; // 24h
+const EURIBOR_STALE_MS  = 12 * 60 * 60 * 1000; // considera stale após 12h
+
+async function refreshEuriborIfStale() {
+  const banks = require(path.join(__dirname, "api", "banks.js"));
+  const stored = banks.getEuribor ? banks.getEuribor() : null;
+  if (stored && stored.fetchedAt && (Date.now() - stored.fetchedAt) < EURIBOR_STALE_MS) return;
+  try {
+    const { eur, eurLabel } = await fetchEuribor();
+    if (banks.setEuribor) banks.setEuribor(eur, eurLabel);
+    console.log("server: Euribor atualizada —", eurLabel);
+  } catch (e) {
+    console.warn("server: falha ao atualizar Euribor:", e.message);
+  }
+}
+
 const port = Number(process.env.PORT || 3000);
 server.listen(port, () => {
   console.log(`Server listening on http://localhost:${port}`);
+  // Aguarda 5s para a BD inicializar antes do primeiro fetch
+  setTimeout(() => {
+    refreshEuriborIfStale();
+    setInterval(refreshEuriborIfStale, EURIBOR_REFRESH_MS);
+  }, 5000);
 });
