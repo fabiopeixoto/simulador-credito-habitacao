@@ -40,9 +40,12 @@
       var Htot = props.height || 300;
       var data = props.data || [];
 
+      // Índice do ponto sob o rato (-1 = nenhum) para o tooltip.
+      var _hv = React.useState(-1); var hover = _hv[0]; var setHover = _hv[1];
+
       // Collect children info
-      var bars = [], lines = [], xKey = null, hasLegend = false;
-      var xAxis = null, yAxis = null;
+      var bars = [], lines = [], xKey = null, hasLegend = false, hasTooltip = false;
+      var xAxis = null, yAxis = null, tooltipProps = null;
       React.Children.forEach(props.children, function(child) {
         if (!child) return;
         var t = child.type;
@@ -51,6 +54,7 @@
         if (t === XAxis || t === 'XAxis') { xKey = child.props.dataKey; xAxis = child.props; }
         if (t === YAxis || t === 'YAxis') { yAxis = child.props; }
         if (t === Legend || t === 'Legend') { hasLegend = true; }
+        if (t === Tooltip || t === 'Tooltip') { hasTooltip = true; tooltipProps = child.props; }
       });
 
       // Legend entries (name + colour) from Lines/Bars
@@ -137,11 +141,90 @@
       });
 
       var svgStr = '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" style="display:block">' + svgParts.join('') + '</svg>';
-      var chartDiv = h('div', {
-        key: 'chart',
+      var svgDiv = h('div', {
+        key: 'svg',
         style: {width: '100%', height: H + 'px'},
         dangerouslySetInnerHTML: {__html: svgStr}
       });
+
+      // ── Camada interativa (tooltip ao passar o rato) ──
+      var cxAt = function(i){ return margin.left + gap * i + gap / 2; };
+      var series = lines.map(function(l){ return {name: l.name || l.dataKey, key: l.dataKey, color: l.stroke || '#2563eb'}; })
+        .concat(bars.map(function(b){ return {name: b.name || b.dataKey, key: b.dataKey, color: b.fill || '#2563eb'}; }));
+
+      var overlayChildren = [];
+      var enableHover = hasTooltip && n > 0 && series.length > 0;
+      if (enableHover) {
+        // Área transparente que captura o movimento do rato sobre o gráfico.
+        overlayChildren.push(h('div', {
+          key: 'hot',
+          style: {position:'absolute', left:0, top:0, width:'100%', height:H+'px', cursor:'crosshair'},
+          onMouseMove: function(e){
+            var rect = e.currentTarget.getBoundingClientRect();
+            var x = e.clientX - rect.left;
+            var i = Math.round((x - margin.left - gap/2) / gap);
+            if (i < 0) i = 0; if (i > n-1) i = n-1;
+            if (i !== hover) setHover(i);
+          },
+          onMouseLeave: function(){ setHover(-1); }
+        }));
+
+        if (hover >= 0 && hover < n) {
+          var hx = cxAt(hover);
+          var d = data[hover];
+          // Linha vertical de referência
+          overlayChildren.push(h('div', {
+            key: 'cursor',
+            style: {position:'absolute', left:hx+'px', top:margin.top+'px', width:'1px', height:innerH+'px', background:'rgba(0,0,0,0.18)', pointerEvents:'none'}
+          }));
+          // Pontos destacados sobre cada série
+          series.forEach(function(s, si){
+            if (d[s.key] == null) return;
+            var cy = toY(+d[s.key]);
+            overlayChildren.push(h('div', {
+              key: 'pt'+si,
+              style: {position:'absolute', left:(hx-4)+'px', top:(cy-4)+'px', width:'8px', height:'8px', borderRadius:'50%', background:'#fff', border:'2px solid '+s.color, pointerEvents:'none'}
+            }));
+          });
+          // Caixa do tooltip
+          var labelRaw = (xKey && d[xKey] != null) ? d[xKey] : hover;
+          var labelTxt = (tooltipProps && typeof tooltipProps.labelFormatter === 'function')
+            ? tooltipProps.labelFormatter(labelRaw) : String(labelRaw);
+          var rows = series.map(function(s, si){
+            var raw = d[s.key];
+            var valTxt = String(raw), nameTxt = s.name;
+            if (tooltipProps && typeof tooltipProps.formatter === 'function') {
+              var r = tooltipProps.formatter(raw, s.name);
+              if (Array.isArray(r)) { valTxt = r[0]; if (r[1] != null) nameTxt = r[1]; }
+              else if (r != null) { valTxt = r; }
+            }
+            return h('div', {key:si, style:{display:'flex', alignItems:'center', gap:'6px', marginTop: si? 3:0}},
+              h('span', {style:{width:9, height:9, borderRadius:2, background:s.color, display:'inline-block', flexShrink:0}}),
+              h('span', {style:{color:'#374151'}}, nameTxt+': '),
+              h('strong', {style:{color:'#111827'}}, valTxt)
+            );
+          });
+          var flip = hx > W * 0.6;
+          var tipStyle = Object.assign({
+            position:'absolute', top:Math.max(margin.top, 4)+'px',
+            background:'#ffffff', border:'1px solid rgba(37,99,235,0.5)', borderRadius:'8px',
+            padding:'7px 9px', fontFamily:'sans-serif', fontSize:'12px', color:'#111827',
+            boxShadow:'0 2px 8px rgba(0,0,0,0.12)', pointerEvents:'none', whiteSpace:'nowrap', zIndex:5
+          }, tooltipProps && tooltipProps.contentStyle ? tooltipProps.contentStyle : {});
+          tipStyle.left = (flip ? hx - 12 : hx + 12) + 'px';
+          tipStyle.transform = flip ? 'translateX(-100%)' : 'none';
+          overlayChildren.push(h('div', {key:'tip', style: tipStyle},
+            h('div', {style:{fontWeight:700, marginBottom:4, color:'#111827'}}, labelTxt),
+            rows
+          ));
+        }
+      }
+
+      var chartDiv = h('div', {
+        key: 'chart',
+        style: {position:'relative', width: '100%', height: H + 'px'}
+      }, svgDiv, overlayChildren);
+
       if (!showLegend) return chartDiv;
 
       var legendDiv = h('div', {
