@@ -48,6 +48,7 @@
     var commentCount=props.commentCount||0;
     var onOpenComments=props.onOpenComments||function(){};
     var onOpenGlossario=props.onOpenGlossario||null;
+    var onOpenProcesso=props.onOpenProcesso||null;
 
     var _cap=useState(150000);
     var capital=_cap[0]; var setCapital=_cap[1];
@@ -153,7 +154,7 @@
     var tdSL={padding:"7px 10px",fontSize:12,borderBottom:"1px solid rgba(0,0,0,0.05)",textAlign:"left",verticalAlign:"middle"};
 
     return h("div",{style:{background:N,minHeight:"100vh",fontFamily:"'Inter',system-ui,sans-serif",color:"#111827"}},
-      h(window.PageHeader,{EUR:EUR,activePage:"transferencia",commentCount:commentCount,onOpenComments:onOpenComments,onOpenGlossario:onOpenGlossario,subtitle:"Simula a transferência do teu crédito habitação para outro banco · Compara poupanças mensais, custos e ponto de equilíbrio"}),
+      h(window.PageHeader,{EUR:EUR,activePage:"transferencia",commentCount:commentCount,onOpenComments:onOpenComments,onOpenGlossario:onOpenGlossario,onOpenProcesso:onOpenProcesso,subtitle:"Simula a transferência do teu crédito habitação para outro banco · Compara poupanças mensais, custos e ponto de equilíbrio"}),
       window.NoticeBanner&&h(window.NoticeBanner,null),
       h("div",{style:{maxWidth:1440,margin:"0 auto",padding:"14px 14px 40px"}},
 

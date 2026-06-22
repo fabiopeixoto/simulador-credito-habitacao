@@ -22,6 +22,8 @@
     var showComments=_sc[0]; var setShowComments=_sc[1];
     var _sg=useState(false);
     var showGlossario=_sg[0]; var setShowGlossario=_sg[1];
+    var _sp=useState(false);
+    var showProcesso=_sp[0]; var setShowProcesso=_sp[1];
     var _scom=useState([]);
     var comments=_scom[0]; var setComments=_scom[1];
 
@@ -76,6 +78,7 @@
 
     var CommentsModal=window.CommentsModal||function(){return null;};
     var GlossarioModal=window.GlossarioModal||null;
+    var ProcessoModal=window.ProcessoModal||null;
     if(!window.HistoricoPage)return h("div",null,"A carregar…");
     return h(React.Fragment,null,
       h(window.HistoricoPage,{
@@ -88,6 +91,7 @@
         commentCount:commentTotal,
         onOpenComments:function(){setShowComments(true);},
         onOpenGlossario:function(){setShowGlossario(true);},
+        onOpenProcesso:function(){setShowProcesso(true);},
       }),
       showComments&&h(CommentsModal,{
         onClose:function(){setShowComments(false);},
@@ -96,6 +100,9 @@
       }),
       showGlossario&&GlossarioModal&&h(GlossarioModal,{
         onClose:function(){setShowGlossario(false);},
+      }),
+      showProcesso&&ProcessoModal&&h(ProcessoModal,{
+        onClose:function(){setShowProcesso(false);},
       })
     );
   }

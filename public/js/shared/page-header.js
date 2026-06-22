@@ -82,6 +82,7 @@
     var commentCount=props.commentCount||0;
     var onOpenComments=props.onOpenComments||function(){};
     var onOpenGlossario=props.onOpenGlossario||null;
+    var onOpenProcesso=props.onOpenProcesso||null;
     var subtitle=props.subtitle||"";
     var _pm=React.useState(typeof window!=='undefined'&&window.innerWidth<640);
     var isMobileH=_pm[0];var setIsMobileH=_pm[1];
@@ -112,7 +113,10 @@
               })
             )
           ),
-          onOpenGlossario&&h("button",{onClick:onOpenGlossario,style:{padding:"6px 13px",border:"1px solid rgba(37,99,235,0.25)",borderRadius:7,background:"rgba(255,255,255,0.85)",color:Au,fontSize:12,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600,alignSelf:"flex-start",whiteSpace:"nowrap"}},"📖 Glossário")
+          h("div",{style:{display:"flex",gap:6,alignSelf:"flex-start",flexShrink:0}},
+            onOpenProcesso&&h("button",{onClick:onOpenProcesso,style:{padding:"6px 13px",border:"1px solid rgba(37,99,235,0.25)",borderRadius:7,background:"rgba(255,255,255,0.85)",color:Au,fontSize:12,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600,whiteSpace:"nowrap"}},"📋 Processo"),
+            onOpenGlossario&&h("button",{onClick:onOpenGlossario,style:{padding:"6px 13px",border:"1px solid rgba(37,99,235,0.25)",borderRadius:7,background:"rgba(255,255,255,0.85)",color:Au,fontSize:12,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600,whiteSpace:"nowrap"}},"📖 Glossário")
+          )
         ),
         h(NavTabs,{activePage:activePage,commentCount:commentCount,onOpenComments:onOpenComments}),
         h("div",{style:{paddingBottom:8}},subtitle&&h("span",{style:{fontSize:11,color:"#374151"}},subtitle))

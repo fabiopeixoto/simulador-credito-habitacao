@@ -108,6 +108,7 @@ function ProcessoPage(props){
   var commentCount=props.commentCount||0;
   var onOpenComments=props.onOpenComments||function(){};
   var onOpenGlossario=props.onOpenGlossario||null;
+  var onOpenProcesso=props.onOpenProcesso||null;
 
   var _tab=useState("processo");
   var tab=_tab[0];var setTab=_tab[1];
@@ -189,6 +190,7 @@ function ProcessoPage(props){
       EUR:EUR,activePage:"processo",
       commentCount:commentCount,onOpenComments:onOpenComments,
       onOpenGlossario:onOpenGlossario,
+      onOpenProcesso:onOpenProcesso,
       subtitle:"Guia do processo de crédito habitação — da preparação à escritura"
     }),
     window.NoticeBanner&&h(window.NoticeBanner,null),

@@ -46,6 +46,7 @@
     var commentCount=props.commentCount||0;
     var onOpenComments=props.onOpenComments||function(){};
     var onOpenGlossario=props.onOpenGlossario||null;
+    var onOpenProcesso=props.onOpenProcesso||null;
 
     // ── Inputs: Compra ──
     var _vi=useState(250000);
@@ -202,7 +203,7 @@
     }
 
     return h("div",{style:{background:N,minHeight:"100vh",fontFamily:"'Inter',system-ui,sans-serif",color:"#111827"}},
-      h(window.PageHeader,{EUR:EUR,activePage:"comparacao",commentCount:commentCount,onOpenComments:onOpenComments,onOpenGlossario:onOpenGlossario,subtitle:"Comprar com crédito habitação vs arrendar · Prestação, seguros, IMI, valorização e o ano em que comprar compensa"}),
+      h(window.PageHeader,{EUR:EUR,activePage:"comparacao",commentCount:commentCount,onOpenComments:onOpenComments,onOpenGlossario:onOpenGlossario,onOpenProcesso:onOpenProcesso,subtitle:"Comprar com crédito habitação vs arrendar · Prestação, seguros, IMI, valorização e o ano em que comprar compensa"}),
       window.NoticeBanner&&h(window.NoticeBanner,null),
       h("div",{style:{maxWidth:1440,margin:"0 auto",padding:"14px 14px 40px"}},
 

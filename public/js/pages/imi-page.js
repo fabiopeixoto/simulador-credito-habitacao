@@ -92,6 +92,7 @@ function IMIPage(props){
   var commentCount=props.commentCount||0;
   var onOpenComments=props.onOpenComments||function(){};
   var onOpenGlossario=props.onOpenGlossario||null;
+  var onOpenProcesso=props.onOpenProcesso||null;
 
   var _vpt=useState(180000);var vpt=_vpt[0];var setVpt=_vpt[1];
   var _tipo=useState("urbano");var tipo=_tipo[0];var setTipo=_tipo[1];
@@ -151,6 +152,7 @@ function IMIPage(props){
       EUR:EUR,activePage:"imi",
       commentCount:commentCount,onOpenComments:onOpenComments,
       onOpenGlossario:onOpenGlossario,
+      onOpenProcesso:onOpenProcesso,
       subtitle:"Calcula o IMI anual do teu imóvel com isenções actualizadas 2025"
     }),
     window.NoticeBanner&&h(window.NoticeBanner,null),

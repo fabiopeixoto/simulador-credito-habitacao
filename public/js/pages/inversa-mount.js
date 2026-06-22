@@ -65,6 +65,7 @@
 
   var CommentsModal = window.CommentsModal || function () { return null; };
   var GlossarioModal = window.GlossarioModal || null;
+  var ProcessoModal = window.ProcessoModal || null;
 
   function InversaRoot() {
     var fe = window._SIM.FALLBACK_EUR;
@@ -83,6 +84,9 @@
     var _sg = useState(false);
     var showGlossario = _sg[0];
     var setShowGlossario = _sg[1];
+    var _sp = useState(false);
+    var showProcesso = _sp[0];
+    var setShowProcesso = _sp[1];
 
     var _scom = useState([]);
     var comments = _scom[0];
@@ -121,6 +125,7 @@
         onBack: function () { window.location.href = "/"; },
         onOpenComments: function () { setShowComments(true); },
         onOpenGlossario: function () { setShowGlossario(true); },
+        onOpenProcesso: function () { setShowProcesso(true); },
         onSimulate: function (cap, params) { window.location.href = buildSimUrl(cap, params); },
       }),
       showComments && h(CommentsModal, {
@@ -130,6 +135,9 @@
       }),
       showGlossario && GlossarioModal && h(GlossarioModal, {
         onClose: function () { setShowGlossario(false); },
+      }),
+      showProcesso && ProcessoModal && h(ProcessoModal, {
+        onClose: function () { setShowProcesso(false); },
       })
     );
   }
