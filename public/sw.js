@@ -1,4 +1,4 @@
-const CACHE = "simulador-v158";
+const CACHE = "simulador-v159";
 
 /** URLs exactas referenciadas nos HTML (incl. query ?v=). */
 const PRECACHE = [
@@ -17,7 +17,7 @@ const PRECACHE = [
   "/js/vendor/recharts-polyfill.js?v=3",
   "/js/shared/sim-shared-constants.js?v=2",
   "/js/shared/inversa-bootstrap.js?v=6",
-  "/js/shared/page-header.js?v=26",
+  "/js/shared/page-header.js?v=27",
   "/js/core/calc.js?v=1",
   "/js/core/constants.js?v=1",
   "/js/core/styles.js?v=1",
@@ -34,7 +34,7 @@ const PRECACHE = [
   "/js/components/cust-table-mobile.js?v=1",
   "/js/components/cen-table-mobile.js?v=2",
   "/js/components/transf-table-mobile.js?v=2",
-  "/js/views/header-bar.js?v=5",
+  "/js/views/header-bar.js?v=6",
   "/js/views/params-panel.js?v=1",
   "/js/views/view-comp.js?v=1",
   "/js/views/view-seguros.js?v=2",
