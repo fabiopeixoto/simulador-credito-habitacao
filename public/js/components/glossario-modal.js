@@ -51,6 +51,12 @@
     {t:"Comissão de Manutenção de Conta",d:"Custo mensal da conta à ordem no banco credor, frequentemente associada à domiciliação do ordenado. Entra no custo total mensal (coluna CONTA na comparação)."},
     {t:"Hipoteca",    d:"Garantia real sobre o imóvel a favor do banco: em caso de incumprimento, o banco pode executar o imóvel para recuperar o crédito. É registada no início e cancelada no fim do contrato."},
     {t:"Revisão da Taxa",d:"Periodicidade com que a TAN é atualizada ao valor da Euribor (3, 6 ou 12 meses, conforme o indexante contratado). A prestação muda em cada revisão."},
+    {t:"CPCV",          d:"Contrato de Promessa de Compra e Venda. Assinado entre comprador e vendedor antes da escritura, fixa preço, condições e prazo. O comprador paga um sinal. Se o comprador desistir, perde o sinal; se o vendedor desistir, devolve-o em dobro."},
+    {t:"Sinal",         d:"Valor pago pelo comprador ao assinar o CPCV, tipicamente 10–20% do preço de compra. Garante o negócio: perda pelo comprador em caso de desistência, ou devolução em dobro pelo vendedor."},
+    {t:"AIMI",          d:"Adicional ao IMI. Imposto anual adicional sobre o VPT dos imóveis acima de €600.000 por titular (pessoas singulares). Taxa de 0,7% entre €600k e €1M, e 1% acima de €1M. Não se aplica à maioria dos imóveis de habitação corrente."},
+    {t:"Caderneta Predial",d:"Documento emitido pela Autoridade Tributária (AT) que identifica o imóvel, o seu VPT, a descrição matricial e os proprietários registados. Necessária para a escritura e base de cálculo do IMI."},
+    {t:"Mútuo",         d:"Contrato de empréstimo formalizado entre o banco e o mutuário que estabelece o crédito habitação: montante, prazo, taxa, garantias e condições. É assinado na escritura, juntamente com a constituição de hipoteca."},
+    {t:"Certidão de Teor",d:"Documento emitido pela Conservatória do Registo Predial que comprova a situação jurídica do imóvel: proprietário actual, ónus, hipotecas e penhoras. Indispensável antes da compra para confirmar que o imóvel está livre de encargos."},
   ];
   // Apresentação por ordem alfabética (locale pt — trata acentos correctamente)
   TERMOS.sort(function(a,b){return a.t.localeCompare(b.t,"pt");});
