@@ -11,8 +11,9 @@ var Sky=window._SIM.Sky;
 var G=window._SIM.G;
 var R=window._SIM.R;
 
-// Todos os 308 municípios portugueses — taxas IMI 2025 (prédios urbanos habitacionais)
-// Fonte: deliberações camarárias publicadas no DR. 0,30% é o mínimo legal; a maioria usa-o.
+// Todos os 308 municípios portugueses — taxas IMI 2026 (prédios urbanos habitacionais)
+// Fonte: deliberações camarárias 2025/2026 publicadas no DR. 0,30% é o mínimo legal.
+// Municípios sem deliberação conhecida acima do mínimo usam 0,30%. Verificar em portaldasfinancas.gov.pt.
 var MUNICIPIOS=[
   {label:"Abrantes",taxa:0.003},
   {label:"Aguiar da Beira",taxa:0.003},
@@ -27,7 +28,7 @@ var MUNICIPIOS=[
   {label:"Alfândega da Fé",taxa:0.003},
   {label:"Aljezur",taxa:0.003},
   {label:"Aljustrel",taxa:0.003},
-  {label:"Almada",taxa:0.003},
+  {label:"Almada",taxa:0.0035},
   {label:"Almeida",taxa:0.003},
   {label:"Almeirim",taxa:0.003},
   {label:"Almodôvar",taxa:0.003},
@@ -61,7 +62,7 @@ var MUNICIPIOS=[
   {label:"Bombarral",taxa:0.003},
   {label:"Borba",taxa:0.003},
   {label:"Boticas",taxa:0.003},
-  {label:"Braga",taxa:0.003},
+  {label:"Braga",taxa:0.0032},
   {label:"Bragança",taxa:0.003},
   {label:"Cabeceiras de Basto",taxa:0.003},
   {label:"Cadaval",taxa:0.003},
@@ -73,9 +74,9 @@ var MUNICIPIOS=[
   {label:"Campo Maior",taxa:0.003},
   {label:"Cantanhede",taxa:0.003},
   {label:"Carregal do Sal",taxa:0.003},
-  {label:"Cartaxo",taxa:0.003},
+  {label:"Cartaxo",taxa:0.0045},
   {label:"Carrazeda de Ansiães",taxa:0.003},
-  {label:"Cascais",taxa:0.003},
+  {label:"Cascais",taxa:0.0035},
   {label:"Castanheira de Pêra",taxa:0.003},
   {label:"Castelo Branco",taxa:0.003},
   {label:"Castelo de Paiva",taxa:0.003},
@@ -83,12 +84,12 @@ var MUNICIPIOS=[
   {label:"Castro Daire",taxa:0.003},
   {label:"Castro Marim",taxa:0.003},
   {label:"Castro Verde",taxa:0.003},
-  {label:"Celorico da Beira",taxa:0.003},
+  {label:"Celorico da Beira",taxa:0.0035},
   {label:"Celorico de Basto",taxa:0.003},
   {label:"Chamusca",taxa:0.003},
   {label:"Chaves",taxa:0.003},
   {label:"Cinfães",taxa:0.003},
-  {label:"Coimbra",taxa:0.0034},
+  {label:"Coimbra",taxa:0.003},
   {label:"Condeixa-a-Nova",taxa:0.003},
   {label:"Constância",taxa:0.003},
   {label:"Corvo",taxa:0.003},
@@ -96,7 +97,7 @@ var MUNICIPIOS=[
   {label:"Covilhã",taxa:0.003},
   {label:"Crato",taxa:0.003},
   {label:"Cuba",taxa:0.003},
-  {label:"Elvas",taxa:0.003},
+  {label:"Elvas",taxa:0.0035},
   {label:"Entroncamento",taxa:0.003},
   {label:"Esposende",taxa:0.003},
   {label:"Espinho",taxa:0.003},
@@ -136,7 +137,7 @@ var MUNICIPIOS=[
   {label:"Leiria",taxa:0.003},
   {label:"Lisboa",taxa:0.003},
   {label:"Loulé",taxa:0.003},
-  {label:"Loures",taxa:0.003},
+  {label:"Loures",taxa:0.00361},
   {label:"Lourinhã",taxa:0.003},
   {label:"Lousã",taxa:0.003},
   {label:"Lousada",taxa:0.003},
@@ -178,21 +179,21 @@ var MUNICIPIOS=[
   {label:"Mourão",taxa:0.003},
   {label:"Murça",taxa:0.003},
   {label:"Murtosa",taxa:0.003},
-  {label:"Nazaré",taxa:0.003},
+  {label:"Nazaré",taxa:0.0045},
   {label:"Nelas",taxa:0.003},
   {label:"Nisa",taxa:0.003},
   {label:"Nordeste",taxa:0.003},
   {label:"Óbidos",taxa:0.003},
   {label:"Odivelas",taxa:0.003},
   {label:"Odemira",taxa:0.003},
-  {label:"Oeiras",taxa:0.003},
+  {label:"Oeiras",taxa:0.0045},
   {label:"Oleiros",taxa:0.003},
   {label:"Olhão",taxa:0.003},
   {label:"Oliveira de Azeméis",taxa:0.003},
   {label:"Oliveira de Frades",taxa:0.003},
   {label:"Oliveira do Bairro",taxa:0.003},
   {label:"Oliveira do Hospital",taxa:0.003},
-  {label:"Ourém",taxa:0.003},
+  {label:"Ourém",taxa:0.00325},
   {label:"Ourique",taxa:0.003},
   {label:"Ovar",taxa:0.003},
   {label:"Paços de Ferreira",taxa:0.003},
@@ -218,11 +219,11 @@ var MUNICIPIOS=[
   {label:"Ponte de Sor",taxa:0.003},
   {label:"Portalegre",taxa:0.003},
   {label:"Portimão",taxa:0.003},
-  {label:"Porto",taxa:0.003},
+  {label:"Porto",taxa:0.00324},
   {label:"Porto de Mós",taxa:0.003},
   {label:"Porto Moniz",taxa:0.003},
   {label:"Porto Santo",taxa:0.003},
-  {label:"Póvoa de Lanhoso",taxa:0.003},
+  {label:"Póvoa de Lanhoso",taxa:0.0034},
   {label:"Póvoa de Varzim",taxa:0.003},
   {label:"Povoação",taxa:0.003},
   {label:"Praia da Vitória",taxa:0.003},
@@ -256,7 +257,7 @@ var MUNICIPIOS=[
   {label:"Sardoal",taxa:0.003},
   {label:"Sátão",taxa:0.003},
   {label:"Seia",taxa:0.003},
-  {label:"Seixal",taxa:0.003},
+  {label:"Seixal",taxa:0.00325},
   {label:"Serpa",taxa:0.003},
   {label:"Sernancelhe",taxa:0.003},
   {label:"Sertã",taxa:0.003},
@@ -281,7 +282,7 @@ var MUNICIPIOS=[
   {label:"Torres Vedras",taxa:0.003},
   {label:"Trancoso",taxa:0.003},
   {label:"Trofa",taxa:0.003},
-  {label:"Vagos",taxa:0.003},
+  {label:"Vagos",taxa:0.004},
   {label:"Vale de Cambra",taxa:0.003},
   {label:"Valença",taxa:0.003},
   {label:"Valongo",taxa:0.003},
@@ -304,10 +305,10 @@ var MUNICIPIOS=[
   {label:"Vila Nova de Foz Côa",taxa:0.003},
   {label:"Vila Nova de Gaia",taxa:0.003},
   {label:"Vila Nova de Paiva",taxa:0.003},
-  {label:"Vila Nova de Poiares",taxa:0.003},
+  {label:"Vila Nova de Poiares",taxa:0.0039},
   {label:"Vila Pouca de Aguiar",taxa:0.003},
   {label:"Vila Real",taxa:0.003},
-  {label:"Vila Real de Santo António",taxa:0.003},
+  {label:"Vila Real de Santo António",taxa:0.0045},
   {label:"Vila Velha de Ródão",taxa:0.003},
   {label:"Vila Verde",taxa:0.003},
   {label:"Vimioso",taxa:0.003},
@@ -357,7 +358,7 @@ function calcIMI(vpt, tipo, finalidade, taxaMunicipal, rendimento, nDep, anosPos
 
 function fE(v){return isFinite(v)?Math.round(v).toLocaleString("pt-PT",{style:"currency",currency:"EUR",maximumFractionDigits:0}):"—";}
 function fE2(v){return isFinite(v)?v.toLocaleString("pt-PT",{style:"currency",currency:"EUR",minimumFractionDigits:2,maximumFractionDigits:2}):"—";}
-function fP(v){return isFinite(v)?(v*100).toFixed(2).replace(".",",")+"%":"—";}
+function fP(v){if(!isFinite(v))return"—";var s=(v*100).toFixed(3);if(s.endsWith("0"))s=s.slice(0,-1);return s.replace(".",",")+"%";}
 function norm(s){return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");}
 
 function SliderRow(props){
@@ -507,7 +508,7 @@ function IMIPage(props){
       commentCount:commentCount,onOpenComments:onOpenComments,
       onOpenGlossario:onOpenGlossario,
       onOpenProcesso:onOpenProcesso,
-      subtitle:"Calcula o IMI anual do teu imóvel com isenções actualizadas 2025"
+      subtitle:"Calcula o IMI anual do teu imóvel com isenções actualizadas 2026"
     }),
     window.NoticeBanner&&h(window.NoticeBanner,null),
     h("div",{style:{maxWidth:860,margin:"0 auto",padding:isMobile?"12px 10px 40px":"20px 16px 60px"}},
@@ -569,7 +570,7 @@ function IMIPage(props){
                 min:5000,max:80000,step:500,val:rend,set:setRend,
                 fmt:fE
               }),
-              h("div",{style:{padding:"8px 12px",background:"rgba(37,99,235,0.04)",borderRadius:7,fontSize:11,color:"#374151",fontFamily:"'Inter',system-ui,sans-serif"}},"O rendimento é usado para verificar a isenção permanente (Art. 48 EBF). Limiar 2025: "+fE(Math.round(LIMIAR_ISENCAO_PERMANENTE_REND))+".")
+              h("div",{style:{padding:"8px 12px",background:"rgba(37,99,235,0.04)",borderRadius:7,fontSize:11,color:"#374151",fontFamily:"'Inter',system-ui,sans-serif"}},"O rendimento é usado para verificar a isenção permanente (Art. 48 EBF). Limiar 2026: "+fE(Math.round(LIMIAR_ISENCAO_PERMANENTE_REND))+".")
             )
           )
         ),
@@ -624,7 +625,7 @@ function IMIPage(props){
                   h("div",{style:{fontSize:11,color:"#4b5563",lineHeight:1.5,fontFamily:"'Inter',system-ui,sans-serif"}},item.desc)
                 );
               }),
-              h("div",{style:{marginTop:10,padding:"8px 10px",background:"rgba(37,99,235,0.04)",borderRadius:7,fontSize:11,color:"#374151",fontFamily:"'Inter',system-ui,sans-serif"}},"⚠️ Taxas de 2025. A maioria dos municípios aplica 0,30% (mínimo legal). Coimbra aplica 0,34%. Verifica a taxa exacta do teu município no Portal das Finanças (AT).")
+              h("div",{style:{marginTop:10,padding:"8px 10px",background:"rgba(37,99,235,0.04)",borderRadius:7,fontSize:11,color:"#374151",fontFamily:"'Inter',system-ui,sans-serif"}},"⚠️ Taxas de 2026. A maioria dos municípios aplica 0,30% (mínimo legal). Verifica a taxa exacta do teu município no Portal das Finanças (AT).")
             )
           )
         )
