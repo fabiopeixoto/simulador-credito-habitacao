@@ -14,7 +14,7 @@
   /**
    * Barra de navegação partilhada por todas as páginas.
    * Props:
-   *   activePage     "simulador" | "inversa" | "transferencia" | "comparacao" | "historico"
+   *   activePage     "simulador" | "inversa" | "transferencia" | "comparacao" | "imi" | "historico" | "processo"
    *   commentCount   number
    *   onOpenComments function
    */
@@ -34,8 +34,8 @@
     var nb=Object.assign({},navBase,{flex:flex,fontSize:fs,padding:isMobile?"7px 4px":"9px",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"});
     var na=Object.assign({},navActive,{flex:flex,fontSize:fs,padding:isMobile?"7px 4px":"9px",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"});
     var labels=isMobile
-      ?["🏠 Simulador","💰 Posso Pedir?","🔄 Transferência","🆚 Comprar/Arrendar","📈 Histórico","💬 Comentários"]
-      :["🏠 Simulador","💰 Quanto Posso Pedir?","🔄 Transferência de Crédito","🆚 Comprar vs Arrendar","📈 Histórico de Euribor e Spreads","💬 Comentários"];
+      ?["🏠 Simulador","💰 Posso Pedir?","🔄 Transferência","🆚 Comprar/Arrendar","🏛️ IMI","📈 Histórico","💬 Comentários"]
+      :["🏠 Simulador","💰 Quanto Posso Pedir?","🔄 Transferência de Crédito","🆚 Comprar vs Arrendar","🏛️ Simulador IMI","📈 Histórico de Euribor e Spreads","💬 Comentários"];
     return h("div",{style:{display:"flex",flexWrap:"wrap",borderRadius:9,overflow:"hidden",border:"1px solid rgba(0,0,0,0.07)",background:isMobile?"rgba(0,0,0,0.06)":"rgba(255,255,255,1)",rowGap:isMobile?1:0}},
       h("button",{
         onClick:activePage==="simulador"?undefined:function(){window.location.href="/";},
@@ -54,11 +54,15 @@
         style:activePage==="comparacao"?na:nb
       },labels[3]),
       h("button",{
+        onClick:activePage==="imi"?undefined:function(){window.location.href="/imi.html";},
+        style:activePage==="imi"?na:nb
+      },labels[4]),
+      h("button",{
         onClick:activePage==="historico"?undefined:function(){window.location.href="/historico.html";},
         style:activePage==="historico"?na:nb
-      },labels[4]),
+      },labels[5]),
       h("button",{onClick:onOpenComments,style:Object.assign({},nb,{cursor:"pointer"})},
-        labels[5]+(commentCount>0?" ("+commentCount+")":"")
+        labels[6]+(commentCount>0?" ("+commentCount+")":"")
       )
     );
   }

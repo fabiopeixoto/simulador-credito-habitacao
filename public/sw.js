@@ -1,4 +1,4 @@
-const CACHE = "simulador-v149";
+const CACHE = "simulador-v150";
 
 /** URLs exactas referenciadas nos HTML (incl. query ?v=). */
 const PRECACHE = [
@@ -8,6 +8,8 @@ const PRECACHE = [
   "/historico.html",
   "/transferencia.html",
   "/comparacao.html",
+  "/imi.html",
+  "/processo.html",
   "/privacidade.html",
   "/manifest.json",
   "/favicon.png",
@@ -16,7 +18,7 @@ const PRECACHE = [
   "/js/vendor/recharts-polyfill.js?v=3",
   "/js/shared/sim-shared-constants.js?v=2",
   "/js/shared/inversa-bootstrap.js?v=6",
-  "/js/shared/page-header.js?v=24",
+  "/js/shared/page-header.js?v=25",
   "/js/core/calc.js?v=1",
   "/js/core/constants.js?v=1",
   "/js/core/styles.js?v=1",
@@ -32,7 +34,7 @@ const PRECACHE = [
   "/js/components/cust-table-mobile.js?v=1",
   "/js/components/cen-table-mobile.js?v=2",
   "/js/components/transf-table-mobile.js?v=2",
-  "/js/views/header-bar.js?v=2",
+  "/js/views/header-bar.js?v=3",
   "/js/views/params-panel.js?v=1",
   "/js/views/view-comp.js?v=1",
   "/js/views/view-seguros.js?v=2",
@@ -50,6 +52,10 @@ const PRECACHE = [
   "/js/pages/inversa-mount.js?v=7",
   "/js/pages/comparacao-page.js?v=6",
   "/js/pages/comparacao-mount.js?v=1",
+  "/js/pages/imi-page.js?v=1",
+  "/js/pages/imi-mount.js?v=1",
+  "/js/pages/processo-page.js?v=1",
+  "/js/pages/processo-mount.js?v=1",
 ];
 
 self.addEventListener("install", (e) => {
