@@ -14,7 +14,7 @@
   /**
    * Barra de navegação partilhada por todas as páginas.
    * Props:
-   *   activePage     "simulador" | "inversa" | "transferencia" | "comparacao" | "historico"
+   *   activePage     "simulador" | "inversa" | "transferencia" | "comparacao" | "imi" | "historico"
    *   commentCount   number
    *   onOpenComments function
    */
@@ -34,8 +34,8 @@
     var nb=Object.assign({},navBase,{flex:flex,fontSize:fs,padding:isMobile?"7px 4px":"9px",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"});
     var na=Object.assign({},navActive,{flex:flex,fontSize:fs,padding:isMobile?"7px 4px":"9px",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"});
     var labels=isMobile
-      ?["🏠 Simulador","💰 Posso Pedir?","🔄 Transferência","🆚 Comprar/Arrendar","📈 Histórico","💬 Comentários"]
-      :["🏠 Simulador","💰 Quanto Posso Pedir?","🔄 Transferência de Crédito","🆚 Comprar vs Arrendar","📈 Histórico de Euribor e Spreads","💬 Comentários"];
+      ?["🏠 Simulador","💰 Posso Pedir?","🔄 Transferência","🆚 Comprar/Arrendar","🏛️ IMI","📈 Histórico","💬 Comentários"]
+      :["🏠 Simulador","💰 Quanto Posso Pedir?","🔄 Transferência de Crédito","🆚 Comprar vs Arrendar","🏛️ Simulador IMI","📈 Histórico de Euribor e Spreads","💬 Comentários"];
     return h("div",{style:{display:"flex",flexWrap:"wrap",borderRadius:9,overflow:"hidden",border:"1px solid rgba(0,0,0,0.07)",background:isMobile?"rgba(0,0,0,0.06)":"rgba(255,255,255,1)",rowGap:isMobile?1:0}},
       h("button",{
         onClick:activePage==="simulador"?undefined:function(){window.location.href="/";},
@@ -54,11 +54,15 @@
         style:activePage==="comparacao"?na:nb
       },labels[3]),
       h("button",{
+        onClick:activePage==="imi"?undefined:function(){window.location.href="/imi.html";},
+        style:activePage==="imi"?na:nb
+      },labels[4]),
+      h("button",{
         onClick:activePage==="historico"?undefined:function(){window.location.href="/historico.html";},
         style:activePage==="historico"?na:nb
-      },labels[4]),
+      },labels[5]),
       h("button",{onClick:onOpenComments,style:Object.assign({},nb,{cursor:"pointer"})},
-        labels[5]+(commentCount>0?" ("+commentCount+")":"")
+        labels[6]+(commentCount>0?" ("+commentCount+")":"")
       )
     );
   }
@@ -78,6 +82,7 @@
     var commentCount=props.commentCount||0;
     var onOpenComments=props.onOpenComments||function(){};
     var onOpenGlossario=props.onOpenGlossario||null;
+    var onOpenProcesso=props.onOpenProcesso||null;
     var subtitle=props.subtitle||"";
     var _pm=React.useState(typeof window!=='undefined'&&window.innerWidth<640);
     var isMobileH=_pm[0];var setIsMobileH=_pm[1];
@@ -108,7 +113,10 @@
               })
             )
           ),
-          onOpenGlossario&&h("button",{onClick:onOpenGlossario,style:{padding:"6px 13px",border:"1px solid rgba(37,99,235,0.25)",borderRadius:7,background:"rgba(255,255,255,0.85)",color:Au,fontSize:12,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600,alignSelf:"flex-start",whiteSpace:"nowrap"}},"📖 Glossário")
+          h("div",{style:{display:"flex",gap:6,alignSelf:"flex-start",flexShrink:0}},
+            onOpenProcesso&&h("button",{onClick:onOpenProcesso,style:{padding:"6px 13px",border:"1px solid rgba(37,99,235,0.25)",borderRadius:7,background:"rgba(255,255,255,0.85)",color:Au,fontSize:12,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600,whiteSpace:"nowrap"}},"📋 Processo"),
+            onOpenGlossario&&h("button",{onClick:onOpenGlossario,style:{padding:"6px 13px",border:"1px solid rgba(37,99,235,0.25)",borderRadius:7,background:"rgba(255,255,255,0.85)",color:Au,fontSize:12,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600,whiteSpace:"nowrap"}},"📖 Glossário")
+          )
         ),
         h(NavTabs,{activePage:activePage,commentCount:commentCount,onOpenComments:onOpenComments}),
         h("div",{style:{paddingBottom:8}},subtitle&&h("span",{style:{fontSize:11,color:"#374151"}},subtitle))

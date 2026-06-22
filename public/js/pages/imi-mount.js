@@ -2,7 +2,7 @@
   'use strict';
   var React=window.React;
   var ReactDOM=window.ReactDOM;
-  if(!React||!ReactDOM||!window._SIM||!window.TransferenciaPage){
+  if(!React||!ReactDOM||!window._SIM||!window.IMIPage){
     var root=document.getElementById("root");
     if(root)root.innerHTML='<div style="padding:40px;font-family:sans-serif;color:#b91c1c"><h2>Erro ao carregar</h2><p>Falta um script necessário.</p></div>';
     return;
@@ -25,27 +25,18 @@
     };
   }
 
-  function mapBanks(raw){
-    return (raw.banks||[]).map(function(b){
-      if(b.ltvBrackets&&Array.isArray(b.ltvBrackets))window._SIM.LTV_BRACKETS[b.code]=b.ltvBrackets;
-      return {code:b.code,name:b.name,color:b.color,refs:b.refs||[],tipos:b.tipos||[],spreads:b.spreads||{}};
-    });
-  }
-
-  function TransferenciaRoot(props){
+  function IMIRoot(props){
     var fe=window._SIM.FALLBACK_EUR;
     var _u=useState(props.initialEUR||{"3m":{valor:fe["3m"].valor,data:fe["3m"].data},"6m":{valor:fe["6m"].valor,data:fe["6m"].data},"12m":{valor:fe["12m"].valor,data:fe["12m"].data}});
     var EUR=_u[0];
-    var _b=useState(props.initialBanks||[]);
-    var banks=_b[0];
     var _sc=useState(false);
-    var showComments=_sc[0]; var setShowComments=_sc[1];
+    var showComments=_sc[0];var setShowComments=_sc[1];
     var _sg=useState(false);
-    var showGlossario=_sg[0]; var setShowGlossario=_sg[1];
+    var showGlossario=_sg[0];var setShowGlossario=_sg[1];
     var _sp=useState(false);
-    var showProcesso=_sp[0]; var setShowProcesso=_sp[1];
+    var showProcesso=_sp[0];var setShowProcesso=_sp[1];
     var _scom=useState([]);
-    var comments=_scom[0]; var setComments=_scom[1];
+    var comments=_scom[0];var setComments=_scom[1];
 
     var commentTotal=comments.reduce(function(t,c){return t+1+((c.replies||[]).length);},0);
 
@@ -59,9 +50,8 @@
     },[]);
 
     return h(React.Fragment,null,
-      h(window.TransferenciaPage,{
+      h(window.IMIPage,{
         EUR:EUR,
-        banks:banks,
         commentCount:commentTotal,
         onOpenComments:function(){setShowComments(true);},
         onOpenGlossario:function(){setShowGlossario(true);},
@@ -87,11 +77,10 @@
   fetch("/api/banks")
     .then(function(r){return r.ok?r.json():null;})
     .then(function(raw){
-      var initialBanks=raw?mapBanks(raw):[];
       var initialEUR=raw?mergeEurFromApi(raw):null;
-      ReactDOM.createRoot(el).render(h(TransferenciaRoot,{initialBanks:initialBanks,initialEUR:initialEUR}));
+      ReactDOM.createRoot(el).render(h(IMIRoot,{initialEUR:initialEUR}));
     })
     .catch(function(){
-      ReactDOM.createRoot(el).render(h(TransferenciaRoot,{initialBanks:[],initialEUR:null}));
+      ReactDOM.createRoot(el).render(h(IMIRoot,{initialEUR:null}));
     });
 })();

@@ -130,6 +130,7 @@
     var commentCount=props.commentCount||0;
     var onOpenComments=props.onOpenComments||function(){};
     var onOpenGlossario=props.onOpenGlossario||null;
+    var onOpenProcesso=props.onOpenProcesso||null;
 
     var pageEUR=useMemo(function(){
       return ["3m","6m","12m"].reduce(function(acc,k){
@@ -178,7 +179,7 @@
     var titleS={fontSize:11,letterSpacing:3,color:Au,fontFamily:"monospace",marginBottom:10};
 
     return h("div",{style:{fontFamily:"'Inter',system-ui,sans-serif",background:N,minHeight:"100vh",color:"#111827"}},
-      h(window.PageHeader||function(){return null;},{EUR:pageEUR,activePage:"historico",commentCount:commentCount,onOpenComments:onOpenComments,onOpenGlossario:onOpenGlossario,subtitle:"Dados de mercado e contexto · Euribor BCE e evolução de spreads bancários"}),
+      h(window.PageHeader||function(){return null;},{EUR:pageEUR,activePage:"historico",commentCount:commentCount,onOpenComments:onOpenComments,onOpenGlossario:onOpenGlossario,onOpenProcesso:onOpenProcesso,subtitle:"Dados de mercado e contexto · Euribor BCE e evolução de spreads bancários"}),
       window.NoticeBanner&&h(window.NoticeBanner,null),
       h("div",{style:{maxWidth:840,margin:"0 auto",padding:"16px 14px"}},
         h("div",{style:cardS},
