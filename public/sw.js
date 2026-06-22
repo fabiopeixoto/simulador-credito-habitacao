@@ -1,4 +1,4 @@
-const CACHE = "simulador-v151";
+const CACHE = "simulador-v152";
 
 /** URLs exactas referenciadas nos HTML (incl. query ?v=). */
 const PRECACHE = [
@@ -9,7 +9,6 @@ const PRECACHE = [
   "/transferencia.html",
   "/comparacao.html",
   "/imi.html",
-  "/processo.html",
   "/privacidade.html",
   "/manifest.json",
   "/favicon.png",
@@ -55,8 +54,6 @@ const PRECACHE = [
   "/js/pages/comparacao-mount.js?v=1",
   "/js/pages/imi-page.js?v=1",
   "/js/pages/imi-mount.js?v=1",
-  "/js/pages/processo-page.js?v=1",
-  "/js/pages/processo-mount.js?v=1",
 ];
 
 self.addEventListener("install", (e) => {

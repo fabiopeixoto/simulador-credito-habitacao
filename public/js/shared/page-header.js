@@ -14,7 +14,7 @@
   /**
    * Barra de navegação partilhada por todas as páginas.
    * Props:
-   *   activePage     "simulador" | "inversa" | "transferencia" | "comparacao" | "imi" | "historico" | "processo"
+   *   activePage     "simulador" | "inversa" | "transferencia" | "comparacao" | "imi" | "historico"
    *   commentCount   number
    *   onOpenComments function
    */
