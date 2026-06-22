@@ -98,14 +98,14 @@
               h("h1",{style:{margin:0,fontSize:isMobileH?16:21,fontWeight:700,color:"#111827",letterSpacing:-0.3,fontFamily:"'Inter',system-ui,sans-serif"}},"Simulador Crédito Habitação")
             ),
             h("div",{style:{fontSize:11,color:"#374151",fontFamily:"sans-serif",marginTop:2}},"Portugal · 13 bancos · Euribor em tempo real"),
-            h("div",{style:{display:"flex",gap:5,marginTop:7,flexWrap:"wrap"}},
+            h("div",{style:{display:"flex",gap:isMobileH?4:5,marginTop:7,flexWrap:"wrap"}},
               ["3m","6m","12m"].map(function(k){
                 var v=EUR[k]||FALLBACK_EUR[k];
                 var ec=EUR_COLORS[k][0],ebg=EUR_COLORS[k][1];
-                return h("div",{key:k,style:{display:"flex",alignItems:"center",gap:5,padding:"3px 9px",background:ebg,borderRight:"1px solid rgba(0,0,0,0.04)",borderRadius:4}},
-                  h("span",{style:{color:ec,fontWeight:700,fontSize:10,fontFamily:"monospace",letterSpacing:1}},"EUR "+k.toUpperCase()),
+                return h("div",{key:k,style:{display:"flex",alignItems:"center",gap:isMobileH?4:5,padding:isMobileH?"3px 6px":"3px 9px",background:ebg,borderRight:"1px solid rgba(0,0,0,0.04)",borderRadius:4,flex:isMobileH?1:undefined,justifyContent:isMobileH?"center":undefined}},
+                  h("span",{style:{color:ec,fontWeight:700,fontSize:10,fontFamily:"monospace",letterSpacing:1}},isMobileH?k.toUpperCase():"EUR "+k.toUpperCase()),
                   h("span",{style:{color:"#111827",fontSize:13,fontWeight:700,fontFamily:"monospace"}},v.valor.toFixed(3).replace(".",",")+"%"),
-                  v.data&&h("span",{style:{color:"#374151",fontSize:10,fontFamily:"sans-serif",marginLeft:2}},v.data)
+                  !isMobileH&&v.data&&h("span",{style:{color:"#374151",fontSize:10,fontFamily:"sans-serif",marginLeft:2}},v.data)
                 );
               })
             )
