@@ -14,6 +14,7 @@
     {key:"inversa",       href:"/quanto-posso-pedir.html", icon:"💰", label:"Quanto Posso Pedir?"},
     {key:"transferencia", href:"/transferencia.html",      icon:"🔄", label:"Transferência de Crédito"},
     {key:"comparacao",    href:"/comparacao.html",         icon:"🆚", label:"Comprar vs Arrendar"},
+    {key:"rentabilidade", href:"/rentabilidade.html",       icon:"📊", label:"Rentabilidade de Imóvel"},
     {key:"imi",           href:"/imi.html",                icon:"🏛️", label:"Simulador IMI"},
     {key:"historico",     href:"/historico.html",          icon:"📈", label:"Histórico de Euribor e Spreads"}
   ];
