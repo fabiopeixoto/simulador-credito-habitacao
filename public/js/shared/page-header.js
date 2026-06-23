@@ -50,7 +50,7 @@
     for(var i=0;i<PAGES.length;i++){if(PAGES[i].key===activePage){current=PAGES[i];break;}}
     if(!current)current=PAGES[0];
 
-    var triggerStyle={display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,width:"100%",padding:"9px 12px",border:"1px solid rgba(0,0,0,0.07)",borderRadius:9,background:"rgba(255,255,255,1)",color:"#374151",fontSize:13,fontFamily:"sans-serif",fontWeight:600,cursor:"pointer"};
+    var triggerStyle={display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,width:"100%",padding:isMobile?"9px 12px":"13px 18px",border:"1px solid rgba(0,0,0,0.07)",borderRadius:9,background:"rgba(255,255,255,1)",color:"#374151",fontSize:isMobile?13:16,fontFamily:"sans-serif",fontWeight:600,cursor:"pointer"};
 
     var items=PAGES.map(function(p){
       var isActive=p.key===current.key;
@@ -92,10 +92,10 @@
       return dropdownWrap;
     }
 
-    return h("div",{style:{display:"flex",alignItems:"center",gap:12}},
+    return h("div",{style:{display:"flex",alignItems:"center",gap:14}},
       dropdownWrap,
-      h("span",{style:{fontSize:12,color:"#6b7280",fontFamily:"'Inter',system-ui,sans-serif",whiteSpace:"nowrap",userSelect:"none"}},
-        "Explora as outras ferramentas →"
+      h("span",{style:{fontSize:15,fontWeight:700,color:"#dc2626",fontFamily:"'Inter',system-ui,sans-serif",whiteSpace:"nowrap",userSelect:"none"}},
+        "← Explora as outras ferramentas"
       )
     );
   }
