@@ -179,7 +179,7 @@
     if(!NOTICE||dismissed)return null;
     return h("div",{style:{background:"#fef3c7",borderBottom:"1px solid #f59e0b",padding:isMobileN?"4px 10px":"8px 16px",display:"flex",alignItems:"center",justifyContent:"center",gap:8,fontSize:isMobileN?11:13,color:"#92400e",fontFamily:"'Inter',system-ui,sans-serif"}},
       h("span",null,"⚠️ "+NOTICE),
-      h("button",{onClick:function(){setDismissed(true);},"aria-label":"Fechar aviso",style:{background:"none",border:"none",cursor:"pointer",color:"#92400e",fontSize:isMobileN?14:18,lineHeight:1,padding:"0 4px",flexShrink:0}},"×")
+      h("button",{onClick:function(){setDismissed(true);},"aria-label":"Fechar aviso",className:"btn-mini",style:{background:"none",border:"none",cursor:"pointer",color:"#92400e",fontSize:isMobileN?14:18,lineHeight:1,padding:"0 4px",flexShrink:0,minHeight:"unset"}},"×")
     );
   }
 
