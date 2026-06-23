@@ -29,7 +29,14 @@
   function NavTabs(props){
     var activePage=props.activePage||"";
     var _o=React.useState(false);var open=_o[0];var setOpen=_o[1];
+    var _m=React.useState(typeof window!=='undefined'&&window.innerWidth<640);
+    var isMobile=_m[0];var setIsMobile=_m[1];
     var wrapRef=React.useRef(null);
+    React.useEffect(function(){
+      function onResize(){setIsMobile(window.innerWidth<640);}
+      window.addEventListener('resize',onResize,{passive:true});
+      return function(){window.removeEventListener('resize',onResize);};
+    },[]);
     React.useEffect(function(){
       if(!open)return;
       function onDocDown(e){if(wrapRef.current&&!wrapRef.current.contains(e.target))setOpen(false);}
@@ -43,7 +50,7 @@
     for(var i=0;i<PAGES.length;i++){if(PAGES[i].key===activePage){current=PAGES[i];break;}}
     if(!current)current=PAGES[0];
 
-    var triggerStyle={display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,width:"100%",maxWidth:360,padding:"9px 12px",border:"1px solid rgba(0,0,0,0.07)",borderRadius:9,background:"rgba(255,255,255,1)",color:"#374151",fontSize:13,fontFamily:"sans-serif",fontWeight:600,cursor:"pointer"};
+    var triggerStyle={display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,width:"100%",padding:"9px 12px",border:"1px solid rgba(0,0,0,0.07)",borderRadius:9,background:"rgba(255,255,255,1)",color:"#374151",fontSize:13,fontFamily:"sans-serif",fontWeight:600,cursor:"pointer"};
 
     var items=PAGES.map(function(p){
       var isActive=p.key===current.key;
@@ -60,7 +67,8 @@
       );
     });
 
-    return h("div",{ref:wrapRef,style:{position:"relative",maxWidth:360}},
+    // O wrapper interno (position:relative) ancora o painel absoluto ao botão.
+    var dropdownWrap=h("div",{ref:wrapRef,style:{position:"relative",width:isMobile?"100%":undefined,maxWidth:360,flexShrink:0}},
       h("button",{
         onClick:function(){setOpen(!open);},
         "aria-haspopup":"menu",
@@ -78,6 +86,17 @@
         role:"menu",
         style:{position:"absolute",top:"calc(100% + 4px)",left:0,width:"100%",zIndex:50,background:"#fff",border:"1px solid rgba(0,0,0,0.07)",borderRadius:9,boxShadow:"0 6px 20px rgba(0,0,0,0.12)",padding:4}
       },items)
+    );
+
+    if(isMobile){
+      return dropdownWrap;
+    }
+
+    return h("div",{style:{display:"flex",alignItems:"center",gap:12}},
+      dropdownWrap,
+      h("span",{style:{fontSize:12,color:"#6b7280",fontFamily:"'Inter',system-ui,sans-serif",whiteSpace:"nowrap",userSelect:"none"}},
+        "Explora as outras ferramentas →"
+      )
     );
   }
 
