@@ -90,10 +90,10 @@
 
     if(isMobile){
       return h("div",{style:{display:"flex",flexDirection:"column",alignItems:"center",gap:4}},
-        dropdownWrap,
         h("span",{style:{fontSize:13,fontWeight:700,color:"#dc2626",fontFamily:"'Inter',system-ui,sans-serif",userSelect:"none",textAlign:"center"}},
-          "↑ Explora as outras ferramentas ↑"
-        )
+          "↓ Explora as outras ferramentas ↓"
+        ),
+        dropdownWrap
       );
     }
 
