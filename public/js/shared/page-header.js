@@ -50,7 +50,7 @@
     for(var i=0;i<PAGES.length;i++){if(PAGES[i].key===activePage){current=PAGES[i];break;}}
     if(!current)current=PAGES[0];
 
-    var triggerStyle={display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,width:"100%",padding:isMobile?"9px 12px":"13px 18px",border:"1px solid rgba(0,0,0,0.07)",borderRadius:9,background:"rgba(255,255,255,1)",color:"#374151",fontSize:isMobile?13:16,fontFamily:"sans-serif",fontWeight:600,cursor:"pointer"};
+    var triggerStyle={display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,width:"100%",padding:isMobile?"9px 12px":"13px 18px",border:"none",borderRadius:9,background:Au,color:"#ffffff",fontSize:isMobile?13:16,fontFamily:"sans-serif",fontWeight:600,cursor:"pointer",boxShadow:"0 2px 8px rgba(37,99,235,0.35)"};
 
     var items=PAGES.map(function(p){
       var isActive=p.key===current.key;
@@ -80,7 +80,7 @@
           h("span",{style:{flexShrink:0}},current.icon),
           h("span",{style:{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},current.label)
         ),
-        h("span",{style:{flexShrink:0,color:Au,fontSize:14,letterSpacing:1}},open?"☰ ▲":"☰ ▼")
+        h("span",{style:{flexShrink:0,color:"rgba(255,255,255,0.85)",fontSize:14,letterSpacing:1}},open?"☰ ▲":"☰ ▼")
       ),
       open&&h("div",{
         role:"menu",
