@@ -8,11 +8,19 @@
   var FALLBACK_EUR=window._SIM.FALLBACK_EUR;
   var EUR_COLORS=window._SIM.EUR_COLORS;
 
-  var navBase={flex:1,padding:"9px",border:"none",background:"rgba(255,255,255,1)",borderBottom:"2px solid transparent",color:"#374151",fontSize:13,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600};
-  var navActive={flex:1,padding:"9px",border:"none",background:"rgba(37,99,235,0.08)",borderBottom:"2px solid "+Au,color:Au,fontSize:13,fontFamily:"sans-serif",cursor:"default",fontWeight:600};
+  // Lista única de páginas — adicionar uma página futura é só uma linha aqui.
+  var PAGES=[
+    {key:"simulador",     href:"/",                        icon:"🏠", label:"Simulador"},
+    {key:"inversa",       href:"/quanto-posso-pedir.html", icon:"💰", label:"Quanto Posso Pedir?"},
+    {key:"transferencia", href:"/transferencia.html",      icon:"🔄", label:"Transferência de Crédito"},
+    {key:"comparacao",    href:"/comparacao.html",         icon:"🆚", label:"Comprar vs Arrendar"},
+    {key:"imi",           href:"/imi.html",                icon:"🏛️", label:"Simulador IMI"},
+    {key:"historico",     href:"/historico.html",          icon:"📈", label:"Histórico de Euribor e Spreads"}
+  ];
 
   /**
-   * Barra de navegação partilhada por todas as páginas.
+   * Navegação partilhada por todas as páginas — menu dropdown (☰), igual em mobile e desktop.
+   * Mostra só a página atual numa linha; clicar abre a lista completa.
    * Props:
    *   activePage     "simulador" | "inversa" | "transferencia" | "comparacao" | "imi" | "historico"
    *   commentCount   number
@@ -20,47 +28,56 @@
    */
   function NavTabs(props){
     var activePage=props.activePage||"";
-    var commentCount=props.commentCount||0;
-    var onOpenComments=props.onOpenComments||function(){};
-    var _m=React.useState(typeof window!=='undefined'&&window.innerWidth<640);
-    var isMobile=_m[0];var setIsMobile=_m[1];
+    var _o=React.useState(false);var open=_o[0];var setOpen=_o[1];
+    var wrapRef=React.useRef(null);
     React.useEffect(function(){
-      function onResize(){setIsMobile(window.innerWidth<640);}
-      window.addEventListener('resize',onResize,{passive:true});
-      return function(){window.removeEventListener('resize',onResize);};
-    },[]);
-    var flex=isMobile?"1 1 33%":1;
-    var fs=isMobile?12:13;
-    var nb=Object.assign({},navBase,{flex:flex,fontSize:fs,padding:isMobile?"7px 4px":"9px",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"});
-    var na=Object.assign({},navActive,{flex:flex,fontSize:fs,padding:isMobile?"7px 4px":"9px",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"});
-    var labels=isMobile
-      ?["🏠 Simulador","💰 Posso Pedir?","🔄 Transferência","🆚 Comprar/Arrendar","🏛️ IMI","📈 Histórico"]
-      :["🏠 Simulador","💰 Quanto Posso Pedir?","🔄 Transferência de Crédito","🆚 Comprar vs Arrendar","🏛️ Simulador IMI","📈 Histórico de Euribor e Spreads"];
-    return h("div",{style:{display:"flex",flexWrap:"wrap",borderRadius:9,overflow:"hidden",border:"1px solid rgba(0,0,0,0.07)",background:isMobile?"rgba(0,0,0,0.06)":"rgba(255,255,255,1)",rowGap:isMobile?1:0}},
+      if(!open)return;
+      function onDocDown(e){if(wrapRef.current&&!wrapRef.current.contains(e.target))setOpen(false);}
+      function onKey(e){if(e.key==="Escape")setOpen(false);}
+      document.addEventListener('mousedown',onDocDown);
+      document.addEventListener('keydown',onKey);
+      return function(){document.removeEventListener('mousedown',onDocDown);document.removeEventListener('keydown',onKey);};
+    },[open]);
+
+    var current=null;
+    for(var i=0;i<PAGES.length;i++){if(PAGES[i].key===activePage){current=PAGES[i];break;}}
+    if(!current)current=PAGES[0];
+
+    var triggerStyle={display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,width:"100%",maxWidth:360,padding:"9px 12px",border:"1px solid rgba(0,0,0,0.07)",borderRadius:9,background:"rgba(255,255,255,1)",color:"#374151",fontSize:13,fontFamily:"sans-serif",fontWeight:600,cursor:"pointer"};
+
+    var items=PAGES.map(function(p){
+      var isActive=p.key===current.key;
+      return h("button",{
+        key:p.key,
+        role:"menuitem",
+        onClick:isActive?function(){setOpen(false);}:function(){window.location.href=p.href;},
+        onMouseEnter:function(e){if(!isActive)e.currentTarget.style.background="rgba(0,0,0,0.04)";},
+        onMouseLeave:function(e){if(!isActive)e.currentTarget.style.background="transparent";},
+        style:{display:"flex",alignItems:"center",gap:8,width:"100%",minHeight:44,padding:"8px 12px",border:"none",borderRadius:6,textAlign:"left",fontSize:13,fontFamily:"sans-serif",fontWeight:600,cursor:isActive?"default":"pointer",background:isActive?"rgba(37,99,235,0.08)":"transparent",color:isActive?Au:"#374151"}
+      },
+        h("span",{style:{flexShrink:0}},p.icon),
+        h("span",null,p.label)
+      );
+    });
+
+    return h("div",{ref:wrapRef,style:{position:"relative",maxWidth:360}},
       h("button",{
-        onClick:activePage==="simulador"?undefined:function(){window.location.href="/";},
-        style:activePage==="simulador"?na:nb
-      },labels[0]),
-      h("button",{
-        onClick:activePage==="inversa"?undefined:function(){window.location.href="/quanto-posso-pedir.html";},
-        style:activePage==="inversa"?na:nb
-      },labels[1]),
-      h("button",{
-        onClick:activePage==="transferencia"?undefined:function(){window.location.href="/transferencia.html";},
-        style:activePage==="transferencia"?na:nb
-      },labels[2]),
-      h("button",{
-        onClick:activePage==="comparacao"?undefined:function(){window.location.href="/comparacao.html";},
-        style:activePage==="comparacao"?na:nb
-      },labels[3]),
-      h("button",{
-        onClick:activePage==="imi"?undefined:function(){window.location.href="/imi.html";},
-        style:activePage==="imi"?na:nb
-      },labels[4]),
-      h("button",{
-        onClick:activePage==="historico"?undefined:function(){window.location.href="/historico.html";},
-        style:activePage==="historico"?na:nb
-      },labels[5]),
+        onClick:function(){setOpen(!open);},
+        "aria-haspopup":"menu",
+        "aria-expanded":open,
+        "aria-label":"Menu de navegação — página atual: "+current.label,
+        style:triggerStyle
+      },
+        h("span",{style:{display:"flex",alignItems:"center",gap:8,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},
+          h("span",{style:{flexShrink:0}},current.icon),
+          h("span",{style:{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},current.label)
+        ),
+        h("span",{style:{flexShrink:0,color:Au,fontSize:14,letterSpacing:1}},open?"☰ ▲":"☰ ▼")
+      ),
+      open&&h("div",{
+        role:"menu",
+        style:{position:"absolute",top:"calc(100% + 4px)",left:0,width:"100%",zIndex:50,background:"#fff",border:"1px solid rgba(0,0,0,0.07)",borderRadius:9,boxShadow:"0 6px 20px rgba(0,0,0,0.12)",padding:4}
+      },items)
     );
   }
 
