@@ -170,17 +170,21 @@ async function loadStatsAdmin() {
     const locEl = document.getElementById('statsAdminLocations');
     if (locEl) {
       const excluded = d.excludedIps || [];
-      const excludedBar = excluded.length
-        ? `<div style="margin-top:10px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <span>🚫 IPs excluídos: ${excluded.map(ip => `<code style="background:rgba(0,0,0,0.15);padding:1px 5px;border-radius:3px">${escapeHtml(ip)}</code>`).join(' ')}</span>
-            <button class="btn-sm" onclick="clearExcludedIps(this)">Remover exclusões</button>
+      const excludedList = excluded.length
+        ? `<div style="margin-bottom:10px;font-size:12px;color:var(--muted);display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;">
+            <span style="line-height:1.6;">IPs: ${excluded.map(ip => `<code style="background:rgba(0,0,0,0.15);padding:1px 5px;border-radius:3px">${escapeHtml(ip)}</code>`).join(' ')}</span>
+            <button class="btn-sm" onclick="clearExcludedIps(this)" style="flex-shrink:0;">Remover todos</button>
           </div>`
-        : '';
-      const excludeBtn = `<div style="margin-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <button class="btn-sm" onclick="excludeMyIp(this)" title="Adiciona o teu IP actual (detectado pelo servidor) à lista de exclusão">🚫 Ignorar o meu IP</button>
-          <input id="excludeIpInput" type="text" placeholder="IP manual (ex: 1.2.3.4)" style="font-size:12px;padding:3px 8px;border-radius:5px;border:1px solid var(--border);background:var(--card);color:var(--text);width:220px;" />
-          <button class="btn-sm" onclick="excludeManualIp(this)">+ Adicionar IP</button>
-          <span id="excludeIpStatus" class="status" style="font-size:12px;"></span>
+        : `<p style="font-size:12px;color:var(--muted);margin:0 0 10px;">Nenhum IP excluído ainda.</p>`;
+      const ipBox = `<div class="stats-admin-col-table" style="margin-top:14px;">
+          <h3 style="font-size:13px;font-weight:600;margin:0 0 10px;color:var(--text)">🚫 IPs excluídos do tracking</h3>
+          ${excludedList}
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <button class="btn-sm" onclick="excludeMyIp(this)" title="Adiciona o teu IP actual (detectado pelo servidor) à lista de exclusão">Ignorar o meu IP</button>
+            <input id="excludeIpInput" type="text" placeholder="IP manual (ex: 1.2.3.4)" style="font-size:12px;padding:3px 8px;border-radius:5px;border:1px solid var(--border);background:var(--card);color:var(--text);width:200px;" />
+            <button class="btn-sm" onclick="excludeManualIp(this)">+ Adicionar</button>
+            <span id="excludeIpStatus" class="status" style="font-size:12px;"></span>
+          </div>
         </div>`;
       if (d.locations && d.locations.length) {
         const flag = cc => cc && cc.length === 2
@@ -194,9 +198,9 @@ async function loadStatsAdmin() {
         const moreBtn = extra > 0
           ? `<div style="text-align:center;margin-top:8px;"><button class="btn-sm btn-history" onclick="showMoreLocations(this)">Ver mais (${extra} localização${extra !== 1 ? 'ões' : ''})</button></div>`
           : '';
-        locEl.innerHTML = `<div class="stats-admin-col-table"><h3 style="font-size:13px;font-weight:600;margin:0 0 8px;color:var(--text)">🌍 Localização dos visitantes</h3><div class="stats-admin-7d"><table><thead><tr><th>Cidade</th><th>País</th><th>Visitas</th></tr></thead><tbody>${rows}</tbody></table></div>${moreBtn}${excludedBar}${excludeBtn}</div>`;
+        locEl.innerHTML = `<div class="stats-admin-col-table"><h3 style="font-size:13px;font-weight:600;margin:0 0 8px;color:var(--text)">🌍 Localização dos visitantes</h3><div class="stats-admin-7d"><table><thead><tr><th>Cidade</th><th>País</th><th>Visitas</th></tr></thead><tbody>${rows}</tbody></table></div>${moreBtn}</div>${ipBox}`;
       } else {
-        locEl.innerHTML = `<div class="stats-admin-col-table"><p class="status" style="margin:4px 0;font-size:12px;">Sem dados de localização ainda.</p>${excludedBar}${excludeBtn}</div>`;
+        locEl.innerHTML = `<div class="stats-admin-col-table"><p class="status" style="margin:4px 0;font-size:12px;">Sem dados de localização ainda.</p></div>${ipBox}`;
       }
     }
   } catch (e) {
