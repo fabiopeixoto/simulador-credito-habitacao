@@ -1,4 +1,4 @@
-const CACHE = "simulador-v163";
+const CACHE = "simulador-v164";
 
 /** URLs exactas referenciadas nos HTML (incl. query ?v=). */
 const PRECACHE = [
@@ -59,7 +59,7 @@ const PRECACHE = [
   "/js/pages/imi-mount.js?v=1",
   "/js/pages/custos-compra-page.js?v=3",
   "/js/pages/custos-compra-mount.js?v=1",
-  "/js/pages/stress-euribor-page.js?v=1",
+  "/js/pages/stress-euribor-page.js?v=2",
   "/js/pages/stress-euribor-mount.js?v=1",
 ];
 
