@@ -39,7 +39,7 @@
     {t:"Capital em Dívida",d:"Montante de capital ainda por pagar ao banco num determinado momento do crédito. Diminui a cada prestação paga."},
     {t:"HPP",         d:"Habitação Própria Permanente. Imóvel destinado a residência principal do proprietário. LTV máximo de 90% recomendado pelo BdP."},
     {t:"Produtos Vinculados",d:"Vendas associadas facultativas: produtos contratados com o banco (domiciliação de ordenado, cartões, seguros) em troca de redução do spread. O cliente pode recusar — paga o spread base (s/produtos)."},
-    {t:"Crédito Jovem",d:"Medida para jovens ≤35 anos (DL 44/2024): garantia pública do Estado que permite financiar até 100% do valor do imóvel e isenção de IMT e Imposto de Selo na compra da 1.ª habitação, dentro de limites de valor."},
+    {t:"Crédito Jovem",d:"Medida para jovens ≤35 anos (DL 44/2024): garantia pública do Estado que cobre a entrada (banco financia 90%, Estado garante os 10% restantes), isenção total de IMT até €330 539 e isenção de IS Aquisição (0,8%) na compra da 1.ª habitação própria permanente. Imóvel limitado a €450 000. Taxas de dossier e avaliação bancária tipicamente dispensadas."},
     {t:"Taxa de Esforço",d:"Percentagem do rendimento líquido mensal consumida pelos encargos com créditos. O mesmo que DSTI. Neste simulador: ≤35% aprovável, 35–40% no limite, >40% difícil."},
     {t:"Stress Test", d:"Teste exigido pelo BdP: a prestação é recalculada com a taxa agravada (+1,5 p.p. em créditos a mais de 10 anos) para verificar se o orçamento aguenta subidas da Euribor."},
     {t:"IMT",         d:"Imposto Municipal sobre as Transmissões Onerosas de Imóveis. Pago na compra, por escalões, sobre o maior entre o preço e o valor patrimonial. HPP tem isenção parcial; jovens ≤35 anos podem ficar isentos."},
@@ -57,6 +57,15 @@
     {t:"Caderneta Predial",d:"Documento emitido pela Autoridade Tributária (AT) que identifica o imóvel, o seu VPT, a descrição matricial e os proprietários registados. Necessária para a escritura e base de cálculo do IMI."},
     {t:"Mútuo",         d:"Contrato de empréstimo formalizado entre o banco e o mutuário que estabelece o crédito habitação: montante, prazo, taxa, garantias e condições. É assinado na escritura, juntamente com a constituição de hipoteca."},
     {t:"Certidão de Teor",d:"Documento emitido pela Conservatória do Registo Predial que comprova a situação jurídica do imóvel: proprietário actual, ónus, hipotecas e penhoras. Indispensável antes da compra para confirmar que o imóvel está livre de encargos."},
+    {t:"Break-even de Ocupação",d:"Número de meses por ano (ou taxa de ocupação) necessário para que as receitas de arrendamento cubram todos os custos (prestação, condomínio, IMI, manutenção, seguros). Indicador chave de viabilidade de investimento imobiliário."},
+    {t:"Capital Próprio",d:"Diferença entre o valor actual do imóvel e o montante do empréstimo ainda em dívida. Também designado de equity. Cresce à medida que o imóvel valoriza e o crédito é amortizado."},
+    {t:"Casa Pronta",d:"Serviço simplificado de escritura e registo prestado na Conservatória do Registo Predial, sem necessidade de notário independente. Custo habitual: €600–€800."},
+    {t:"Cash-flow",d:"No contexto de arrendamento: receitas mensais menos todos os custos (prestação, condomínio, IMI, manutenção, seguro). Positivo significa que o imóvel se paga a si próprio; negativo implica esforço mensal adicional do proprietário."},
+    {t:"IS Aquisição",d:"Imposto de Selo de 0,8% sobre o valor de transmissão do imóvel (escritura de compra e venda). Isento para beneficiários do Crédito Jovem (DL 44/2024). Distinto do IS sobre o contrato de crédito."},
+    {t:"IS Hipoteca",d:"Imposto de Selo de 0,6% sobre o montante do empréstimo hipotecário (verba 17.2 TGIS). Isento quando a finalidade é Habitação Própria Permanente (Art. 7.º CIS). Aplica-se a 2.ª habitação e investimento."},
+    {t:"Taxa de Ocupação",d:"Percentagem do ano em que o imóvel está efectivamente arrendado e a gerar receita. Usada no cálculo de rentabilidade para estimar receitas realistas (ex.: 90% = 10,8 meses arrendados por ano)."},
+    {t:"Yield Bruta",d:"Renda anual a dividir pelo valor do imóvel, em percentagem. Não desconta custos. Ex.: renda mensal €1 000 num imóvel de €200 000 → yield bruta de 6%."},
+    {t:"Yield Líquida",d:"Rentabilidade após descontar todos os custos operacionais anuais (IMI, condomínio, manutenção, seguro) ao rendimento de arrendamento, dividida pelo investimento total (preço + custos de compra). Mais representativa do retorno real."},
   ];
   // Apresentação por ordem alfabética (locale pt — trata acentos correctamente)
   TERMOS.sort(function(a,b){return a.t.localeCompare(b.t,"pt");});

@@ -91,8 +91,8 @@
     var entrada=comGarantia?0:valor-emprestimo;
 
     var imt=Math.round(calcIMT(valor,isJovem,finalidade==='hpp'?'hpp':'segunda'));
-    var isEscritura=Math.round(valor*0.008);
-    var isCredito=financiamento?Math.round(emprestimo*0.006):0;
+    var isEscritura=isJovem?0:Math.round(valor*0.008);           // DL 44/2024: isento Crédito Jovem
+    var isCredito=(financiamento&&finalidade!=='hpp')?Math.round(emprestimo*0.006):0; // Art.7.º CIS: isento HPP
     // Taxas bancárias típicas (isentas no Crédito Jovem)
     var DOSSIER_NORMAL=300;
     var AVAL_NORMAL=230;
@@ -107,9 +107,10 @@
     var imtSemJovem=Math.round(calcIMT(valor,false,finalidade==='hpp'?'hpp':'segunda'));
     var entradaSemGarantia=valor-Math.round(valor*ltv/100);
     var poupancaIMT=imtSemJovem-imt;
+    var poupancaIS=isJovem?Math.round(valor*0.008):0;
     var poupancaEntrada=comGarantia?entradaSemGarantia:0;
     var poupancaTaxasBancarias=isJovem?(DOSSIER_NORMAL+AVAL_NORMAL):0;
-    var poupancaTotal=poupancaIMT+poupancaEntrada+poupancaTaxasBancarias;
+    var poupancaTotal=poupancaIMT+poupancaIS+poupancaEntrada+poupancaTaxasBancarias;
 
     var acimaCap=valor>450000;
 
@@ -118,9 +119,9 @@
         ?{label:'Entrada (coberta pela garantia pública)',valor:0,cor:'#059669',isento:true}
         :{label:'Entrada / Valor a pagar',valor:entrada,cor:'#2563eb'},
       {label:'IMT',valor:imt,cor:'#dc2626',isento:imt===0&&isJovem},
-      {label:'Imposto de Selo — escritura (0,8%)',valor:isEscritura,cor:'#d97706'},
+      {label:'Imposto de Selo — escritura (0,8%)',valor:isEscritura,cor:'#d97706',isento:isJovem},
     ];
-    if(financiamento)componentes.push({label:'Imposto de Selo — crédito (0,6%)',valor:isCredito,cor:'#7c3aed'});
+    if(financiamento)componentes.push({label:'Imposto de Selo — crédito (0,6%)',valor:isCredito,cor:'#7c3aed',isento:finalidade==='hpp'});
     componentes.push({label:'Notário / Registo',valor:custosNotario,cor:'#059669'});
     if(taxasBancarias>0)componentes.push({label:'Taxas bancárias (dossier + avaliação)',valor:taxasBancarias,cor:'#6b7280'});
 
@@ -238,6 +239,10 @@
             poupancaIMT>0&&h('div',{style:{display:'flex',justifyContent:'space-between'}},
               h('span',{style:{fontSize:13,color:'#166534',fontFamily:'sans-serif'}},'IMT (isenção)'),
               h('span',{style:{fontSize:15,fontWeight:700,color:'#15803d',fontFamily:'monospace'}},fmtEur(poupancaIMT))
+            ),
+            poupancaIS>0&&h('div',{style:{display:'flex',justifyContent:'space-between'}},
+              h('span',{style:{fontSize:13,color:'#166534',fontFamily:'sans-serif'}},'IS Aquisição (isenção)'),
+              h('span',{style:{fontSize:15,fontWeight:700,color:'#15803d',fontFamily:'monospace'}},fmtEur(poupancaIS))
             ),
             poupancaEntrada>0&&h('div',{style:{display:'flex',justifyContent:'space-between'}},
               h('span',{style:{fontSize:13,color:'#166534',fontFamily:'sans-serif'}},'Entrada (garantia pública)'),
