@@ -169,6 +169,14 @@ async function loadStatsAdmin() {
     }
     const locEl = document.getElementById('statsAdminLocations');
     if (locEl) {
+      const excluded = d.excludedIps || [];
+      const excludedBar = excluded.length
+        ? `<div style="margin-top:10px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span>🚫 IPs excluídos: ${excluded.map(ip => `<code style="background:rgba(0,0,0,0.15);padding:1px 5px;border-radius:3px">${escapeHtml(ip)}</code>`).join(' ')}</span>
+            <button class="btn-sm" onclick="clearExcludedIps()">Remover exclusões</button>
+          </div>`
+        : '';
+      const excludeBtn = `<div style="margin-top:10px;"><button class="btn-sm" onclick="excludeMyIp()" title="Adiciona o teu IP actual à lista de exclusão — as tuas visitas deixam de ser contadas">🚫 Ignorar o meu IP</button></div>`;
       if (d.locations && d.locations.length) {
         const flag = cc => cc && cc.length === 2
           ? `<img src="https://flagcdn.com/16x12/${escapeHtml(cc.toLowerCase())}.png" width="16" height="12" alt="${escapeHtml(cc.toUpperCase())}" style="vertical-align:middle;margin-right:5px;border-radius:1px">`
@@ -181,9 +189,9 @@ async function loadStatsAdmin() {
         const moreBtn = extra > 0
           ? `<div style="text-align:center;margin-top:8px;"><button class="btn-sm btn-history" onclick="showMoreLocations(this)">Ver mais (${extra} localização${extra !== 1 ? 'ões' : ''})</button></div>`
           : '';
-        locEl.innerHTML = `<div class="stats-admin-col-table"><h3 style="font-size:13px;font-weight:600;margin:0 0 8px;color:var(--text)">🌍 Localização dos visitantes</h3><div class="stats-admin-7d"><table><thead><tr><th>Cidade</th><th>País</th><th>Visitas</th></tr></thead><tbody>${rows}</tbody></table></div>${moreBtn}</div>`;
+        locEl.innerHTML = `<div class="stats-admin-col-table"><h3 style="font-size:13px;font-weight:600;margin:0 0 8px;color:var(--text)">🌍 Localização dos visitantes</h3><div class="stats-admin-7d"><table><thead><tr><th>Cidade</th><th>País</th><th>Visitas</th></tr></thead><tbody>${rows}</tbody></table></div>${moreBtn}${excludedBar}${excludeBtn}</div>`;
       } else {
-        locEl.innerHTML = '<div class="stats-admin-col-table"><p class="status" style="margin:4px 0;font-size:12px;">Sem dados de localização ainda.</p></div>';
+        locEl.innerHTML = `<div class="stats-admin-col-table"><p class="status" style="margin:4px 0;font-size:12px;">Sem dados de localização ainda.</p>${excludedBar}${excludeBtn}</div>`;
       }
     }
   } catch (e) {
@@ -195,6 +203,39 @@ async function loadStatsAdmin() {
 function showMoreLocations(btn) {
   document.querySelectorAll('.loc-extra').forEach(tr => { tr.style.display = ''; });
   btn.closest('div').remove();
+}
+
+async function excludeMyIp() {
+  if (!adminUnlocked) return;
+  try {
+    const r = await fetch('/api/stats', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'x-admin-token': getToken().trim() },
+      body: JSON.stringify({ action: 'exclude' })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'HTTP ' + r.status);
+    alert('IP ' + d.ip + ' excluído — as tuas visitas deixam de ser contadas.');
+    await loadStatsAdmin();
+  } catch (e) {
+    alert('Erro: ' + e.message);
+  }
+}
+
+async function clearExcludedIps() {
+  if (!adminUnlocked) return;
+  if (!confirm('Remover todos os IPs excluídos?')) return;
+  try {
+    const r = await fetch('/api/stats', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'x-admin-token': getToken().trim() },
+      body: JSON.stringify({ action: 'clear_excluded' })
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    await loadStatsAdmin();
+  } catch (e) {
+    alert('Erro: ' + e.message);
+  }
 }
 
 async function resetStatsAdmin() {
