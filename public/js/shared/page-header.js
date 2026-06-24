@@ -157,7 +157,7 @@
             )
           ),
           h("div",{style:{display:"flex",gap:isMobileH?3:6,alignSelf:"flex-start",flexShrink:0,flexWrap:"nowrap"}},
-            onOpenProcesso&&h("button",{onClick:onOpenProcesso,style:{padding:isMobileH?"5px 4px":"6px 13px",border:"1px solid rgba(37,99,235,0.25)",borderRadius:7,background:"rgba(255,255,255,0.85)",color:Au,fontSize:isMobileH?10:12,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600,whiteSpace:"nowrap"}},"📋 Processo"),
+            onOpenProcesso&&h("button",{onClick:onOpenProcesso,style:{padding:isMobileH?"5px 4px":"6px 13px",border:"1px solid rgba(37,99,235,0.25)",borderRadius:7,background:"rgba(255,255,255,0.85)",color:Au,fontSize:isMobileH?10:12,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600,whiteSpace:"nowrap"}},"📋 Guia Processo"),
             onOpenGlossario&&h("button",{onClick:onOpenGlossario,style:{padding:isMobileH?"5px 4px":"6px 13px",border:"1px solid rgba(37,99,235,0.25)",borderRadius:7,background:"rgba(255,255,255,0.85)",color:Au,fontSize:isMobileH?10:12,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600,whiteSpace:"nowrap"}},"📖 Glossário"),
             h("button",{onClick:onOpenComments,style:{padding:isMobileH?"5px 4px":"6px 13px",border:"1px solid rgba(37,99,235,0.25)",borderRadius:7,background:"rgba(255,255,255,0.85)",color:Au,fontSize:isMobileH?10:12,fontFamily:"sans-serif",cursor:"pointer",fontWeight:600,whiteSpace:"nowrap"}},"💬 Comentários"+(commentCount>0?" ("+commentCount+")":""))
           )
