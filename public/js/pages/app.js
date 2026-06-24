@@ -8,7 +8,7 @@ const { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Le
 //  js/components/slider-input.js, inversa-bootstrap.js)
 const {
   fE,fE2,fP,fP1,margemVsOficial,
-  calcP,calcTAEG,calcMTIC,isJurosMedioMensal,sTot,calcIMT,simA,amChart,prestacaoCarencia,getLTVAddon,
+  calcP,calcTAEG,calcTAEGWithCarencia,calcMTIC,isJurosMedioMensal,sTot,calcIMT,simA,amChart,prestacaoCarencia,getLTVAddon,
   FINALIDADE_ADDON,FINALIDADE_MAX_LTV,NAV,
   ecC,ecL,thS,thSC,tdB,tdBC,tdG,tdGC,tdR,tdRC,rbg,
   SliderInput,CONTRATO_FACTOR,FALLBACK_EUR,EUR_COLORS,
@@ -347,7 +347,9 @@ function App(props){
         const regHTAEG=(modoJovem&&finalidade==="hpp")?0:Math.round(capital*0.0008+150);
         const comInic=comD2+comA2+(comB2.minutas||0)+200+isCredTAEG+regHTAEG;
         const encargoTAEG=pC+seg.tot+isM+segProtMensal+contaM;
-        const taeg=calcTAEG(capital,comInic,encargoTAEG,prazoCalc*12);
+        const taeg=carencia>0
+          ?calcTAEGWithCarencia(capital,comInic,(pCarenciaC||0)+seg.tot+isM+segProtMensal+contaM,carencia,encargoTAEG,prazoCalc*12)
+          :calcTAEG(capital,comInic,encargoTAEG,prazoCalc*12);
         let mtic;
         if(carencia>0){
           const encCar=(pCarenciaC||0)+seg.tot+isM+segProtMensal+contaM;
@@ -395,9 +397,10 @@ function App(props){
     const cRow=resultados.find(r=>r.s===(bancoCen||(melhor?.s)||""))||melhor;
     return[-0.5,0,0.5,1.0,1.5,2.0].map(d=>{
       const e2=cRow.ev+d,t2=e2+cRow.sCom;
-      const p2=calcP(capital,t2,prazoR),pt2=p2+cRow.seg.tot+isJurosMedioMensal(capital,t2,prazoR,finalidade)+segProtMensal;
+      const contaM_cen=cRow.contaM||0;
+      const p2=calcP(capital,t2,prazoR),pt2=p2+cRow.seg.tot+isJurosMedioMensal(capital,t2,prazoR,finalidade)+segProtMensal+contaM_cen;
       const ef=rendT>0?(pt2+outros)/rendT*100:0;
-      const st=calcP(capital,t2+1.5,prazoR)+cRow.seg.tot+isJurosMedioMensal(capital,t2+1.5,prazoR,finalidade)+segProtMensal;
+      const st=calcP(capital,t2+1.5,prazoR)+cRow.seg.tot+isJurosMedioMensal(capital,t2+1.5,prazoR,finalidade)+segProtMensal+contaM_cen;
       return{label:d===0?"Atual":d>0?("+"+d+"%"):(d+"%"),delta:d,eur:e2,tan:t2,p:Math.round(p2),pt:Math.round(pt2),ef,st:Math.round(st),efSt:rendT>0?(st+outros)/rendT*100:0};
     });
   },[melhor,resultados,bancoCen,capital,prazoR,rendT,outros,tipoTaxa,segProtMensal]);
