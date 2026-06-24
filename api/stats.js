@@ -85,7 +85,20 @@ function isLoopback(ip) {
   return ip === '::1' || ip === '127.0.0.1' || ip.startsWith('::ffff:127.');
 }
 
-function recordVisitorLocation(ip) {
+async function _ipApiLookup(ip) {
+  try {
+    const r = await fetch(
+      `http://ip-api.com/json/${encodeURIComponent(ip)}?fields=status,city,regionName,country,countryCode`,
+      { signal: AbortSignal.timeout(3000) }
+    );
+    if (!r.ok) return null;
+    const d = await r.json();
+    if (d.status !== 'success' || !d.countryCode) return null;
+    return { city: d.city || d.regionName || '—', country_code: d.countryCode, country_name: d.country || d.countryCode };
+  } catch (_) { return null; }
+}
+
+async function recordVisitorLocation(ip) {
   if (!sqliteDb || !ip || ip === 'unknown' || isLoopback(ip)) return;
   if (getExcludedIps().has(ip)) return;
   if (_ipCache.has(ip)) {
@@ -94,14 +107,22 @@ function recordVisitorLocation(ip) {
     return;
   }
   const geo = geoip.lookup(ip);
-  if (geo && geo.country) {
-    const loc = { city: geo.city || geo.region || '—', country_code: geo.country, country_name: geo.country };
-    if (_ipCache.size >= 50000) _ipCache.clear();
-    _ipCache.set(ip, loc);
-    incrementLocation(loc.city, loc.country_code, loc.country_name);
+  const geoCity = geo && (geo.city || geo.region);
+  let loc;
+  if (geo && geo.country && geoCity) {
+    loc = { city: geoCity, country_code: geo.country, country_name: geo.country };
   } else {
-    _ipCache.set(ip, null);
+    // geoip-lite sem cidade (comum em IPs móveis) — fallback para ip-api.com
+    const api = await _ipApiLookup(ip);
+    if (api) {
+      loc = api;
+    } else if (geo && geo.country) {
+      loc = { city: '—', country_code: geo.country, country_name: geo.country };
+    }
   }
+  if (_ipCache.size >= 50000) _ipCache.clear();
+  _ipCache.set(ip, loc || null);
+  if (loc) incrementLocation(loc.city, loc.country_code, loc.country_name);
 }
 
 function utcToday() {
