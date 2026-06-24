@@ -220,48 +220,60 @@
                     n===1?'1 Titular':'2 Titulares');
                 })
               ),
-              // Titular 1
-              numTitulares===2&&h('div',{style:{fontSize:10,letterSpacing:2,color:Au,fontFamily:'monospace',marginBottom:8}},'TITULAR 1'),
-              h('div',{style:fieldS},
-                h('span',{style:lbl},'Rendimento líquido / mês'),
-                h(SliderInput,{min:500,max:10000,step:100,value:rendimento,onChange:setRendimento,color:Au,suffix:'€/mês',ariaLabel:'Rendimento T1',formatFn:function(v){return v.toLocaleString('pt-PT');}})
-              ),
-              h('div',{style:fieldS},
-                h('span',{style:lbl},'Tipo de contrato'),
-                h('select',{value:tipo,onChange:function(e){setTipo(e.target.value);},
-                  style:{width:'100%',background:'#fff',border:'1px solid rgba(37,99,235,0.3)',color:'#111827',borderRadius:6,padding:'6px 8px',fontSize:12,cursor:'pointer'}},
-                  TIPO_OPTS.map(function(o){return h('option',{key:o[0],value:o[0]},o[1]);})
-                ),
-                (CONTRATO_FACTOR[tipo]||1)<1&&h('div',{style:{fontSize:11,color:Au,marginTop:4}},
-                  'Banco considera '+Math.round((CONTRATO_FACTOR[tipo]||1)*100)+'%'
-                )
-              ),
-              h('div',{style:fieldS},
-                h('span',{style:lbl},'Anos no emprego actual'),
-                h(SliderInput,{min:0,max:20,step:1,value:anosEmprego,onChange:setAnosEmprego,color:'#059669',suffix:' anos',ariaLabel:'Anos emprego T1',formatFn:function(v){return String(v);}})
-              ),
-              // Titular 2
-              numTitulares===2&&h('div',null,
-                h('div',{style:{fontSize:10,letterSpacing:2,color:'#059669',fontFamily:'monospace',marginBottom:8,marginTop:4,borderTop:'1px solid #f3f4f6',paddingTop:12}},'TITULAR 2'),
-                h('div',{style:fieldS},
-                  h('span',{style:lbl},'Rendimento líquido / mês'),
-                  h(SliderInput,{min:500,max:10000,step:100,value:rendimento2,onChange:setRendimento2,color:'#059669',suffix:'€/mês',ariaLabel:'Rendimento T2',formatFn:function(v){return v.toLocaleString('pt-PT');}})
-                ),
-                h('div',{style:fieldS},
-                  h('span',{style:lbl},'Tipo de contrato'),
-                  h('select',{value:tipo2,onChange:function(e){setTipo2(e.target.value);},
-                    style:{width:'100%',background:'#fff',border:'1px solid rgba(5,150,105,0.3)',color:'#111827',borderRadius:6,padding:'6px 8px',fontSize:12,cursor:'pointer'}},
-                    TIPO_OPTS.map(function(o){return h('option',{key:o[0],value:o[0]},o[1]);})
-                  ),
-                  (CONTRATO_FACTOR[tipo2]||1)<1&&h('div',{style:{fontSize:11,color:'#059669',marginTop:4}},
-                    'Banco considera '+Math.round((CONTRATO_FACTOR[tipo2]||1)*100)+'%'
+              numTitulares===1
+                ?h('div',null,
+                    h('div',{style:fieldS},
+                      h('span',{style:lbl},'Rendimento líquido / mês'),
+                      h(SliderInput,{min:500,max:10000,step:100,value:rendimento,onChange:setRendimento,color:Au,suffix:'€/mês',ariaLabel:'Rendimento',formatFn:function(v){return v.toLocaleString('pt-PT');}})
+                    ),
+                    h('div',{style:fieldS},
+                      h('span',{style:lbl},'Tipo de contrato'),
+                      h('select',{value:tipo,onChange:function(e){setTipo(e.target.value);},
+                        style:{width:'100%',background:'#fff',border:'1px solid rgba(37,99,235,0.3)',color:'#111827',borderRadius:6,padding:'6px 8px',fontSize:12,cursor:'pointer'}},
+                        TIPO_OPTS.map(function(o){return h('option',{key:o[0],value:o[0]},o[1]);})
+                      ),
+                      (CONTRATO_FACTOR[tipo]||1)<1&&h('div',{style:{fontSize:11,color:Au,marginTop:4}},
+                        'Banco considera '+Math.round((CONTRATO_FACTOR[tipo]||1)*100)+'%'
+                      )
+                    ),
+                    h('div',{style:fieldS},
+                      h('span',{style:lbl},'Anos no emprego actual'),
+                      h(SliderInput,{min:0,max:20,step:1,value:anosEmprego,onChange:setAnosEmprego,color:'#059669',suffix:' anos',ariaLabel:'Anos emprego',formatFn:function(v){return String(v);}})
+                    )
                   )
-                ),
-                h('div',{style:fieldS},
-                  h('span',{style:lbl},'Anos no emprego actual'),
-                  h(SliderInput,{min:0,max:20,step:1,value:anosEmprego2,onChange:setAnosEmprego2,color:'#059669',suffix:' anos',ariaLabel:'Anos emprego T2',formatFn:function(v){return String(v);}})
-                )
-              ),
+                :(function(){
+                    var cpt=isMobile;
+                    var cpad=cpt?'8px 9px':'12px 14px';
+                    var cfs=cpt?10:11;
+                    var cfmb=cpt?8:14;
+                    function tCard(n,clr,rend,setRend,tipo_,setTipo_,anos,setAnos){
+                      var clbl={fontSize:cfs,color:'#374151',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.5px',display:'block',marginBottom:4};
+                      var cfld={marginBottom:cfmb};
+                      return h('div',{key:n,style:{background:'rgba('+clr+',0.05)',border:'1px solid rgba('+clr+',0.25)',borderRadius:10,padding:cpad}},
+                        h('div',{style:{fontSize:cpt?11:12,fontWeight:700,color:'rgba('+clr+',1)',fontFamily:'sans-serif',marginBottom:cpt?6:9}},'👤 T'+n),
+                        h('div',{style:cfld},
+                          h('span',{style:clbl},cpt?'Rendimento':'Rendimento / mês'),
+                          h(SliderInput,{min:500,max:10000,step:100,value:rend,onChange:setRend,color:'rgba('+clr+',1)',suffix:'€/mês',ariaLabel:'Rendimento T'+n,formatFn:function(v){return v.toLocaleString('pt-PT');}})
+                        ),
+                        h('div',{style:cfld},
+                          h('span',{style:clbl},'Contrato'),
+                          h('select',{value:tipo_,onChange:function(e){setTipo_(e.target.value);},
+                            style:{width:'100%',background:'#fff',border:'1px solid rgba('+clr+',0.4)',color:'#111827',borderRadius:6,padding:'4px 6px',fontSize:cfs,cursor:'pointer'}},
+                            TIPO_OPTS.map(function(o){return h('option',{key:o[0],value:o[0]},o[1]);})
+                          ),
+                          (CONTRATO_FACTOR[tipo_]||1)<1&&h('div',{style:{fontSize:10,color:'rgba('+clr+',1)',marginTop:3}},'×'+Math.round((CONTRATO_FACTOR[tipo_]||1)*100)+'%')
+                        ),
+                        h('div',{style:{marginBottom:0}},
+                          h('span',{style:clbl},'Anos emprego'),
+                          h(SliderInput,{min:0,max:20,step:1,value:anos,onChange:setAnos,color:'rgba('+clr+',1)',suffix:'a',ariaLabel:'Anos emprego T'+n,formatFn:function(v){return String(v);}})
+                        )
+                      );
+                    }
+                    return h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:cpt?8:12,marginBottom:12,alignItems:'start'}},
+                      tCard(1,'201,168,76',rendimento,setRendimento,tipo,setTipo,anosEmprego,setAnosEmprego),
+                      tCard(2,'74,222,128',rendimento2,setRendimento2,tipo2,setTipo2,anosEmprego2,setAnosEmprego2)
+                    );
+                  })(),
               // Encargos partilhados
               h('div',{style:{borderTop:'1px solid #f3f4f6',paddingTop:12}},
                 h('div',{style:fieldS},
