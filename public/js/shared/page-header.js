@@ -17,6 +17,7 @@
     {key:"comparacao",    href:"/comparacao.html",         icon:"🆚", label:"Comprar vs Arrendar"},
     {key:"rentabilidade", href:"/rentabilidade.html",       icon:"📊", label:"Rentabilidade de Imóvel"},
     {key:"imi",           href:"/imi.html",                icon:"🏛️", label:"Simulador IMI"},
+    {key:"stress",        href:"/stress-euribor.html",     icon:"📉", label:"Stress Test Euribor"},
     {key:"historico",     href:"/historico.html",          icon:"📈", label:"Histórico de Euribor e Spreads"}
   ];
 
