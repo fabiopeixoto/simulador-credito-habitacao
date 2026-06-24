@@ -48,7 +48,7 @@
     <p>A nossa recolha de dados é mínima e limita-se ao necessário para o funcionamento da plataforma:</p>
     <ul>
       <li><strong>Registos de acesso (logs):</strong> endereço IP, data/hora, página visitada e browser. Mantidos no servidor por 30 dias para fins de diagnóstico e segurança.</li>
-      <li><strong>Estatísticas agregadas de visitas:</strong> número de visitantes por dia e localização aproximada por cidade. A geolocalização é determinada localmente nos nossos servidores com base numa base de dados MaxMind GeoLite2 — o teu endereço IP nunca sai dos nossos servidores para este fim; apenas a cidade resultante é armazenada. Os dados de visitas são <em>agrupados e anonimizados</em> — não identificamos utilizadores individuais.</li>
+      <li><strong>Estatísticas agregadas de visitas:</strong> número de visitantes por dia e localização aproximada por cidade. A geolocalização é determinada nos nossos servidores. Em primeiro lugar recorremos a uma base de dados local (MaxMind GeoLite2). Quando não é possível determinar a localização localmente (frequente em redes móveis), efectuamos uma consulta via HTTPS ao serviço <a href="https://ipwho.is" target="_blank" rel="noopener">ipwho.is</a> para obter cidade/país — nesse caso o endereço IP é transmitido a esse serviço exclusivamente para fins de geolocalização. Em nenhum caso o IP é partilhado com terceiros para fins de publicidade ou rastreamento. Os dados de visitas são <em>agrupados e anonimizados</em> — não identificamos utilizadores individuais.</li>
       <li><strong>Comentários (opcional):</strong> se publicares um comentário, guardamos o nome/alcunha que indicares, o texto e a data/hora. Opcionalmente, também são guardados o banco seleccionado, a prestação simulada e a prestação real, caso os preenchas. Não pedimos email nem criação de conta. Podes usar um nome fictício. Qualquer utilizador pode reportar um comentário inadequado ao administrador.</li>
       <li><strong>Dados da simulação:</strong> os parâmetros que introduzes no simulador (capital, prazo, rendimento, etc.) são processados exclusivamente no teu browser e/ou enviados para os nossos servidores apenas para efectuar o cálculo — <strong>não são armazenados</strong> de forma permanente.</li>
     </ul>
@@ -78,6 +78,7 @@
     <p>Não vendemos nem cedemos dados pessoais a terceiros. Os únicos terceiros envolvidos são:</p>
     <ul>
       <li><strong>Banco Central Europeu (BCE):</strong> consultamos a API pública do BCE para obter valores Euribor actualizados. Nenhum dado teu é transmitido ao BCE.</li>
+      <li><strong>ipwho.is:</strong> serviço de geolocalização de IP utilizado como alternativa quando a base de dados local não consegue determinar a localização (frequente em IPs de redes móveis). O endereço IP é transmitido via HTTPS exclusivamente para obter cidade e país. O IP não é armazenado pelo nosso sistema após a consulta. Consulta a <a href="https://ipwhois.io/privacy-policy.html" target="_blank" rel="noopener">política de privacidade do ipwho.is</a>.</li>
       <li><strong>Fornecedor de alojamento:</strong> o servidor está alojado numa infraestrutura cloud. Os logs de acesso podem estar sujeitos às políticas do fornecedor.</li>
     </ul>
     <div class="highlight">
