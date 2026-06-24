@@ -322,7 +322,7 @@ var MUNICIPIOS=[
 var MUN_DEFAULT=MUNICIPIOS.filter(function(m){return m.label==="Lisboa";})[0]||MUNICIPIOS[0];
 
 var IAS_2025=522.50;
-var LIMIAR_ISENCAO_PERMANENTE_VPT=66500;
+var LIMIAR_ISENCAO_PERMANENTE_VPT=IAS_2025*14*10; // 73.150€ — Art. 46/48 EBF: 10×14×IAS
 var LIMIAR_ISENCAO_PERMANENTE_REND=IAS_2025*14*2.3;
 
 function calcIMI(vpt, tipo, finalidade, taxaMunicipal, rendimento, nDep, anosPosse){
