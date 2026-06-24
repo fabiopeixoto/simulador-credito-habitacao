@@ -160,7 +160,7 @@
           h(ResponsiveContainer,{width:'100%',height:isMobile?240:320},
             h(LineChart,{data:res.chartData,margin:isMobile?{top:4,right:12,left:0,bottom:20}:{top:8,right:24,left:8,bottom:24}},
               h(CartesianGrid,{strokeDasharray:'3 3',stroke:'rgba(0,0,0,0.05)'}),
-              h(XAxis,{dataKey:'ano',tick:{fill:'#374151',fontSize:isMobile?10:11},axisLine:false,tickLine:false,tickFormatter:function(v){return v+'a';}}),
+              h(XAxis,{dataKey:'ano',ticks:(function(){var t=[];for(var y=0;y<=prazo;y+=5)t.push(y);return t;})(),tick:{fill:'#374151',fontSize:isMobile?10:11},axisLine:{stroke:'rgba(0,0,0,0.2)'},tickLine:{stroke:'rgba(0,0,0,0.2)'},tickFormatter:function(v){return v+'a';}}),
               h(YAxis,{width:isMobile?50:60,tick:{fill:'#374151',fontSize:isMobile?10:11},axisLine:false,tickLine:false,tickFormatter:function(v){return Math.round(v/1000)+'k€';}}),
               h(Tooltip,{formatter:function(v,n){return[fE(v),n];},contentStyle:{background:'#fff',border:'1px solid '+Au,borderRadius:8,color:'#111827',fontFamily:'sans-serif',fontSize:12},labelFormatter:function(l){return 'Ano '+l;}}),
               h(Legend,{verticalAlign:'bottom',iconSize:10,wrapperStyle:{paddingTop:6,fontSize:isMobile?11:12,fontFamily:'sans-serif',color:'#374151'}}),
