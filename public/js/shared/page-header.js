@@ -13,6 +13,7 @@
     {key:"simulador",     href:"/",                        icon:"🏠", label:"Simulador"},
     {key:"inversa",       href:"/quanto-posso-pedir.html", icon:"💰", label:"Quanto Posso Pedir?"},
     {key:"transferencia", href:"/transferencia.html",      icon:"🔄", label:"Transferência de Crédito"},
+    {key:"custos",        href:"/custos-compra.html",      icon:"🧾", label:"Custos de Compra de Casa"},
     {key:"comparacao",    href:"/comparacao.html",         icon:"🆚", label:"Comprar vs Arrendar"},
     {key:"rentabilidade", href:"/rentabilidade.html",       icon:"📊", label:"Rentabilidade de Imóvel"},
     {key:"imi",           href:"/imi.html",                icon:"🏛️", label:"Simulador IMI"},
