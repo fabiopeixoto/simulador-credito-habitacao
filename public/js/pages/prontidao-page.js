@@ -36,7 +36,7 @@
     var onOpenProcesso=props.onOpenProcesso||null;
     var eur6m=(EUR['6m']&&EUR['6m'].valor)||FALLBACK_EUR['6m'].valor;
 
-    var _rend=useState(1800);var rendimento=_rend[0];var setRendimento=_rend[1];
+    var _rend=useState(1500);var rendimento=_rend[0];var setRendimento=_rend[1];
     var _tipo=useState('efetivo');var tipo=_tipo[0];var setTipo=_tipo[1];
     var _anos=useState(3);var anosEmprego=_anos[0];var setAnosEmprego=_anos[1];
     var _debt=useState(0);var outrosEncargos=_debt[0];var setOutrosEncargos=_debt[1];
