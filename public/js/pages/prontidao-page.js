@@ -51,7 +51,7 @@
     var _cj=useState(false);var creditoJovem=_cj[0];var setCreditoJovem=_cj[1];
     var _jltv=useState(0.9);var jovemLTV=_jltv[0];var setJovemLTV=_jltv[1];
     var _mob=useState(typeof window!=='undefined'&&window.innerWidth<640);var isMobile=_mob[0];var setIsMobile=_mob[1];
-    var _oc=useState({rend:true,credito:true,imovel:true});var openCards=_oc[0];var setOpenCards=_oc[1];
+    var _oc=useState({rend:false,credito:false,imovel:false});var openCards=_oc[0];var setOpenCards=_oc[1];
     function toggleCard(key){setOpenCards(function(p){var n=Object.assign({},p);n[key]=!p[key];return n;});}
 
     useEffect(function(){
@@ -188,9 +188,9 @@
           // Rendimento & encargos
           h('div',{style:card},
             isMobile
-              ?h('button',{onClick:function(){toggleCard('rend');},style:{display:'flex',alignItems:'center',justifyContent:'space-between',width:'100%',background:'none',border:'none',cursor:'pointer',padding:0,marginBottom:openCards.rend?10:0}},
-                  h('span',{style:Object.assign({},secTitleS,{marginBottom:0})},'Rendimento & Encargos'),
-                  h('span',{style:{color:Au,fontSize:11,flexShrink:0}},openCards.rend?'▲':'▼'))
+              ?h('div',{onClick:function(){toggleCard('rend');},role:'button','aria-expanded':openCards.rend,style:{fontSize:11,letterSpacing:3,color:'#fff',background:Au,borderRadius:7,padding:'10px 12px',fontFamily:'monospace',marginBottom:openCards.rend?10:0,display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer',WebkitTapHighlightColor:'transparent'}},
+                  'RENDIMENTO & ENCARGOS',
+                  h('span',{style:{fontSize:14,fontWeight:800,lineHeight:1,color:'#fff',transform:openCards.rend?'rotate(90deg)':'none',transition:'transform 0.2s'}},'›'))
               :h('div',{style:secTitleS},'Rendimento & Encargos'),
             (!isMobile||openCards.rend)&&h('div',null,
               h('div',{style:fieldS},
@@ -222,9 +222,9 @@
           // Crédito pretendido
           h('div',{style:card},
             isMobile
-              ?h('button',{onClick:function(){toggleCard('credito');},style:{display:'flex',alignItems:'center',justifyContent:'space-between',width:'100%',background:'none',border:'none',cursor:'pointer',padding:0,marginBottom:openCards.credito?10:0}},
-                  h('span',{style:Object.assign({},secTitleS,{marginBottom:0})},'Crédito Pretendido'),
-                  h('span',{style:{color:Au,fontSize:11,flexShrink:0}},openCards.credito?'▲':'▼'))
+              ?h('div',{onClick:function(){toggleCard('credito');},role:'button','aria-expanded':openCards.credito,style:{fontSize:11,letterSpacing:3,color:'#fff',background:Au,borderRadius:7,padding:'10px 12px',fontFamily:'monospace',marginBottom:openCards.credito?10:0,display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer',WebkitTapHighlightColor:'transparent'}},
+                  'CRÉDITO PRETENDIDO',
+                  h('span',{style:{fontSize:14,fontWeight:800,lineHeight:1,color:'#fff',transform:openCards.credito?'rotate(90deg)':'none',transition:'transform 0.2s'}},'›'))
               :h('div',{style:secTitleS},'Crédito Pretendido'),
             (!isMobile||openCards.credito)&&h('div',null,
               h('div',{style:fieldS},
@@ -257,9 +257,9 @@
           // Imóvel & poupança
           h('div',{style:card},
             isMobile
-              ?h('button',{onClick:function(){toggleCard('imovel');},style:{display:'flex',alignItems:'center',justifyContent:'space-between',width:'100%',background:'none',border:'none',cursor:'pointer',padding:0,marginBottom:openCards.imovel?10:0}},
-                  h('span',{style:Object.assign({},secTitleS,{marginBottom:0})},'Imóvel & Poupança'),
-                  h('span',{style:{color:Au,fontSize:11,flexShrink:0}},openCards.imovel?'▲':'▼'))
+              ?h('div',{onClick:function(){toggleCard('imovel');},role:'button','aria-expanded':openCards.imovel,style:{fontSize:11,letterSpacing:3,color:'#fff',background:Au,borderRadius:7,padding:'10px 12px',fontFamily:'monospace',marginBottom:openCards.imovel?10:0,display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer',WebkitTapHighlightColor:'transparent'}},
+                  'IMÓVEL & POUPANÇA',
+                  h('span',{style:{fontSize:14,fontWeight:800,lineHeight:1,color:'#fff',transform:openCards.imovel?'rotate(90deg)':'none',transition:'transform 0.2s'}},'›'))
               :h('div',{style:secTitleS},'Imóvel & Poupança'),
             (!isMobile||openCards.imovel)&&h('div',null,
               h('div',{style:fieldS},
