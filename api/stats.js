@@ -112,8 +112,9 @@ function bumpMeta(key) {
     .run(key);
 }
 
-function recordHomepageView() {
+function recordHomepageView(ip) {
   if (!sqliteDb) return;
+  if (ip && !isLoopback(ip) && getExcludedIps().has(ip)) return;
   const day = utcToday();
   sqliteDb
     .prepare(`
@@ -124,8 +125,9 @@ function recordHomepageView() {
   bumpMeta("homepage_total");
 }
 
-function recordAdminPageView() {
+function recordAdminPageView(ip) {
   if (!sqliteDb) return;
+  if (ip && !isLoopback(ip) && getExcludedIps().has(ip)) return;
   const day = utcToday();
   sqliteDb
     .prepare(`
