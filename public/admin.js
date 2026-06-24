@@ -176,7 +176,12 @@ async function loadStatsAdmin() {
             <button class="btn-sm" onclick="clearExcludedIps(this)">Remover exclusões</button>
           </div>`
         : '';
-      const excludeBtn = `<div style="margin-top:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><button class="btn-sm" onclick="excludeMyIp(this)" title="Adiciona o teu IP actual à lista de exclusão — as tuas visitas deixam de ser contadas">🚫 Ignorar o meu IP</button><span id="excludeIpStatus" class="status" style="font-size:12px;"></span></div>`;
+      const excludeBtn = `<div style="margin-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <button class="btn-sm" onclick="excludeMyIp(this)" title="Adiciona o teu IP actual (detectado pelo servidor) à lista de exclusão">🚫 Ignorar o meu IP</button>
+          <input id="excludeIpInput" type="text" placeholder="IP manual (ex: 1.2.3.4)" style="font-size:12px;padding:3px 8px;border-radius:5px;border:1px solid var(--border);background:var(--card);color:var(--text);width:220px;" />
+          <button class="btn-sm" onclick="excludeManualIp(this)">+ Adicionar IP</button>
+          <span id="excludeIpStatus" class="status" style="font-size:12px;"></span>
+        </div>`;
       if (d.locations && d.locations.length) {
         const flag = cc => cc && cc.length === 2
           ? `<img src="https://flagcdn.com/16x12/${escapeHtml(cc.toLowerCase())}.png" width="16" height="12" alt="${escapeHtml(cc.toUpperCase())}" style="vertical-align:middle;margin-right:5px;border-radius:1px">`
@@ -222,6 +227,30 @@ async function excludeMyIp(btn) {
     });
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || 'HTTP ' + r.status);
+    _setExcludeStatus('✓ IP ' + d.ip + ' excluído.', 'ok');
+    await loadStatsAdmin();
+  } catch (e) {
+    if (btn) { btn.disabled = false; }
+    _setExcludeStatus('Erro: ' + e.message, 'error');
+  }
+}
+
+async function excludeManualIp(btn) {
+  if (!adminUnlocked) return;
+  const input = document.getElementById('excludeIpInput');
+  const ip = input ? input.value.trim() : '';
+  if (!ip) { _setExcludeStatus('Introduz um IP.', 'error'); return; }
+  if (btn) { btn.disabled = true; }
+  _setExcludeStatus('A excluir…', '');
+  try {
+    const r = await fetch('/api/stats', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'x-admin-token': getToken().trim() },
+      body: JSON.stringify({ action: 'exclude_manual', ip })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'HTTP ' + r.status);
+    if (input) input.value = '';
     _setExcludeStatus('✓ IP ' + d.ip + ' excluído.', 'ok');
     await loadStatsAdmin();
   } catch (e) {

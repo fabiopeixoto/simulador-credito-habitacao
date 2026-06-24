@@ -260,6 +260,12 @@ module.exports = async function handler(req, res) {
       addExcludedIp(ip);
       return res.status(200).json({ ok: true, ip });
     }
+    if (body.action === "exclude_manual") {
+      const ip = String(body.ip || "").trim();
+      if (!ip) return res.status(400).json({ error: "IP em falta" });
+      addExcludedIp(ip);
+      return res.status(200).json({ ok: true, ip });
+    }
     if (body.action === "clear_excluded") {
       clearExcludedIps();
       return res.status(200).json({ ok: true });
