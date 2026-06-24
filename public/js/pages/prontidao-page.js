@@ -403,7 +403,7 @@
             h('div',{style:{fontWeight:700,color:Au,marginBottom:3}},'Pronto para comparar os bancos?'),
             h('div',{style:{fontSize:12,color:'#374151'}},'Usa o Simulador Principal para ver as propostas de 13 bancos com o teu capital e prazo.')
           ),
-          h('a',{href:'/?c='+capital+'&p='+prazo,style:{display:'inline-block',padding:'9px 18px',background:Au,border:'none',borderRadius:8,color:'#fff',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'sans-serif',whiteSpace:'nowrap',textDecoration:'none'}},'Abrir Simulador →')
+          h('a',{href:'/?c='+capital+'&p='+prazo+(creditoJovem&&idade<=35?'&j=1':''),style:{display:'inline-block',padding:'9px 18px',background:Au,border:'none',borderRadius:8,color:'#fff',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'sans-serif',whiteSpace:'nowrap',textDecoration:'none'}},'Abrir Simulador →')
         ),
 
         h('p',{style:{fontSize:11,color:'#111827',textAlign:'center',padding:'4px 10px 20px',fontFamily:'sans-serif',lineHeight:1.65}},
