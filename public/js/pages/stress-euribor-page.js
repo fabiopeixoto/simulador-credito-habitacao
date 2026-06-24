@@ -201,7 +201,7 @@
           )
         ),
 
-        h('p',{style:{fontSize:11,color:'#9ca3af',textAlign:'center',padding:'4px 10px 28px',fontFamily:'sans-serif',lineHeight:1.65}},
+        h('p',{style:{fontSize:11,color:'#374151',textAlign:'center',padding:'4px 10px 28px',fontFamily:'sans-serif',lineHeight:1.65}},
           'Simulação indicativa baseada no método francês (prestação constante). Não inclui seguros, comissões nem produtos vinculados.',
           h('br',null),
           'Euribor actualizada periodicamente a partir do BCE. Confirma sempre a TAN contratual com o teu banco.'
