@@ -190,13 +190,11 @@
 
 
   function CookieBanner(){
-    var _s=React.useState(function(){try{return!!localStorage.getItem('cookie_consent');}catch(_){return true;}});
+    var _s=React.useState(false); // sempre visível em cada carregamento de página
     var hidden=_s[0],setHidden=_s[1];
     if(hidden)return null;
     function recusar(){
       try{
-        localStorage.setItem('cookie_consent','0');
-        // Apagar armazenamento não essencial ao recusar
         localStorage.removeItem('SIMULATION_HISTORY_v2');
         localStorage.removeItem('processo_checked');
       }catch(_){}
@@ -210,7 +208,7 @@
         style:{background:"#fff",color:"#374151",border:"1px solid #d1d5db",borderRadius:6,padding:"6px 16px",fontSize:13,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}
       },"Recusar"),
       h("button",{
-        onClick:function(){try{localStorage.setItem('cookie_consent','1');}catch(_){}setHidden(true);},
+        onClick:function(){setHidden(true);},
         style:{background:"#2563eb",color:"#fff",border:"none",borderRadius:6,padding:"6px 16px",fontSize:13,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}
       },"Aceitar")
     );
