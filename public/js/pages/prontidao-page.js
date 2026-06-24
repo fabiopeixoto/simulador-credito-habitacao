@@ -36,7 +36,7 @@
     var onOpenProcesso=props.onOpenProcesso||null;
     var eur6m=(EUR['6m']&&EUR['6m'].valor)||FALLBACK_EUR['6m'].valor;
 
-    var _rend=useState(1800);var rendimento=_rend[0];var setRendimento=_rend[1];
+    var _rend=useState(1500);var rendimento=_rend[0];var setRendimento=_rend[1];
     var _tipo=useState('efetivo');var tipo=_tipo[0];var setTipo=_tipo[1];
     var _anos=useState(3);var anosEmprego=_anos[0];var setAnosEmprego=_anos[1];
     var _debt=useState(0);var outrosEncargos=_debt[0];var setOutrosEncargos=_debt[1];
@@ -51,6 +51,8 @@
     var _cj=useState(false);var creditoJovem=_cj[0];var setCreditoJovem=_cj[1];
     var _jltv=useState(0.9);var jovemLTV=_jltv[0];var setJovemLTV=_jltv[1];
     var _mob=useState(typeof window!=='undefined'&&window.innerWidth<640);var isMobile=_mob[0];var setIsMobile=_mob[1];
+    var _oc=useState({rend:true,credito:true,imovel:true});var openCards=_oc[0];var setOpenCards=_oc[1];
+    function toggleCard(key){setOpenCards(function(p){var n=Object.assign({},p);n[key]=!p[key];return n;});}
 
     useEffect(function(){
       function onR(){setIsMobile(window.innerWidth<640);}
@@ -185,95 +187,113 @@
 
           // Rendimento & encargos
           h('div',{style:card},
-            h('div',{style:secTitleS},'Rendimento & Encargos'),
-            h('div',{style:fieldS},
-              h('span',{style:lbl},'Rendimento líquido / mês'),
-              h(SliderInput,{min:500,max:10000,step:100,value:rendimento,onChange:setRendimento,color:Au,suffix:'€/mês',ariaLabel:'Rendimento',formatFn:function(v){return v.toLocaleString('pt-PT');}})
-            ),
-            h('div',{style:fieldS},
-              h('span',{style:lbl},'Tipo de contrato'),
-              h('select',{value:tipo,onChange:function(e){setTipo(e.target.value);},
-                style:{width:'100%',background:'#fff',border:'1px solid rgba(37,99,235,0.3)',color:'#111827',borderRadius:6,padding:'6px 8px',fontSize:12,cursor:'pointer'}},
-                TIPO_OPTS.map(function(o){return h('option',{key:o[0],value:o[0]},o[1]);})
+            isMobile
+              ?h('button',{onClick:function(){toggleCard('rend');},style:{display:'flex',alignItems:'center',justifyContent:'space-between',width:'100%',background:'none',border:'none',cursor:'pointer',padding:0,marginBottom:openCards.rend?10:0}},
+                  h('span',{style:Object.assign({},secTitleS,{marginBottom:0})},'Rendimento & Encargos'),
+                  h('span',{style:{color:Au,fontSize:11,flexShrink:0}},openCards.rend?'▲':'▼'))
+              :h('div',{style:secTitleS},'Rendimento & Encargos'),
+            (!isMobile||openCards.rend)&&h('div',null,
+              h('div',{style:fieldS},
+                h('span',{style:lbl},'Rendimento líquido / mês'),
+                h(SliderInput,{min:500,max:10000,step:100,value:rendimento,onChange:setRendimento,color:Au,suffix:'€/mês',ariaLabel:'Rendimento',formatFn:function(v){return v.toLocaleString('pt-PT');}})
               ),
-              (CONTRATO_FACTOR[tipo]||1)<1&&h('div',{style:{fontSize:11,color:Au,marginTop:4}},
-                'Banco considera '+Math.round((CONTRATO_FACTOR[tipo]||1)*100)+'% = '+fE(calc.rendConsiderado)+'/mês'
+              h('div',{style:fieldS},
+                h('span',{style:lbl},'Tipo de contrato'),
+                h('select',{value:tipo,onChange:function(e){setTipo(e.target.value);},
+                  style:{width:'100%',background:'#fff',border:'1px solid rgba(37,99,235,0.3)',color:'#111827',borderRadius:6,padding:'6px 8px',fontSize:12,cursor:'pointer'}},
+                  TIPO_OPTS.map(function(o){return h('option',{key:o[0],value:o[0]},o[1]);})
+                ),
+                (CONTRATO_FACTOR[tipo]||1)<1&&h('div',{style:{fontSize:11,color:Au,marginTop:4}},
+                  'Banco considera '+Math.round((CONTRATO_FACTOR[tipo]||1)*100)+'% = '+fE(calc.rendConsiderado)+'/mês'
+                )
+              ),
+              h('div',{style:fieldS},
+                h('span',{style:lbl},'Anos no emprego actual'),
+                h(SliderInput,{min:0,max:20,step:1,value:anosEmprego,onChange:setAnosEmprego,color:'#059669',suffix:' anos',ariaLabel:'Anos emprego',formatFn:function(v){return String(v);}})
+              ),
+              h('div',{style:fieldS},
+                h('span',{style:lbl},'Outros encargos mensais'),
+                h(SliderInput,{min:0,max:3000,step:50,value:outrosEncargos,onChange:setOutrosEncargos,color:'#f97316',suffix:'€/mês',ariaLabel:'Outros encargos',formatFn:function(v){return v.toLocaleString('pt-PT');}}),
+                h('div',{style:{fontSize:11,color:'#6b7280',marginTop:3}},'Outros créditos, renda actual, pensão de alimentos…')
               )
-            ),
-            h('div',{style:fieldS},
-              h('span',{style:lbl},'Anos no emprego actual'),
-              h(SliderInput,{min:0,max:20,step:1,value:anosEmprego,onChange:setAnosEmprego,color:'#059669',suffix:' anos',ariaLabel:'Anos emprego',formatFn:function(v){return String(v);}})
-            ),
-            h('div',{style:fieldS},
-              h('span',{style:lbl},'Outros encargos mensais'),
-              h(SliderInput,{min:0,max:3000,step:50,value:outrosEncargos,onChange:setOutrosEncargos,color:'#f97316',suffix:'€/mês',ariaLabel:'Outros encargos',formatFn:function(v){return v.toLocaleString('pt-PT');}}),
-              h('div',{style:{fontSize:11,color:'#6b7280',marginTop:3}},'Outros créditos, renda actual, pensão de alimentos…')
             )
           ),
 
           // Crédito pretendido
           h('div',{style:card},
-            h('div',{style:secTitleS},'Crédito Pretendido'),
-            h('div',{style:fieldS},
-              h('span',{style:lbl},'Capital a pedir'),
-              h(SliderInput,{min:20000,max:600000,step:5000,value:capital,onChange:setCapital,color:Au,prefix:'€',ariaLabel:'Capital',formatFn:function(v){return Math.round(v).toLocaleString('pt-PT');}})
-            ),
-            h('div',{style:fieldS},
-              h('span',{style:lbl},'Prazo (anos)'),
-              h(SliderInput,{min:5,max:40,step:1,value:prazo,onChange:setPrazo,color:'#059669',suffix:' anos',ariaLabel:'Prazo',formatFn:function(v){return String(v);}})
-            ),
-            h('div',{style:fieldS},
-              h('span',{style:lbl},'TAN estimada (%)'),
-              h('div',{style:{display:'flex',alignItems:'center',gap:8}},
-                h('input',{type:'number',step:'0.001',min:'0',max:'15',className:'val-compact',
-                  value:typeof tan==='number'?tan.toFixed(3):tan,
-                  onChange:function(e){var v=parseFloat(e.target.value);if(!isNaN(v)&&v>=0)setTan(v);},
-                  style:{width:90,padding:'6px 8px',border:'1px solid rgba(37,99,235,0.3)',borderRadius:6,fontSize:13}}),
-                h('span',{style:{fontSize:11,color:'#6b7280'}},'Euribor 6m + spread ~1%')
+            isMobile
+              ?h('button',{onClick:function(){toggleCard('credito');},style:{display:'flex',alignItems:'center',justifyContent:'space-between',width:'100%',background:'none',border:'none',cursor:'pointer',padding:0,marginBottom:openCards.credito?10:0}},
+                  h('span',{style:Object.assign({},secTitleS,{marginBottom:0})},'Crédito Pretendido'),
+                  h('span',{style:{color:Au,fontSize:11,flexShrink:0}},openCards.credito?'▲':'▼'))
+              :h('div',{style:secTitleS},'Crédito Pretendido'),
+            (!isMobile||openCards.credito)&&h('div',null,
+              h('div',{style:fieldS},
+                h('span',{style:lbl},'Capital a pedir'),
+                h(SliderInput,{min:20000,max:600000,step:5000,value:capital,onChange:setCapital,color:Au,prefix:'€',ariaLabel:'Capital',formatFn:function(v){return Math.round(v).toLocaleString('pt-PT');}})
+              ),
+              h('div',{style:fieldS},
+                h('span',{style:lbl},'Prazo (anos)'),
+                h(SliderInput,{min:5,max:40,step:1,value:prazo,onChange:setPrazo,color:'#059669',suffix:' anos',ariaLabel:'Prazo',formatFn:function(v){return String(v);}})
+              ),
+              h('div',{style:fieldS},
+                h('span',{style:lbl},'TAN estimada (%)'),
+                h('div',{style:{display:'flex',alignItems:'center',gap:8}},
+                  h('input',{type:'number',step:'0.001',min:'0',max:'15',className:'val-compact',
+                    value:typeof tan==='number'?tan.toFixed(3):tan,
+                    onChange:function(e){var v=parseFloat(e.target.value);if(!isNaN(v)&&v>=0)setTan(v);},
+                    style:{width:90,padding:'6px 8px',border:'1px solid rgba(37,99,235,0.3)',borderRadius:6,fontSize:13}}),
+                  h('span',{style:{fontSize:11,color:'#6b7280'}},'Euribor 6m + spread ~1%')
+                )
+              ),
+              h('div',{style:{padding:'8px 12px',background:'rgba(37,99,235,0.05)',borderRadius:8,fontSize:12,color:'#374151',marginTop:4}},
+                'Prestação estimada: ',h('strong',{style:{color:Au}},fE(calc.prestacaoHabitacao)),'/mês',
+                h('br',null),
+                'DSTI com este crédito: ',h('strong',{style:{color:calc.dstiComCredito<=35?G:calc.dstiComCredito<=40?'#ca8a04':R}},calc.dstiComCredito.toFixed(0)+'%'),
+                h('span',{style:{fontSize:11,color:'#6b7280'}}, ' (prestação máx. possível: '+fE(calc.prestacaoMaxima)+'/mês)')
               )
-            ),
-            h('div',{style:{padding:'8px 12px',background:'rgba(37,99,235,0.05)',borderRadius:8,fontSize:12,color:'#374151',marginTop:4}},
-              'Prestação estimada: ',h('strong',{style:{color:Au}},fE(calc.prestacaoHabitacao)),'/mês',
-              h('br',null),
-              'DSTI com este crédito: ',h('strong',{style:{color:calc.dstiComCredito<=35?G:calc.dstiComCredito<=40?'#ca8a04':R}},calc.dstiComCredito.toFixed(0)+'%'),
-              h('span',{style:{fontSize:11,color:'#6b7280'}}, ' (prestação máx. possível: '+fE(calc.prestacaoMaxima)+'/mês)')
             )
           ),
 
           // Imóvel & poupança
           h('div',{style:card},
-            h('div',{style:secTitleS},'Imóvel & Poupança'),
-            h('div',{style:fieldS},
-              h('span',{style:lbl},'Valor do imóvel pretendido'),
-              h(SliderInput,{min:50000,max:800000,step:5000,value:valorImovel,onChange:setValorImovel,color:Au,prefix:'€',ariaLabel:'Valor imóvel',formatFn:function(v){return Math.round(v).toLocaleString('pt-PT');}})
-            ),
-            !calc.isJovem&&h('div',{style:fieldS},
-              h('span',{style:lbl},'LTV — financiamento (%)'),
-              h(SliderInput,{min:50,max:90,step:5,value:ltv,onChange:setLtv,color:'#7c3aed',suffix:'%',ariaLabel:'LTV',formatFn:function(v){return String(v);}})
-            ),
-            calc.isJovem&&h('div',{style:fieldS},
-              h('span',{style:lbl},'LTV — Crédito Jovem'),
-              h('div',{style:{fontSize:13,color:G,fontWeight:700,padding:'6px 0'}},
-                calc.ltvEfetivo+'% '+( calc.ltvEfetivo===100?'(D.L. Jovem — sem entrada necessária)':'(entrada mínima de 10%)')
-              )
-            ),
-            h('div',{style:fieldS},
-              h('span',{style:lbl},'Poupança disponível'),
-              h(SliderInput,{min:0,max:200000,step:1000,value:poupanca,onChange:setPoupanca,color:G,prefix:'€',ariaLabel:'Poupança',formatFn:function(v){return Math.round(v).toLocaleString('pt-PT');}})
-            ),
-            h('div',{style:fieldS},
-              h('span',{style:lbl},'Idade do titular principal'),
-              h(SliderInput,{min:18,max:65,step:1,value:idade,onChange:setIdade,color:'#f97316',suffix:' anos',ariaLabel:'Idade',formatFn:function(v){return String(v);}})
-            ),
-            h('div',{style:fieldS},
-              h('span',{style:lbl},'Historial de crédito'),
-              h('div',{style:{display:'flex',flexDirection:'column',gap:8}},
-                [['limpo','✅ Sem incidentes'],['atrasos','⚠️ Atrasos pontuais (já resolvidos)'],['incidentes','⛔ Incidentes activos']].map(function(o){
-                  return h('label',{key:o[0],style:{display:'flex',alignItems:'center',gap:10,cursor:'pointer',fontSize:13,color:historico===o[0]?'#111827':'#374151',fontWeight:historico===o[0]?600:400}},
-                    h('input',{type:'radio',name:'historico',value:o[0],checked:historico===o[0],onChange:function(){setHistorico(o[0]);},style:{flexShrink:0}}),
-                    o[1]
-                  );
-                })
+            isMobile
+              ?h('button',{onClick:function(){toggleCard('imovel');},style:{display:'flex',alignItems:'center',justifyContent:'space-between',width:'100%',background:'none',border:'none',cursor:'pointer',padding:0,marginBottom:openCards.imovel?10:0}},
+                  h('span',{style:Object.assign({},secTitleS,{marginBottom:0})},'Imóvel & Poupança'),
+                  h('span',{style:{color:Au,fontSize:11,flexShrink:0}},openCards.imovel?'▲':'▼'))
+              :h('div',{style:secTitleS},'Imóvel & Poupança'),
+            (!isMobile||openCards.imovel)&&h('div',null,
+              h('div',{style:fieldS},
+                h('span',{style:lbl},'Valor do imóvel pretendido'),
+                h(SliderInput,{min:50000,max:800000,step:5000,value:valorImovel,onChange:setValorImovel,color:Au,prefix:'€',ariaLabel:'Valor imóvel',formatFn:function(v){return Math.round(v).toLocaleString('pt-PT');}})
+              ),
+              !calc.isJovem&&h('div',{style:fieldS},
+                h('span',{style:lbl},'LTV — financiamento (%)'),
+                h(SliderInput,{min:50,max:90,step:5,value:ltv,onChange:setLtv,color:'#7c3aed',suffix:'%',ariaLabel:'LTV',formatFn:function(v){return String(v);}})
+              ),
+              calc.isJovem&&h('div',{style:fieldS},
+                h('span',{style:lbl},'LTV — Crédito Jovem'),
+                h('div',{style:{fontSize:13,color:G,fontWeight:700,padding:'6px 0'}},
+                  calc.ltvEfetivo+'% '+(calc.ltvEfetivo===100?'(D.L. Jovem — sem entrada necessária)':'(entrada mínima de 10%)')
+                )
+              ),
+              h('div',{style:fieldS},
+                h('span',{style:lbl},'Poupança disponível'),
+                h(SliderInput,{min:0,max:200000,step:1000,value:poupanca,onChange:setPoupanca,color:G,prefix:'€',ariaLabel:'Poupança',formatFn:function(v){return Math.round(v).toLocaleString('pt-PT');}})
+              ),
+              h('div',{style:fieldS},
+                h('span',{style:lbl},'Idade do titular principal'),
+                h(SliderInput,{min:18,max:65,step:1,value:idade,onChange:setIdade,color:'#f97316',suffix:' anos',ariaLabel:'Idade',formatFn:function(v){return String(v);}})
+              ),
+              h('div',{style:fieldS},
+                h('span',{style:lbl},'Historial de crédito'),
+                h('div',{style:{display:'flex',flexDirection:'column',gap:8}},
+                  [['limpo','✅ Sem incidentes'],['atrasos','⚠️ Atrasos pontuais (já resolvidos)'],['incidentes','⛔ Incidentes activos']].map(function(o){
+                    return h('label',{key:o[0],style:{display:'flex',alignItems:'center',gap:10,cursor:'pointer',fontSize:13,color:historico===o[0]?'#111827':'#374151',fontWeight:historico===o[0]?600:400}},
+                      h('input',{type:'radio',name:'historico',value:o[0],checked:historico===o[0],onChange:function(){setHistorico(o[0]);},style:{flexShrink:0}}),
+                      o[1]
+                    );
+                  })
+                )
               )
             )
           )
@@ -320,7 +340,7 @@
           h('a',{href:'/?c='+capital+'&p='+prazo,style:{display:'inline-block',padding:'9px 18px',background:Au,border:'none',borderRadius:8,color:'#fff',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'sans-serif',whiteSpace:'nowrap',textDecoration:'none'}},'Abrir Simulador →')
         ),
 
-        h('p',{style:{fontSize:11,color:'#6b7280',textAlign:'center',padding:'4px 10px 20px',fontFamily:'sans-serif',lineHeight:1.65}},
+        h('p',{style:{fontSize:11,color:'#111827',textAlign:'center',padding:'4px 10px 20px',fontFamily:'sans-serif',lineHeight:1.65}},
           '⚠️ Avaliação orientativa baseada em parâmetros típicos do Banco de Portugal. Cada banco tem critérios próprios de análise de risco. Esta ferramenta não substitui uma pré-análise bancária oficial.'
         ),
 
