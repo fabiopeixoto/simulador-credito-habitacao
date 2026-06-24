@@ -86,7 +86,7 @@
             h("div", {style:{fontSize:11,fontWeight:700,color:"#7c3aed",letterSpacing:1,marginBottom:10,fontFamily:"monospace"}}, "DEIXA O TEU COMENTÁRIO"),
             h("div", {style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:8,marginBottom:8}},
               h("div", null,
-                h("label", {style:{fontSize:10,color:"#4b5563",display:"block",marginBottom:3}}, "Nome (opcional)"),
+                h("label", {style:{fontSize:10,color:"#4b5563",display:"block",marginBottom:3}}, "Nickname (opcional)"),
                 h("input", {value:commentForm.name,onChange:function(e){setCommentForm(function(f){return Object.assign({},f,{name:e.target.value});});},placeholder:"Anónimo",maxLength:50,style:{width:"100%",padding:"6px 9px",border:"1px solid rgba(0,0,0,0.12)",borderRadius:6,fontSize:12,fontFamily:"sans-serif",boxSizing:"border-box"}})
               ),
               h("div", null,
@@ -133,7 +133,7 @@
               ),
               replyTo===c.id&&h("form", {onSubmit:function(e){submitReply(e,c.id);},style:{marginTop:8,background:"rgba(37,99,235,0.04)",border:"1px solid rgba(37,99,235,0.14)",borderRadius:8,padding:10}},
                 h("div", {style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:8,marginBottom:8}},
-                  h("input", {value:replyForm.name,onChange:function(e){setReplyForm(function(f){return Object.assign({},f,{name:e.target.value});});},placeholder:"Nome (opcional)",maxLength:50,style:{width:"100%",padding:"6px 8px",border:"1px solid rgba(0,0,0,0.12)",borderRadius:6,fontSize:12,fontFamily:"sans-serif",boxSizing:"border-box"}}),
+                  h("input", {value:replyForm.name,onChange:function(e){setReplyForm(function(f){return Object.assign({},f,{name:e.target.value});});},placeholder:"Nickname (opcional)",maxLength:50,style:{width:"100%",padding:"6px 8px",border:"1px solid rgba(0,0,0,0.12)",borderRadius:6,fontSize:12,fontFamily:"sans-serif",boxSizing:"border-box"}}),
                   h("textarea", {value:replyForm.text,onChange:function(e){setReplyForm(function(f){return Object.assign({},f,{text:e.target.value});});},placeholder:"Escreve a tua resposta...",required:true,maxLength:500,rows:2,style:{width:"100%",padding:"6px 8px",border:"1px solid rgba(0,0,0,0.12)",borderRadius:6,fontSize:12,fontFamily:"sans-serif",resize:"vertical",boxSizing:"border-box"}})
                 ),
                 replyErr&&h("div", {style:{fontSize:11,color:"#dc2626",marginBottom:8}}, "⚠️ "+replyErr),
