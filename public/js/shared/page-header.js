@@ -211,7 +211,7 @@
     var bpad=isMobileC?"4px 10px":"6px 16px";
     var gap=isMobileC?4:10;
     return h("div",{style:{position:"fixed",bottom:0,left:0,right:0,zIndex:9999,background:"#fff",borderTop:"1px solid #e5e7eb",padding:isMobileC?"10px 12px":"12px 20px",display:"flex",flexDirection:"column",alignItems:"center",gap:6,color:"#374151",fontFamily:"'Inter',system-ui,sans-serif",boxShadow:"0 -2px 8px rgba(0,0,0,0.08)"}},
-      h("span",{style:{fontSize:fs,textAlign:"center"}},"Este site utiliza armazenamento local para guardar as tuas preferências."),
+      h("span",{style:{fontSize:isMobileC?14:16,fontWeight:700,textAlign:"center"}},"Este site utiliza armazenamento local para guardar as tuas preferências."),
       h("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",gap:gap,flexWrap:"nowrap"}},
         h("a",{href:"/privacidade.html",style:{color:"#2563eb",fontSize:fs,textDecoration:"underline",whiteSpace:"nowrap"}},"Política de Privacidade"),
         h("a",{href:"/aviso-legal.html",style:{color:"#2563eb",fontSize:fs,textDecoration:"underline",whiteSpace:"nowrap"}},"Aviso Legal"),
