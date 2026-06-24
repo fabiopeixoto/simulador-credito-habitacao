@@ -26,6 +26,18 @@
   .highlight{background:rgba(37,99,235,0.06);border-left:3px solid #2563eb;padding:10px 14px;border-radius:0 6px 6px 0;margin:12px 0;font-size:13px;color:#1e3a8a}
   a{color:#2563eb}
   footer{text-align:center;font-size:12px;color:#6b7280;margin-top:32px}
+  .ck-actions{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:nowrap}
+  .ck-link{color:#2563eb;font-size:13px;text-decoration:underline;white-space:nowrap}
+  .ck-btn{border-radius:6px;padding:6px 16px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+  .ck-btn-reject{background:#fff;color:#374151;border:1px solid #d1d5db}
+  .ck-btn-accept{background:#2563eb;color:#fff;border:none}
+  @media(max-width:480px){
+    #cookie-banner{padding:10px 12px!important}
+    #cookie-banner>span{font-size:11px}
+    .ck-actions{gap:4px}
+    .ck-link,.ck-btn{font-size:11px}
+    .ck-btn{padding:4px 10px}
+  }
 </style>
 </head>
 <body>
@@ -133,12 +145,14 @@
   </footer>
 </div>
 
-<div id="cookie-banner" style="position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#fff;border-top:1px solid #e5e7eb;padding:12px 20px;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;font-size:13px;color:#374151;font-family:'Inter',system-ui,sans-serif;box-shadow:0 -2px 8px rgba(0,0,0,0.08)">
+<div id="cookie-banner" style="position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#fff;border-top:1px solid #e5e7eb;padding:12px 20px;display:flex;flex-direction:column;align-items:center;gap:6px;color:#374151;font-family:'Inter',system-ui,sans-serif;box-shadow:0 -2px 8px rgba(0,0,0,0.08)">
   <span>Este site utiliza armazenamento local para guardar as tuas preferências.</span>
-  <a href="/privacidade.html" style="color:#2563eb;font-size:13px;text-decoration:underline;white-space:nowrap">Política de Privacidade</a>
-  <a href="/aviso-legal.html" style="color:#2563eb;font-size:13px;text-decoration:underline;white-space:nowrap">Aviso Legal</a>
-  <button onclick="try{localStorage.removeItem('SIMULATION_HISTORY_v2');localStorage.removeItem('processo_checked');}catch(_){}document.getElementById('cookie-banner').style.display='none';" style="background:#fff;color:#374151;border:1px solid #d1d5db;border-radius:6px;padding:6px 16px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">Recusar</button>
-  <button onclick="document.getElementById('cookie-banner').style.display='none';" style="background:#2563eb;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">Aceitar</button>
+  <div class="ck-actions">
+    <a href="/privacidade.html" class="ck-link">Política de Privacidade</a>
+    <a href="/aviso-legal.html" class="ck-link">Aviso Legal</a>
+    <button onclick="try{localStorage.removeItem('SIMULATION_HISTORY_v2');localStorage.removeItem('processo_checked');}catch(_){}document.getElementById('cookie-banner').style.display='none';" class="ck-btn ck-btn-reject">Recusar</button>
+    <button onclick="document.getElementById('cookie-banner').style.display='none';" class="ck-btn ck-btn-accept">Aceitar</button>
+  </div>
 </div>
 </body>
 </html>

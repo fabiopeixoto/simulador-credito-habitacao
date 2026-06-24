@@ -192,6 +192,13 @@
   function CookieBanner(){
     var _s=React.useState(false); // sempre visível em cada carregamento de página
     var hidden=_s[0],setHidden=_s[1];
+    var _m=React.useState(typeof window!=='undefined'&&window.innerWidth<640);
+    var isMobileC=_m[0];var setIsMobileC=_m[1];
+    React.useEffect(function(){
+      function onR(){setIsMobileC(window.innerWidth<640);}
+      window.addEventListener('resize',onR,{passive:true});
+      return function(){window.removeEventListener('resize',onR);};
+    },[]);
     if(hidden)return null;
     function recusar(){
       try{
@@ -200,18 +207,23 @@
       }catch(_){}
       setHidden(true);
     }
-    return h("div",{style:{position:"fixed",bottom:0,left:0,right:0,zIndex:9999,background:"#fff",borderTop:"1px solid #e5e7eb",padding:"12px 20px",display:"flex",alignItems:"center",justifyContent:"center",gap:12,flexWrap:"wrap",fontSize:13,color:"#374151",fontFamily:"'Inter',system-ui,sans-serif",boxShadow:"0 -2px 8px rgba(0,0,0,0.08)"}},
-      h("span",null,"Este site utiliza armazenamento local para guardar as tuas preferências."),
-      h("a",{href:"/privacidade.html",style:{color:"#2563eb",fontSize:13,textDecoration:"underline",whiteSpace:"nowrap"}},"Política de Privacidade"),
-      h("a",{href:"/aviso-legal.html",style:{color:"#2563eb",fontSize:13,textDecoration:"underline",whiteSpace:"nowrap"}},"Aviso Legal"),
-      h("button",{
-        onClick:recusar,
-        style:{background:"#fff",color:"#374151",border:"1px solid #d1d5db",borderRadius:6,padding:"6px 16px",fontSize:13,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}
-      },"Recusar"),
-      h("button",{
-        onClick:function(){setHidden(true);},
-        style:{background:"#2563eb",color:"#fff",border:"none",borderRadius:6,padding:"6px 16px",fontSize:13,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}
-      },"Aceitar")
+    var fs=isMobileC?11:13;
+    var bpad=isMobileC?"4px 10px":"6px 16px";
+    var gap=isMobileC?4:10;
+    return h("div",{style:{position:"fixed",bottom:0,left:0,right:0,zIndex:9999,background:"#fff",borderTop:"1px solid #e5e7eb",padding:isMobileC?"10px 12px":"12px 20px",display:"flex",flexDirection:"column",alignItems:"center",gap:6,color:"#374151",fontFamily:"'Inter',system-ui,sans-serif",boxShadow:"0 -2px 8px rgba(0,0,0,0.08)"}},
+      h("span",{style:{fontSize:fs,textAlign:"center"}},"Este site utiliza armazenamento local para guardar as tuas preferências."),
+      h("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",gap:gap,flexWrap:"nowrap"}},
+        h("a",{href:"/privacidade.html",style:{color:"#2563eb",fontSize:fs,textDecoration:"underline",whiteSpace:"nowrap"}},"Política de Privacidade"),
+        h("a",{href:"/aviso-legal.html",style:{color:"#2563eb",fontSize:fs,textDecoration:"underline",whiteSpace:"nowrap"}},"Aviso Legal"),
+        h("button",{
+          onClick:recusar,
+          style:{background:"#fff",color:"#374151",border:"1px solid #d1d5db",borderRadius:6,padding:bpad,fontSize:fs,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}
+        },"Recusar"),
+        h("button",{
+          onClick:function(){setHidden(true);},
+          style:{background:"#2563eb",color:"#fff",border:"none",borderRadius:6,padding:bpad,fontSize:fs,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}
+        },"Aceitar")
+      )
     );
   }
 
