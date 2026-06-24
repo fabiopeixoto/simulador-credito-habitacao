@@ -103,6 +103,14 @@
         var lv = maxV - (maxV - minV) * g / 4;
         svgParts.push('<text x="' + (margin.left - 6) + '" y="' + (gy + 4) + '" text-anchor="end" font-size="10" fill="#4b5563" font-family="sans-serif">' + esc(yFmt(Math.round(lv))) + '</text>');
       }
+      // X axis line
+      var showXAxisLine = !(xAxis && xAxis.axisLine === false);
+      if (showXAxisLine) {
+        svgParts.push('<line x1="' + margin.left + '" y1="' + (margin.top + innerH) + '" x2="' + (margin.left + innerW) + '" y2="' + (margin.top + innerH) + '" stroke="rgba(0,0,0,0.2)" stroke-width="1"/>');
+      }
+      var xTicksFilter = xAxis && Array.isArray(xAxis.ticks) ? xAxis.ticks : null;
+      var showTickLines = !(xAxis && xAxis.tickLine === false);
+
       // Bars
       data.forEach(function(d, i) {
         bars.forEach(function(b, bi) {
@@ -117,10 +125,17 @@
           }
           svgParts.push('<rect x="' + Math.round(bx) + '" y="' + by + '" width="' + bw + '" height="' + bh + '" rx="2" fill="' + fill + '" opacity="' + (b.opacity||0.85) + '"/>');
         });
-        // X labels
+        // X labels (filtered by ticks if specified)
         if (xKey && d[xKey] != null) {
-          var lx = margin.left + gap * i + gap / 2;
-          svgParts.push('<text x="' + Math.round(lx) + '" y="' + (H - margin.bottom + 16) + '" text-anchor="middle" font-size="10" fill="#4b5563" font-family="sans-serif">' + esc(xFmt(d[xKey])) + '</text>');
+          var showLabel = !xTicksFilter || xTicksFilter.indexOf(d[xKey]) >= 0;
+          if (showLabel) {
+            var lx = Math.round(margin.left + gap * i + gap / 2);
+            var axisY = margin.top + innerH;
+            if (showTickLines) {
+              svgParts.push('<line x1="' + lx + '" y1="' + axisY + '" x2="' + lx + '" y2="' + (axisY + 4) + '" stroke="rgba(0,0,0,0.2)" stroke-width="1"/>');
+            }
+            svgParts.push('<text x="' + lx + '" y="' + (H - margin.bottom + 16) + '" text-anchor="middle" font-size="10" fill="#4b5563" font-family="sans-serif">' + esc(xFmt(d[xKey])) + '</text>');
+          }
         }
       });
       // Lines
