@@ -136,6 +136,7 @@
 <div id="cookie-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#fff;border-top:1px solid #e5e7eb;padding:12px 20px;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;font-size:13px;color:#374151;font-family:'Inter',system-ui,sans-serif;box-shadow:0 -2px 8px rgba(0,0,0,0.08)">
   <span>Este site utiliza armazenamento local para guardar as tuas preferências.</span>
   <a href="/privacidade.html" style="color:#2563eb;font-size:13px;text-decoration:underline;white-space:nowrap">Política de Privacidade</a>
+  <button onclick="localStorage.setItem('cookie_consent','0');localStorage.removeItem('SIMULATION_HISTORY_v2');localStorage.removeItem('processo_checked');document.getElementById('cookie-banner').style.display='none';" style="background:#fff;color:#374151;border:1px solid #d1d5db;border-radius:6px;padding:6px 16px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">Recusar</button>
   <button onclick="localStorage.setItem('cookie_consent','1');document.getElementById('cookie-banner').style.display='none';" style="background:#2563eb;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">Aceitar</button>
 </div>
 <script>if(!localStorage.getItem('cookie_consent'))document.getElementById('cookie-banner').style.display='flex';</script>
