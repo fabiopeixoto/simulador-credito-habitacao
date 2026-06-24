@@ -48,6 +48,10 @@
     var _capital=useState(200000);var capital=_capital[0];var setCapital=_capital[1];
     var _prazo=useState(30);var prazo=_prazo[0];var setPrazo=_prazo[1];
     var _tan=useState(parseFloat((eur6m+1.0).toFixed(3)));var tan=_tan[0];var setTan=_tan[1];
+    var _nt=useState(1);var numTitulares=_nt[0];var setNumTitulares=_nt[1];
+    var _r2=useState(1500);var rendimento2=_r2[0];var setRendimento2=_r2[1];
+    var _t2=useState('efetivo');var tipo2=_t2[0];var setTipo2=_t2[1];
+    var _a2=useState(3);var anosEmprego2=_a2[0];var setAnosEmprego2=_a2[1];
     var _cj=useState(false);var creditoJovem=_cj[0];var setCreditoJovem=_cj[1];
     var _jltv=useState(0.9);var jovemLTV=_jltv[0];var setJovemLTV=_jltv[1];
     var _mob=useState(typeof window!=='undefined'&&window.innerWidth<640);var isMobile=_mob[0];var setIsMobile=_mob[1];
@@ -63,7 +67,9 @@
     var calc=useMemo(function(){
       var tanN=typeof tan==='number'?tan:parseFloat(tan)||0;
       var cf=CONTRATO_FACTOR[tipo]||1;
-      var rendConsiderado=Math.round(rendimento*cf);
+      var cf2=numTitulares===2?(CONTRATO_FACTOR[tipo2]||1):0;
+      var rend2c=numTitulares===2?Math.round(rendimento2*cf2):0;
+      var rendConsiderado=Math.round(rendimento*cf)+rend2c;
       var prestacaoHabitacao=Math.round(calcP(capital,tanN,prazo));
       var totalEncargos=outrosEncargos+prestacaoHabitacao;
       var dstiComCredito=rendConsiderado>0?totalEncargos/rendConsiderado*100:0;
@@ -71,22 +77,35 @@
 
       // 1 — DSTI
       var dsti_status=dstiComCredito<=35?'verde':dstiComCredito<=40?'amarelo':'vermelho';
-      var dsti_desc='Com este crédito, o teu DSTI seria '+dstiComCredito.toFixed(0)+'% (BdP recomenda ≤35%). Rendimento considerado pelo banco: '+fE(rendConsiderado)+'/mês.';
+      var rendDesc=numTitulares===2
+        ?'T1: '+fE(Math.round(rendimento*cf))+' + T2: '+fE(rend2c)+' = '+fE(rendConsiderado)
+        :fE(rendConsiderado);
+      var dsti_desc='DSTI de '+dstiComCredito.toFixed(0)+'% (BdP recomenda ≤35%). Rendimento considerado: '+rendDesc+'/mês.';
       var dsti_acao=dsti_status==='vermelho'?'Reduz a prestação (capital menor ou prazo maior) ou liquida outros créditos antes de pedir habitação.':
                     dsti_status==='amarelo'?'Estás no limite. O banco pode aprovar, mas considera reduzir o capital pedido.':null;
 
       // 2 — Estabilidade laboral
-      var emp_status;
-      if(tipo==='recibo'&&anosEmprego<2) emp_status='vermelho';
-      else if(tipo==='recibo') emp_status='amarelo';
-      else if(tipo==='pensao') emp_status='verde';
-      else if(anosEmprego<1) emp_status='amarelo';
-      else emp_status='verde';
-      var emp_desc=tipo==='recibo'&&anosEmprego<2?'Recibo verde com '+anosEmprego+' ano(s) — os bancos habitualmente exigem ≥2 anos de historial sólido.':
-                   tipo==='recibo'?'Recibo verde ≥2 anos: crédito possível, mas o banco aplica penalização no rendimento (×70%).':
-                   tipo==='pensao'?'Pensionista — rendimento estável, perfil geralmente bem aceite.':
-                   anosEmprego<1?'Menos de 1 ano no emprego actual — alguns bancos exigem 1 a 2 anos de antiguidade.':
-                   'Vínculo '+tipo+' com '+anosEmprego+' ano(s) — boa estabilidade laboral.';
+      function getES(t,a){
+        if(t==='recibo'&&a<2)return 'vermelho';
+        if(t==='recibo')return 'amarelo';
+        if(t==='pensao')return 'verde';
+        if(a<1)return 'amarelo';
+        return 'verde';
+      }
+      function getED(t,a){
+        return t==='recibo'&&a<2?'Recibo verde com '+a+'a — bancos exigem ≥2 anos.':
+               t==='recibo'?'Recibo verde ≥2 anos — possível, com penalização (×70%).':
+               t==='pensao'?'Pensionista — rendimento estável.':
+               a<1?'<1 ano no emprego — alguns bancos exigem 1-2 anos.':
+               'Vínculo '+t+', '+a+'a — boa estabilidade.';
+      }
+      var es1=getES(tipo,anosEmprego);
+      var es2=numTitulares===2?getES(tipo2,anosEmprego2):null;
+      var rankS={verde:0,amarelo:1,vermelho:2};
+      var emp_status=numTitulares===2&&rankS[es2]>rankS[es1]?es2:es1;
+      var emp_desc=numTitulares===2
+        ?'T1: '+getED(tipo,anosEmprego)+' T2: '+getED(tipo2,anosEmprego2)
+        :getED(tipo,anosEmprego);
       var emp_acao=emp_status==='vermelho'?'Aguarda mais tempo no emprego actual ou consolida 2+ anos de recibos consistentes.':
                    emp_status==='amarelo'?'Considera esperar mais alguns meses para reforçar o historial laboral.':null;
 
@@ -134,7 +153,7 @@
       var veredicto=nVermelhos===0&&nAmarelos<=1?'ok':nVermelhos<=1?'atencao':'nao';
 
       return{rendConsiderado:rendConsiderado,prestacaoHabitacao:prestacaoHabitacao,dstiComCredito:dstiComCredito,prestacaoMaxima:prestacaoMaxima,dimensoes:dimensoes,nVermelhos:nVermelhos,nAmarelos:nAmarelos,veredicto:veredicto,entrada:entrada,custos:custos,poupancaNecessaria:poupancaNecessaria,isJovem:isJovem,ltvEfetivo:ltvEfetivo};
-    },[rendimento,tipo,anosEmprego,outrosEncargos,historico,poupanca,valorImovel,ltv,idade,capital,prazo,tan,creditoJovem,jovemLTV]);
+    },[rendimento,tipo,anosEmprego,outrosEncargos,historico,poupanca,valorImovel,ltv,idade,capital,prazo,tan,creditoJovem,jovemLTV,numTitulares,rendimento2,tipo2,anosEmprego2]);
 
     var card={background:'#fff',borderRadius:11,padding:isMobile?'14px 12px':'18px 20px',marginBottom:12};
     var secTitleS={fontSize:11,letterSpacing:3,color:Au,fontFamily:'monospace',marginBottom:12,textTransform:'uppercase'};
@@ -193,9 +212,19 @@
                   h('span',{style:{fontSize:14,fontWeight:800,lineHeight:1,color:'#fff',transform:openCards.rend?'rotate(90deg)':'none',transition:'transform 0.2s'}},'›'))
               :h('div',{style:secTitleS},'Rendimento & Encargos'),
             (!isMobile||openCards.rend)&&h('div',null,
+              // Toggle 1T / 2T
+              h('div',{style:{display:'flex',borderRadius:7,overflow:'hidden',border:'1px solid rgba(37,99,235,0.18)',marginBottom:14}},
+                [1,2].map(function(n){
+                  return h('button',{key:n,onClick:function(){setNumTitulares(n);},
+                    style:{flex:1,padding:'7px',border:'none',background:numTitulares===n?Au:'#fff',color:numTitulares===n?'#fff':'#374151',fontSize:12,fontFamily:'sans-serif',cursor:'pointer',fontWeight:700}},
+                    n===1?'1 Titular':'2 Titulares');
+                })
+              ),
+              // Titular 1
+              numTitulares===2&&h('div',{style:{fontSize:10,letterSpacing:2,color:Au,fontFamily:'monospace',marginBottom:8}},'TITULAR 1'),
               h('div',{style:fieldS},
                 h('span',{style:lbl},'Rendimento líquido / mês'),
-                h(SliderInput,{min:500,max:10000,step:100,value:rendimento,onChange:setRendimento,color:Au,suffix:'€/mês',ariaLabel:'Rendimento',formatFn:function(v){return v.toLocaleString('pt-PT');}})
+                h(SliderInput,{min:500,max:10000,step:100,value:rendimento,onChange:setRendimento,color:Au,suffix:'€/mês',ariaLabel:'Rendimento T1',formatFn:function(v){return v.toLocaleString('pt-PT');}})
               ),
               h('div',{style:fieldS},
                 h('span',{style:lbl},'Tipo de contrato'),
@@ -204,17 +233,42 @@
                   TIPO_OPTS.map(function(o){return h('option',{key:o[0],value:o[0]},o[1]);})
                 ),
                 (CONTRATO_FACTOR[tipo]||1)<1&&h('div',{style:{fontSize:11,color:Au,marginTop:4}},
-                  'Banco considera '+Math.round((CONTRATO_FACTOR[tipo]||1)*100)+'% = '+fE(calc.rendConsiderado)+'/mês'
+                  'Banco considera '+Math.round((CONTRATO_FACTOR[tipo]||1)*100)+'%'
                 )
               ),
               h('div',{style:fieldS},
                 h('span',{style:lbl},'Anos no emprego actual'),
-                h(SliderInput,{min:0,max:20,step:1,value:anosEmprego,onChange:setAnosEmprego,color:'#059669',suffix:' anos',ariaLabel:'Anos emprego',formatFn:function(v){return String(v);}})
+                h(SliderInput,{min:0,max:20,step:1,value:anosEmprego,onChange:setAnosEmprego,color:'#059669',suffix:' anos',ariaLabel:'Anos emprego T1',formatFn:function(v){return String(v);}})
               ),
-              h('div',{style:fieldS},
-                h('span',{style:lbl},'Outros encargos mensais'),
-                h(SliderInput,{min:0,max:3000,step:50,value:outrosEncargos,onChange:setOutrosEncargos,color:'#f97316',suffix:'€/mês',ariaLabel:'Outros encargos',formatFn:function(v){return v.toLocaleString('pt-PT');}}),
-                h('div',{style:{fontSize:11,color:'#6b7280',marginTop:3}},'Outros créditos, renda actual, pensão de alimentos…')
+              // Titular 2
+              numTitulares===2&&h('div',null,
+                h('div',{style:{fontSize:10,letterSpacing:2,color:'#059669',fontFamily:'monospace',marginBottom:8,marginTop:4,borderTop:'1px solid #f3f4f6',paddingTop:12}},'TITULAR 2'),
+                h('div',{style:fieldS},
+                  h('span',{style:lbl},'Rendimento líquido / mês'),
+                  h(SliderInput,{min:500,max:10000,step:100,value:rendimento2,onChange:setRendimento2,color:'#059669',suffix:'€/mês',ariaLabel:'Rendimento T2',formatFn:function(v){return v.toLocaleString('pt-PT');}})
+                ),
+                h('div',{style:fieldS},
+                  h('span',{style:lbl},'Tipo de contrato'),
+                  h('select',{value:tipo2,onChange:function(e){setTipo2(e.target.value);},
+                    style:{width:'100%',background:'#fff',border:'1px solid rgba(5,150,105,0.3)',color:'#111827',borderRadius:6,padding:'6px 8px',fontSize:12,cursor:'pointer'}},
+                    TIPO_OPTS.map(function(o){return h('option',{key:o[0],value:o[0]},o[1]);})
+                  ),
+                  (CONTRATO_FACTOR[tipo2]||1)<1&&h('div',{style:{fontSize:11,color:'#059669',marginTop:4}},
+                    'Banco considera '+Math.round((CONTRATO_FACTOR[tipo2]||1)*100)+'%'
+                  )
+                ),
+                h('div',{style:fieldS},
+                  h('span',{style:lbl},'Anos no emprego actual'),
+                  h(SliderInput,{min:0,max:20,step:1,value:anosEmprego2,onChange:setAnosEmprego2,color:'#059669',suffix:' anos',ariaLabel:'Anos emprego T2',formatFn:function(v){return String(v);}})
+                )
+              ),
+              // Encargos partilhados
+              h('div',{style:{borderTop:'1px solid #f3f4f6',paddingTop:12}},
+                h('div',{style:fieldS},
+                  h('span',{style:lbl},'Outros encargos mensais'),
+                  h(SliderInput,{min:0,max:3000,step:50,value:outrosEncargos,onChange:setOutrosEncargos,color:'#f97316',suffix:'€/mês',ariaLabel:'Outros encargos',formatFn:function(v){return v.toLocaleString('pt-PT');}}),
+                  h('div',{style:{fontSize:11,color:'#6b7280',marginTop:3}},'Outros créditos, renda actual, pensão de alimentos…')
+                )
               )
             )
           ),
