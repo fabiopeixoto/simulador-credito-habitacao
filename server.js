@@ -180,8 +180,8 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (pathname === "/api/stats") {
-      if (!["GET", "DELETE", "OPTIONS"].includes(req.method)) {
-        res.writeHead(405, { Allow: "GET, DELETE, OPTIONS", "Content-Type": "application/json; charset=utf-8" });
+      if (!["GET", "PUT", "DELETE", "OPTIONS"].includes(req.method)) {
+        res.writeHead(405, { Allow: "GET, PUT, DELETE, OPTIONS", "Content-Type": "application/json; charset=utf-8" });
         return res.end(JSON.stringify({ error: "Método não suportado" }));
       }
       return runApiHandler(req, res, requestUrl, statsHandler);
