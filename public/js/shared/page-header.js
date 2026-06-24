@@ -226,6 +226,8 @@
       " · ",
       h("a",{href:"/privacidade.html",style:{color:"#4b5563",textDecoration:"underline"}},"Política de Privacidade"),
       " · ",
+      h("a",{href:"/aviso-legal.html",style:{color:"#4b5563",textDecoration:"underline"}},"Aviso Legal"),
+      " · ",
       h("a",{href:"/LICENSE",target:"_blank",style:{color:"#4b5563",textDecoration:"underline"}},"Licença")
     );
   }

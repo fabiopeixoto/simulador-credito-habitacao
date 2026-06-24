@@ -254,6 +254,25 @@ const server = http.createServer(async (req, res) => {
 
 const EURIBOR_REFRESH_MS = 24 * 60 * 60 * 1000; // 24h
 const EURIBOR_STALE_MS  = 12 * 60 * 60 * 1000; // considera stale após 12h
+const STATS_RETENTION_DAYS = 30;
+
+// Cumpre a política de privacidade (retenção 30 dias) apagando registos diários antigos.
+function purgeOldDailyStats() {
+  try {
+    const Database = require("better-sqlite3");
+    const dbPath = path.join(__dirname, "data", "stats.sqlite");
+    if (!fs.existsSync(dbPath)) return;
+    const db = new Database(dbPath, { fileMustExist: true });
+    const cutoff = new Date();
+    cutoff.setUTCDate(cutoff.getUTCDate() - STATS_RETENTION_DAYS);
+    const cutoffStr = cutoff.toISOString().slice(0, 10);
+    const info = db.prepare("DELETE FROM daily WHERE day < ?").run(cutoffStr);
+    db.close();
+    if (info.changes > 0) console.log(`server: apagados ${info.changes} registos de estatísticas com mais de ${STATS_RETENTION_DAYS} dias.`);
+  } catch (e) {
+    console.warn("server: erro ao limpar estatísticas antigas:", e.message);
+  }
+}
 
 async function refreshEuriborIfStale() {
   const banks = require(path.join(__dirname, "api", "banks.js"));
@@ -275,5 +294,7 @@ server.listen(port, () => {
   setTimeout(() => {
     refreshEuriborIfStale();
     setInterval(refreshEuriborIfStale, EURIBOR_REFRESH_MS);
+    purgeOldDailyStats();
+    setInterval(purgeOldDailyStats, EURIBOR_REFRESH_MS);
   }, 5000);
 });

@@ -695,8 +695,23 @@ function deleteBank(code) {
 
 // ── HTTP Handler ──────────────────────────────────────────────────────────
 
+const CORS_ORIGIN_BANKS = process.env.CORS_ORIGIN || "https://simhabitacao.pt";
+
+function getAllowedOriginBanks(reqOrigin) {
+  if (!reqOrigin) return null;
+  if (CORS_ORIGIN_BANKS === "*") return "*";
+  const allowed = CORS_ORIGIN_BANKS.split(",").map((s) => s.trim());
+  if (allowed.includes(reqOrigin)) return reqOrigin;
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(reqOrigin)) return reqOrigin;
+  return allowed[0];
+}
+
 module.exports = async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  const origin = getAllowedOriginBanks(req.headers.origin || "");
+  if (origin) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    if (origin !== "*") res.setHeader("Vary", "Origin");
+  }
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-admin-token");
   if (req.method === "OPTIONS") return res.status(200).end();

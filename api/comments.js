@@ -2,6 +2,44 @@ const path = require("path");
 const { openSqliteDb } = require(path.join(__dirname, "..", "lib", "open-sqlite.js"));
 const { randomUUID } = require("crypto");
 
+// ── CORS ──────────────────────────────────────────────────────────────────
+const CORS_ORIGIN = process.env.CORS_ORIGIN || "https://simhabitacao.pt";
+
+function getAllowedOrigin(reqOrigin) {
+  if (!reqOrigin) return null;
+  if (CORS_ORIGIN === "*") return "*";
+  const allowed = CORS_ORIGIN.split(",").map((s) => s.trim());
+  if (allowed.includes(reqOrigin)) return reqOrigin;
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(reqOrigin)) return reqOrigin;
+  return allowed[0];
+}
+
+// ── Rate limiting (POST /api/comments) ───────────────────────────────────
+const _rlMap = new Map(); // ip → { count, resetAt }
+const RL_MAX = 5;
+const RL_WINDOW_MS = 60 * 60 * 1000; // 1 hora
+
+function isRateLimited(ip) {
+  if (!ip) return false;
+  const now = Date.now();
+  const entry = _rlMap.get(ip);
+  if (!entry || now > entry.resetAt) {
+    _rlMap.set(ip, { count: 1, resetAt: now + RL_WINDOW_MS });
+    if (_rlMap.size > 10000) {
+      for (const [k, v] of _rlMap) { if (now > v.resetAt) _rlMap.delete(k); }
+    }
+    return false;
+  }
+  if (entry.count >= RL_MAX) return true;
+  entry.count++;
+  return false;
+}
+
+function getClientIp(req) {
+  const fwd = req.headers["x-forwarded-for"] || "";
+  return fwd.split(",")[0]?.trim() || req.headers["x-real-ip"] || req.socket?.remoteAddress || "";
+}
+
 // ── SQLite ────────────────────────────────────────────────────────────────
 const dbDir = path.join(__dirname, "..", "data");
 const dbPath = path.join(dbDir, "comments.sqlite");
@@ -135,7 +173,11 @@ function unflagCommentById(id) {
 }
 
 module.exports = async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  const origin = getAllowedOrigin(req.headers.origin || "");
+  if (origin) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    if (origin !== "*") res.setHeader("Vary", "Origin");
+  }
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-admin-token");
   if (req.method === "OPTIONS") return res.status(200).end();
@@ -171,6 +213,10 @@ module.exports = async function handler(req, res) {
         error: "Base de dados não disponível.",
         sqliteError,
       });
+    }
+    const clientIp = getClientIp(req);
+    if (isRateLimited(clientIp)) {
+      return res.status(429).json({ error: "Demasiados comentários. Tenta novamente mais tarde." });
     }
     const { name, text, bank, simPt, realPt, parentId } = req.body || {};
     const t = typeof text === "string" ? text.trim() : "";
