@@ -204,12 +204,17 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "GET") {
       try {
         if (pathname === "/" || normalizedPath === "index.html") {
-          statsHandler.recordHomepageView();
           const fwdFor = req.headers["x-forwarded-for"] || "";
           const realIp = req.headers["x-real-ip"] || "";
           const ip = fwdFor.split(",")[0]?.trim() || realIp || req.socket?.remoteAddress || "";
+          statsHandler.recordHomepageView(ip);
           if (ip) statsHandler.recordVisitorLocation(ip);
-        } else if (normalizedPath === "admin.html") statsHandler.recordAdminPageView();
+        } else if (normalizedPath === "admin.html") {
+          const fwdFor = req.headers["x-forwarded-for"] || "";
+          const realIp = req.headers["x-real-ip"] || "";
+          const ip = fwdFor.split(",")[0]?.trim() || realIp || req.socket?.remoteAddress || "";
+          statsHandler.recordAdminPageView(ip);
+        }
       } catch (_) {}
     }
 

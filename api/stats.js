@@ -112,8 +112,9 @@ function bumpMeta(key) {
     .run(key);
 }
 
-function recordHomepageView() {
+function recordHomepageView(ip) {
   if (!sqliteDb) return;
+  if (ip && !isLoopback(ip) && getExcludedIps().has(ip)) return;
   const day = utcToday();
   sqliteDb
     .prepare(`
@@ -124,8 +125,9 @@ function recordHomepageView() {
   bumpMeta("homepage_total");
 }
 
-function recordAdminPageView() {
+function recordAdminPageView(ip) {
   if (!sqliteDb) return;
+  if (ip && !isLoopback(ip) && getExcludedIps().has(ip)) return;
   const day = utcToday();
   sqliteDb
     .prepare(`
@@ -257,6 +259,12 @@ module.exports = async function handler(req, res) {
       const realIp = req.headers["x-real-ip"] || "";
       const ip = fwdFor.split(",")[0]?.trim() || realIp || req.socket?.remoteAddress || "";
       if (!ip) return res.status(400).json({ error: "IP não detectado" });
+      addExcludedIp(ip);
+      return res.status(200).json({ ok: true, ip });
+    }
+    if (body.action === "exclude_manual") {
+      const ip = String(body.ip || "").trim();
+      if (!ip) return res.status(400).json({ error: "IP em falta" });
       addExcludedIp(ip);
       return res.status(200).json({ ok: true, ip });
     }
