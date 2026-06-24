@@ -88,13 +88,13 @@ function isLoopback(ip) {
 async function _ipApiLookup(ip) {
   try {
     const r = await fetch(
-      `http://ip-api.com/json/${encodeURIComponent(ip)}?fields=status,city,regionName,country,countryCode`,
+      `https://ipwho.is/${encodeURIComponent(ip)}`,
       { signal: AbortSignal.timeout(3000) }
     );
     if (!r.ok) return null;
     const d = await r.json();
-    if (d.status !== 'success' || !d.countryCode) return null;
-    return { city: d.city || d.regionName || '—', country_code: d.countryCode, country_name: d.country || d.countryCode };
+    if (!d.success || !d.country_code) return null;
+    return { city: d.city || d.region || '—', country_code: d.country_code, country_name: d.country || d.country_code };
   } catch (_) { return null; }
 }
 
