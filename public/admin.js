@@ -171,19 +171,28 @@ async function loadStatsAdmin() {
     if (locEl) {
       const excluded = d.excludedIps || [];
       const excludedList = excluded.length
-        ? `<div style="margin-bottom:10px;font-size:12px;color:var(--muted);display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;">
-            <span style="line-height:1.6;">IPs: ${excluded.map(ip => `<code style="background:rgba(0,0,0,0.15);padding:1px 5px;border-radius:3px">${escapeHtml(ip)}</code>`).join(' ')}</span>
-            <button class="btn-sm" onclick="clearExcludedIps(this)" style="flex-shrink:0;">Remover todos</button>
+        ? `<div style="margin-bottom:10px;font-size:12px;color:var(--muted);">
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">
+              ${excluded.map(ip => `<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(0,0,0,0.12);padding:2px 6px;border-radius:4px;">
+                <code style="font-size:11px;">${escapeHtml(ip)}</code>
+                <button onclick="removeExcludedIp(this,'${escapeHtml(ip)}')" title="Remover este IP" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px;line-height:1;padding:0 2px;" class="btn-mini">×</button>
+              </span>`).join('')}
+            </div>
+            <button class="btn-sm" onclick="clearExcludedIps(this)">Remover todos</button>
           </div>`
         : `<p style="font-size:12px;color:var(--muted);margin:0 0 10px;">Nenhum IP excluído ainda.</p>`;
       const ipBox = `<div class="stats-admin-col-table" style="margin-top:14px;">
           <h3 style="font-size:13px;font-weight:600;margin:0 0 10px;color:var(--text)">🚫 IPs excluídos do tracking</h3>
           ${excludedList}
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <button class="btn-sm" onclick="excludeMyIp(this)" title="Adiciona o teu IP actual (detectado pelo servidor) à lista de exclusão">Ignorar o meu IP</button>
-            <input id="excludeIpInput" type="text" placeholder="IP manual (ex: 1.2.3.4)" style="font-size:12px;padding:3px 8px;border-radius:5px;border:1px solid var(--border);background:var(--card);color:var(--text);width:200px;" />
-            <button class="btn-sm" onclick="excludeManualIp(this)">+ Adicionar</button>
-            <span id="excludeIpStatus" class="status" style="font-size:12px;"></span>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <button class="btn-sm" onclick="excludeMyIp(this)" title="Adiciona o teu IP actual (detectado pelo servidor) à lista de exclusão">Ignorar o meu IP</button>
+              <span id="excludeIpStatus" class="status" style="font-size:12px;"></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input id="excludeIpInput" type="text" placeholder="IP manual (ex: 1.2.3.4)" style="font-size:12px;padding:3px 8px;border-radius:5px;border:1px solid var(--border);background:var(--card);color:var(--text);width:200px;" />
+              <button class="btn-sm" onclick="excludeManualIp(this)">+ Adicionar</button>
+            </div>
           </div>
         </div>`;
       if (d.locations && d.locations.length) {
@@ -283,6 +292,23 @@ async function clearExcludedIps(btn) {
     await loadStatsAdmin();
   } catch (e) {
     if (btn) { btn.disabled = false; btn.textContent = 'Remover exclusões'; }
+    _setExcludeStatus('Erro: ' + e.message, 'error');
+  }
+}
+
+async function removeExcludedIp(btn, ip) {
+  if (!adminUnlocked) return;
+  if (btn) { btn.disabled = true; }
+  try {
+    const r = await fetch('/api/stats', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'x-admin-token': getToken().trim() },
+      body: JSON.stringify({ action: 'remove_excluded', ip })
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    await loadStatsAdmin();
+  } catch (e) {
+    if (btn) { btn.disabled = false; }
     _setExcludeStatus('Erro: ' + e.message, 'error');
   }
 }

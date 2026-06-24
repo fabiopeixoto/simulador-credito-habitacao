@@ -63,6 +63,12 @@ function addExcludedIp(ip) {
   _ipCache.delete(ip);
 }
 
+function removeExcludedIp(ip) {
+  const s = new Set(getExcludedIps());
+  s.delete(ip);
+  _saveExcludedIps(s);
+}
+
 function clearExcludedIps() {
   _saveExcludedIps(new Set());
 }
@@ -266,6 +272,12 @@ module.exports = async function handler(req, res) {
       const ip = String(body.ip || "").trim();
       if (!ip) return res.status(400).json({ error: "IP em falta" });
       addExcludedIp(ip);
+      return res.status(200).json({ ok: true, ip });
+    }
+    if (body.action === "remove_excluded") {
+      const ip = String(body.ip || "").trim();
+      if (!ip) return res.status(400).json({ error: "IP em falta" });
+      removeExcludedIp(ip);
       return res.status(200).json({ ok: true, ip });
     }
     if (body.action === "clear_excluded") {
