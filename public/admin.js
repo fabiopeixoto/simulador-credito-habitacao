@@ -215,16 +215,15 @@ async function excludeMyIp() {
     });
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || 'HTTP ' + r.status);
-    alert('IP ' + d.ip + ' excluído — as tuas visitas deixam de ser contadas.');
+    setStatus('IP ' + d.ip + ' excluído — as tuas visitas deixam de ser contadas.', 'ok');
     await loadStatsAdmin();
   } catch (e) {
-    alert('Erro: ' + e.message);
+    setStatus('Erro: ' + e.message, 'error');
   }
 }
 
 async function clearExcludedIps() {
   if (!adminUnlocked) return;
-  if (!confirm('Remover todos os IPs excluídos?')) return;
   try {
     const r = await fetch('/api/stats', {
       method: 'PUT',
@@ -232,24 +231,25 @@ async function clearExcludedIps() {
       body: JSON.stringify({ action: 'clear_excluded' })
     });
     if (!r.ok) throw new Error('HTTP ' + r.status);
+    setStatus('Exclusões de IP removidas.', 'ok');
     await loadStatsAdmin();
   } catch (e) {
-    alert('Erro: ' + e.message);
+    setStatus('Erro: ' + e.message, 'error');
   }
 }
 
 async function resetStatsAdmin() {
   if (!adminUnlocked) return;
-  if (!confirm('Tem a certeza que quer apagar TODAS as estatísticas (visitas e localizações)?\n\nEsta acção não pode ser revertida.')) return;
   try {
     const r = await fetch('/api/stats', {
       method: 'DELETE',
       headers: { 'x-admin-token': getToken().trim() }
     });
     if (!r.ok) throw new Error('HTTP ' + r.status);
+    setStatus('Estatísticas apagadas.', 'ok');
     await loadStatsAdmin();
   } catch (e) {
-    alert('Erro ao fazer reset das estatísticas: ' + e.message);
+    setStatus('Erro ao fazer reset das estatísticas: ' + e.message, 'error');
   }
 }
 
