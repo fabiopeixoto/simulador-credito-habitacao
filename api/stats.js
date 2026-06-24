@@ -33,6 +33,39 @@ const { db: sqliteDb } = openSqliteDb(dbPath, { label: "stats.js", schema: STATS
 
 const _ipCache = new Map();
 const _pending = new Map(); // ip → queued visit count while lookup is in flight
+let _excludedIps = null; // cached set, rebuilt from DB on first use or invalidation
+
+function _loadExcludedIps() {
+  if (!sqliteDb) return new Set();
+  const row = sqliteDb.prepare("SELECT value FROM stats_config WHERE key = 'excluded_ips'").get();
+  try { _excludedIps = new Set(JSON.parse(row ? row.value : '[]') || []); } catch(_) { _excludedIps = new Set(); }
+  return _excludedIps;
+}
+
+function getExcludedIps() {
+  return _excludedIps !== null ? _excludedIps : _loadExcludedIps();
+}
+
+function _saveExcludedIps(set) {
+  if (!sqliteDb) return;
+  sqliteDb.prepare(`
+    INSERT INTO stats_config(key, value) VALUES ('excluded_ips', ?)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value
+  `).run(JSON.stringify([...set]));
+  _excludedIps = set;
+}
+
+function addExcludedIp(ip) {
+  if (!ip || isLoopback(ip)) return;
+  const s = new Set(getExcludedIps());
+  s.add(ip);
+  _saveExcludedIps(s);
+  _ipCache.delete(ip);
+}
+
+function clearExcludedIps() {
+  _saveExcludedIps(new Set());
+}
 
 function incrementLocation(city, countryCode, countryName, n) {
   if (!sqliteDb || !city || !countryCode) return;
@@ -48,6 +81,7 @@ function isLoopback(ip) {
 
 function recordVisitorLocation(ip) {
   if (!sqliteDb || !ip || ip === 'unknown' || isLoopback(ip)) return;
+  if (getExcludedIps().has(ip)) return;
   if (_ipCache.has(ip)) {
     const loc = _ipCache.get(ip);
     if (loc) incrementLocation(loc.city, loc.country_code, loc.country_name);
@@ -190,17 +224,18 @@ function getSnapshot() {
     last7Days,
     commentsTotal: countCommentsReadonly(),
     locations,
+    excludedIps: [...getExcludedIps()],
     generatedAt: new Date().toISOString(),
   };
 }
 
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, PUT, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-admin-token");
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  if (req.method !== "GET" && req.method !== "DELETE") {
+  if (!["GET", "PUT", "DELETE"].includes(req.method)) {
     return res.status(405).json({ error: "Método não suportado" });
   }
 
@@ -213,6 +248,28 @@ module.exports = async function handler(req, res) {
   if (req.method === "DELETE") {
     const resetAt = resetStats();
     return res.status(200).json({ ok: true, resetAt });
+  }
+
+  if (req.method === "PUT") {
+    const body = await new Promise((resolve) => {
+      let data = "";
+      req.on("data", (c) => { data += c; });
+      req.on("end", () => { try { resolve(JSON.parse(data)); } catch(_) { resolve({}); } });
+      req.on("error", () => resolve({}));
+    });
+    if (body.action === "exclude") {
+      const fwdFor = req.headers["x-forwarded-for"] || "";
+      const realIp = req.headers["x-real-ip"] || "";
+      const ip = fwdFor.split(",")[0]?.trim() || realIp || req.socket?.remoteAddress || "";
+      if (!ip) return res.status(400).json({ error: "IP não detectado" });
+      addExcludedIp(ip);
+      return res.status(200).json({ ok: true, ip });
+    }
+    if (body.action === "clear_excluded") {
+      clearExcludedIps();
+      return res.status(200).json({ ok: true });
+    }
+    return res.status(400).json({ error: "Acção desconhecida" });
   }
 
   return res.status(200).json(getSnapshot());
