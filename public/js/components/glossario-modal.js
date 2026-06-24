@@ -66,6 +66,7 @@
     {t:"Taxa de Ocupação",d:"Percentagem do ano em que o imóvel está efectivamente arrendado e a gerar receita. Usada no cálculo de rentabilidade para estimar receitas realistas (ex.: 90% = 10,8 meses arrendados por ano)."},
     {t:"Yield Bruta",d:"Renda anual a dividir pelo valor do imóvel, em percentagem. Não desconta custos. Ex.: renda mensal €1 000 num imóvel de €200 000 → yield bruta de 6%."},
     {t:"Yield Líquida",d:"Rentabilidade após descontar todos os custos operacionais anuais (IMI, condomínio, manutenção, seguro) ao rendimento de arrendamento, dividida pelo investimento total (preço + custos de compra). Mais representativa do retorno real."},
+    {t:"Método Francês",d:"Sistema de amortização em que a prestação mensal é constante ao longo do prazo. A componente de juros decresce e a de capital cresce a cada mês. É o método padrão em Portugal para crédito habitação."},
   ];
   // Apresentação por ordem alfabética (locale pt — trata acentos correctamente)
   TERMOS.sort(function(a,b){return a.t.localeCompare(b.t,"pt");});
