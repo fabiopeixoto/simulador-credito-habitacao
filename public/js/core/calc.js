@@ -35,7 +35,8 @@ function calcTAEG(capital, comIniciais, encargo_mensal, n) {
     const pv=encargo_mensal*(1-Math.pow(1+mid,-n))/mid;
     if(pv + comIniciais > capital) lo=mid; else hi=mid;
   }
-  return Math.round((lo+hi)/2*12*10000)/100;
+  // Diretiva EU 2014/17/UE: TAEG = taxa anual efectiva = (1+r_mensal)^12 - 1
+  return Math.round((Math.pow(1+(lo+hi)/2,12)-1)*10000)/100;
 }
 
 // ── MTIC — Montante Total Imputado ao Consumidor ─────────────────────────
