@@ -48,6 +48,8 @@
     var _capital=useState(200000);var capital=_capital[0];var setCapital=_capital[1];
     var _prazo=useState(30);var prazo=_prazo[0];var setPrazo=_prazo[1];
     var _tan=useState(parseFloat((eur6m+1.0).toFixed(3)));var tan=_tan[0];var setTan=_tan[1];
+    var _cj=useState(false);var creditoJovem=_cj[0];var setCreditoJovem=_cj[1];
+    var _jltv=useState(0.9);var jovemLTV=_jltv[0];var setJovemLTV=_jltv[1];
     var _mob=useState(typeof window!=='undefined'&&window.innerWidth<640);var isMobile=_mob[0];var setIsMobile=_mob[1];
 
     useEffect(function(){
@@ -95,13 +97,19 @@
                     historico==='atrasos'?'Garante que todos os atrasos estão resolvidos. Espera alguns meses para o historial reflectir a melhoria.':null;
 
       // 4 — Poupança disponível
-      var entrada=valorImovel*(1-ltv/100);
+      var isJovem=creditoJovem&&idade<=35;
+      var ltvEfetivo=isJovem?Math.round(jovemLTV*100):ltv;
+      var entrada=valorImovel*(1-ltvEfetivo/100);
       var custos=Math.round(valorImovel*0.05);
       var poupancaNecessaria=entrada+custos;
       var poupa_status=poupanca>=poupancaNecessaria?'verde':poupanca>=entrada?'amarelo':'vermelho';
-      var poupa_desc='Entrada necessária (LTV '+ltv+'%): '+fE(Math.round(entrada))+'. Custos de compra estimados (IMT+IS+escritura ~5%): '+fE(custos)+'. Total recomendado: '+fE(Math.round(poupancaNecessaria))+'. Tens: '+fE(poupanca)+'.';
-      var poupa_acao=poupa_status==='vermelho'?'Faltam ~'+fE(Math.round(poupancaNecessaria-poupanca))+'. Poupa mais antes de avançar ou considera Crédito Jovem (≤35 anos) que reduz a entrada.':
-                     poupa_status==='amarelo'?'Tens a entrada, mas os custos de transacção (~5% do valor) podem fazer-te sobrar pouco. Recomenda-se uma reserva adicional.':null;
+      var jovemBadge=isJovem?'🎓 Crédito Jovem (LTV '+ltvEfetivo+'%'+(ltvEfetivo===100?' — D.L. Jovem':'')+') — ':'';
+      var imtNota=isJovem?' (IMT isento em 1.ª habitação para jovens ≤35a)':'';
+      var poupa_desc=jovemBadge+'Entrada necessária: '+fE(Math.round(entrada))+'. Custos estimados (IMT+IS+escritura ~5%'+imtNota+'): '+fE(custos)+'. Total recomendado: '+fE(Math.round(poupancaNecessaria))+'. Tens: '+fE(poupanca)+'.';
+      var poupa_acao=poupa_status==='vermelho'?(
+        isJovem?(jovemLTV<1?'Faltam ~'+fE(Math.round(poupancaNecessaria-poupanca))+'. Experimenta o LTV 100% (D.L. Jovem — sem entrada) no toggle acima.':'Faltam ~'+fE(Math.round(poupancaNecessaria-poupanca))+' mesmo com LTV 100%. Aumenta a poupança ou reduz o valor do imóvel.')
+               :'Faltam ~'+fE(Math.round(poupancaNecessaria-poupanca))+'. Poupa mais antes de avançar ou activa o modo Crédito Jovem acima (se tens ≤35 anos) para reduzir a entrada.'
+      ):poupa_status==='amarelo'?'Tens a entrada, mas os custos de transacção (~5%) podem deixar pouca margem. Recomenda-se uma reserva adicional.':null;
 
       // 5 — Idade e prazo BdP
       var prazoMaxBdP=idade<=30?40:idade<=35?37:35;
@@ -123,8 +131,8 @@
       var nAmarelos=dimensoes.filter(function(d){return d.status==='amarelo';}).length;
       var veredicto=nVermelhos===0&&nAmarelos<=1?'ok':nVermelhos<=1?'atencao':'nao';
 
-      return{rendConsiderado:rendConsiderado,prestacaoHabitacao:prestacaoHabitacao,dstiComCredito:dstiComCredito,prestacaoMaxima:prestacaoMaxima,dimensoes:dimensoes,nVermelhos:nVermelhos,nAmarelos:nAmarelos,veredicto:veredicto,entrada:entrada,custos:custos,poupancaNecessaria:poupancaNecessaria};
-    },[rendimento,tipo,anosEmprego,outrosEncargos,historico,poupanca,valorImovel,ltv,idade,capital,prazo,tan]);
+      return{rendConsiderado:rendConsiderado,prestacaoHabitacao:prestacaoHabitacao,dstiComCredito:dstiComCredito,prestacaoMaxima:prestacaoMaxima,dimensoes:dimensoes,nVermelhos:nVermelhos,nAmarelos:nAmarelos,veredicto:veredicto,entrada:entrada,custos:custos,poupancaNecessaria:poupancaNecessaria,isJovem:isJovem,ltvEfetivo:ltvEfetivo};
+    },[rendimento,tipo,anosEmprego,outrosEncargos,historico,poupanca,valorImovel,ltv,idade,capital,prazo,tan,creditoJovem,jovemLTV]);
 
     var card={background:'#fff',borderRadius:11,padding:isMobile?'14px 12px':'18px 20px',marginBottom:12};
     var secTitleS={fontSize:11,letterSpacing:3,color:Au,fontFamily:'monospace',marginBottom:12,textTransform:'uppercase'};
@@ -152,6 +160,25 @@
       }),
       window.NoticeBanner&&h(window.NoticeBanner,null),
       h('main',{style:{maxWidth:960,margin:'0 auto',padding:isMobile?'12px 10px 40px':'18px 16px 48px'}},
+
+        // ── MODO: NORMAL vs CRÉDITO JOVEM ──────────────────────────────────
+        h('div',{style:{display:'flex',borderRadius:9,overflow:'hidden',border:'1px solid rgba(0,0,0,0.07)',marginBottom:8}},
+          [{id:false,icon:'🏦',label:'Crédito Normal (LTV ≤80%)',c:Au},{id:true,icon:'🎓',label:'Crédito Jovem ≤35a',c:G}].map(function(o){
+            return h('button',{key:String(o.id),onClick:function(){setCreditoJovem(o.id);if(o.id)setJovemLTV(0.9);},
+              style:{flex:1,padding:isMobile?'8px 6px':'9px',border:'none',background:creditoJovem===o.id?'rgba(37,99,235,0.05)':'#fff',borderBottom:'2px solid '+(creditoJovem===o.id?o.c:'transparent'),color:creditoJovem===o.id?o.c:'#374151',fontSize:isMobile?12:13,fontFamily:'sans-serif',cursor:'pointer',fontWeight:600}},
+              o.icon+' '+o.label);
+          })
+        ),
+        creditoJovem&&idade>35&&h('div',{style:{background:'rgba(220,38,38,0.06)',border:'1px solid rgba(220,38,38,0.25)',borderRadius:8,padding:'8px 14px',marginBottom:8,fontSize:12,color:'#dc2626',fontWeight:600}},
+          '⚠️ Crédito Jovem não disponível — o titular tem '+idade+' anos (limite máximo: 35 anos).'
+        ),
+        creditoJovem&&idade<=35&&h('div',{style:{display:'flex',borderRadius:9,overflow:'hidden',border:'1px solid rgba(22,163,74,0.25)',marginBottom:8}},
+          [{ltv:0.9,label:'Entrada 10% (LTV 90%)'},{ltv:1.0,label:'Entrada 0% (LTV 100%) — D.L. Jovem'}].map(function(o){
+            return h('button',{key:o.ltv,onClick:function(){setJovemLTV(o.ltv);},
+              style:{flex:1,padding:'8px',border:'none',background:jovemLTV===o.ltv?'rgba(22,163,74,0.10)':'#fff',borderBottom:'2px solid '+(jovemLTV===o.ltv?G:'transparent'),color:jovemLTV===o.ltv?G:'#374151',fontSize:isMobile?11:12,fontFamily:'sans-serif',cursor:'pointer',fontWeight:jovemLTV===o.ltv?700:400}},
+              o.label);
+          })
+        ),
 
         // ── INPUTS ─────────────────────────────────────────────────────────
         h('div',{style:{display:'grid',gridTemplateColumns:isMobile?'1fr':'repeat(auto-fit,minmax(260px,1fr))',gap:10,marginBottom:10}},
@@ -220,9 +247,15 @@
               h('span',{style:lbl},'Valor do imóvel pretendido'),
               h(SliderInput,{min:50000,max:800000,step:5000,value:valorImovel,onChange:setValorImovel,color:Au,prefix:'€',ariaLabel:'Valor imóvel',formatFn:function(v){return Math.round(v).toLocaleString('pt-PT');}})
             ),
-            h('div',{style:fieldS},
+            !calc.isJovem&&h('div',{style:fieldS},
               h('span',{style:lbl},'LTV — financiamento (%)'),
               h(SliderInput,{min:50,max:90,step:5,value:ltv,onChange:setLtv,color:'#7c3aed',suffix:'%',ariaLabel:'LTV',formatFn:function(v){return String(v);}})
+            ),
+            calc.isJovem&&h('div',{style:fieldS},
+              h('span',{style:lbl},'LTV — Crédito Jovem'),
+              h('div',{style:{fontSize:13,color:G,fontWeight:700,padding:'6px 0'}},
+                calc.ltvEfetivo+'% '+( calc.ltvEfetivo===100?'(D.L. Jovem — sem entrada necessária)':'(entrada mínima de 10%)')
+              )
             ),
             h('div',{style:fieldS},
               h('span',{style:lbl},'Poupança disponível'),
