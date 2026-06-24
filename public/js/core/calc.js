@@ -39,6 +39,22 @@ function calcTAEG(capital, comIniciais, encargo_mensal, n) {
   return Math.round((Math.pow(1+(lo+hi)/2,12)-1)*10000)/100;
 }
 
+// ── TAEG com carência — Directiva EU 2014/17/UE (duas fases) ─────────────
+// Durante a carência pagam-se só juros (encargo_car); depois amortiza-se
+// normalmente (encargo_amort). O PV de cada fase é descontado à taxa mensal r.
+function calcTAEGWithCarencia(capital, comIniciais, encargo_car, n_car, encargo_amort, n_amort) {
+  if(!capital||!encargo_amort||!n_amort) return 0;
+  if(encargo_car*n_car + encargo_amort*n_amort <= capital) return 0;
+  let lo=0.00001, hi=0.05;
+  for(let i=0;i<200;i++){
+    const mid=(lo+hi)/2;
+    const pv_car = n_car>0 ? encargo_car*(1-Math.pow(1+mid,-n_car))/mid : 0;
+    const pv_amort = encargo_amort*(1-Math.pow(1+mid,-n_amort))/mid * Math.pow(1+mid,-n_car);
+    if(pv_car + pv_amort + comIniciais > capital) lo=mid; else hi=mid;
+  }
+  return Math.round((Math.pow(1+(lo+hi)/2,12)-1)*10000)/100;
+}
+
 // ── MTIC — Montante Total Imputado ao Consumidor ─────────────────────────
 // Tudo o que o cliente paga ao longo da vida do crédito
 function calcMTIC(comIniciais, encargo_mensal, n) {
@@ -131,7 +147,7 @@ function getLTVAddon(bankS, ltv) {
 
 window._SIM = Object.assign(window._SIM||{}, {
   fE,fE2,fP,fP1,margemVsOficial,
-  calcP,calcTAEG,calcMTIC,isJurosMedioMensal,vidaR,sVida,sTot,calcIMT,
+  calcP,calcTAEG,calcTAEGWithCarencia,calcMTIC,isJurosMedioMensal,vidaR,sVida,sTot,calcIMT,
   simA,amChart,prestacaoCarencia,getLTVAddon,
 });
 })();
