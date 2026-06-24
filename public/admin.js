@@ -184,11 +184,15 @@ async function loadStatsAdmin() {
       const ipBox = `<div class="stats-admin-col-table" style="margin-top:14px;">
           <h3 style="font-size:13px;font-weight:600;margin:0 0 10px;color:var(--text)">🚫 IPs excluídos do tracking</h3>
           ${excludedList}
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <button class="btn-sm" onclick="excludeMyIp(this)" title="Adiciona o teu IP actual (detectado pelo servidor) à lista de exclusão">Ignorar o meu IP</button>
-            <input id="excludeIpInput" type="text" placeholder="IP manual (ex: 1.2.3.4)" style="font-size:12px;padding:3px 8px;border-radius:5px;border:1px solid var(--border);background:var(--card);color:var(--text);width:200px;" />
-            <button class="btn-sm" onclick="excludeManualIp(this)">+ Adicionar</button>
-            <span id="excludeIpStatus" class="status" style="font-size:12px;"></span>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <button class="btn-sm" onclick="excludeMyIp(this)" title="Adiciona o teu IP actual (detectado pelo servidor) à lista de exclusão">Ignorar o meu IP</button>
+              <span id="excludeIpStatus" class="status" style="font-size:12px;"></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input id="excludeIpInput" type="text" placeholder="IP manual (ex: 1.2.3.4)" style="font-size:12px;padding:3px 8px;border-radius:5px;border:1px solid var(--border);background:var(--card);color:var(--text);width:200px;" />
+              <button class="btn-sm" onclick="excludeManualIp(this)">+ Adicionar</button>
+            </div>
           </div>
         </div>`;
       if (d.locations && d.locations.length) {
