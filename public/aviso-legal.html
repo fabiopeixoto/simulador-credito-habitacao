@@ -28,6 +28,10 @@
   .warn{background:rgba(234,179,8,0.08);border-left:3px solid #ca8a04;padding:10px 14px;border-radius:0 6px 6px 0;margin:12px 0;font-size:13px;color:#713f12}
   a{color:#2563eb}
   footer{text-align:center;font-size:12px;color:#6b7280;margin-top:32px}
+  @media(max-width:640px){
+    button{min-height:44px!important}
+    button.btn-mini{min-height:28px!important}
+  }
 </style>
 </head>
 <body>
@@ -118,5 +122,17 @@
     <a href="/LICENSE" target="_blank">Licença</a>
   </footer>
 </div>
+<div id="cookie-root"></div>
+<script data-cfasync="false" src="/js/vendor/react-runtime.js?v=1"></script>
+<script data-cfasync="false" src="/js/shared/sim-shared-constants.js?v=2"></script>
+<script data-cfasync="false" src="/js/shared/inversa-bootstrap.js?v=6"></script>
+<script data-cfasync="false" src="/js/shared/page-header.js?v=50"></script>
+<script data-cfasync="false">
+;(function(){
+  var React=window.React,ReactDOM=window.ReactDOM,CookieBanner=window.CookieBanner;
+  if(!React||!ReactDOM||!CookieBanner)return;
+  ReactDOM.createRoot(document.getElementById('cookie-root')).render(React.createElement(CookieBanner));
+})();
+</script>
 </body>
 </html>
