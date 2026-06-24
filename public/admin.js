@@ -173,10 +173,10 @@ async function loadStatsAdmin() {
       const excludedBar = excluded.length
         ? `<div style="margin-top:10px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             <span>🚫 IPs excluídos: ${excluded.map(ip => `<code style="background:rgba(0,0,0,0.15);padding:1px 5px;border-radius:3px">${escapeHtml(ip)}</code>`).join(' ')}</span>
-            <button class="btn-sm" onclick="clearExcludedIps()">Remover exclusões</button>
+            <button class="btn-sm" onclick="clearExcludedIps(this)">Remover exclusões</button>
           </div>`
         : '';
-      const excludeBtn = `<div style="margin-top:10px;"><button class="btn-sm" onclick="excludeMyIp()" title="Adiciona o teu IP actual à lista de exclusão — as tuas visitas deixam de ser contadas">🚫 Ignorar o meu IP</button></div>`;
+      const excludeBtn = `<div style="margin-top:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><button class="btn-sm" onclick="excludeMyIp(this)" title="Adiciona o teu IP actual à lista de exclusão — as tuas visitas deixam de ser contadas">🚫 Ignorar o meu IP</button><span id="excludeIpStatus" class="status" style="font-size:12px;"></span></div>`;
       if (d.locations && d.locations.length) {
         const flag = cc => cc && cc.length === 2
           ? `<img src="https://flagcdn.com/16x12/${escapeHtml(cc.toLowerCase())}.png" width="16" height="12" alt="${escapeHtml(cc.toUpperCase())}" style="vertical-align:middle;margin-right:5px;border-radius:1px">`
@@ -205,8 +205,15 @@ function showMoreLocations(btn) {
   btn.closest('div').remove();
 }
 
-async function excludeMyIp() {
+function _setExcludeStatus(msg, type) {
+  const el = document.getElementById('excludeIpStatus');
+  if (el) { el.textContent = msg; el.className = 'status ' + (type || ''); }
+}
+
+async function excludeMyIp(btn) {
   if (!adminUnlocked) return;
+  if (btn) { btn.disabled = true; }
+  _setExcludeStatus('A excluir…', '');
   try {
     const r = await fetch('/api/stats', {
       method: 'PUT',
@@ -215,15 +222,17 @@ async function excludeMyIp() {
     });
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || 'HTTP ' + r.status);
-    setStatus('IP ' + d.ip + ' excluído — as tuas visitas deixam de ser contadas.', 'ok');
+    _setExcludeStatus('✓ IP ' + d.ip + ' excluído.', 'ok');
     await loadStatsAdmin();
   } catch (e) {
-    setStatus('Erro: ' + e.message, 'error');
+    if (btn) { btn.disabled = false; }
+    _setExcludeStatus('Erro: ' + e.message, 'error');
   }
 }
 
-async function clearExcludedIps() {
+async function clearExcludedIps(btn) {
   if (!adminUnlocked) return;
+  if (btn) { btn.disabled = true; btn.textContent = 'A remover…'; }
   try {
     const r = await fetch('/api/stats', {
       method: 'PUT',
@@ -231,10 +240,10 @@ async function clearExcludedIps() {
       body: JSON.stringify({ action: 'clear_excluded' })
     });
     if (!r.ok) throw new Error('HTTP ' + r.status);
-    setStatus('Exclusões de IP removidas.', 'ok');
     await loadStatsAdmin();
   } catch (e) {
-    setStatus('Erro: ' + e.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Remover exclusões'; }
+    _setExcludeStatus('Erro: ' + e.message, 'error');
   }
 }
 
