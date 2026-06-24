@@ -251,12 +251,7 @@ module.exports = async function handler(req, res) {
   }
 
   if (req.method === "PUT") {
-    const body = await new Promise((resolve) => {
-      let data = "";
-      req.on("data", (c) => { data += c; });
-      req.on("end", () => { try { resolve(JSON.parse(data)); } catch(_) { resolve({}); } });
-      req.on("error", () => resolve({}));
-    });
+    const body = req.body || {};
     if (body.action === "exclude") {
       const fwdFor = req.headers["x-forwarded-for"] || "";
       const realIp = req.headers["x-real-ip"] || "";
