@@ -217,7 +217,7 @@
           )
         ),
 
-        h('p',{style:{fontSize:11,color:'#6b7280',textAlign:'center',padding:'4px 10px 20px',fontFamily:'sans-serif',lineHeight:1.65}},
+        h('p',{style:{fontSize:11,color:'#111827',textAlign:'center',padding:'4px 10px 20px',fontFamily:'sans-serif',lineHeight:1.65}},
           'Simulação baseada no método francês (prestação constante). A penalização de 0,5% aplica-se à taxa variável; confirma o valor exacto no teu contrato de crédito.'
         ),
 
