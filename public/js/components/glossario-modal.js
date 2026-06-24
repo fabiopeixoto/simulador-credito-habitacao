@@ -67,6 +67,12 @@
     {t:"Yield Bruta",d:"Renda anual a dividir pelo valor do imóvel, em percentagem. Não desconta custos. Ex.: renda mensal €1 000 num imóvel de €200 000 → yield bruta de 6%."},
     {t:"Yield Líquida",d:"Rentabilidade após descontar todos os custos operacionais anuais (IMI, condomínio, manutenção, seguro) ao rendimento de arrendamento, dividida pelo investimento total (preço + custos de compra). Mais representativa do retorno real."},
     {t:"Método Francês",d:"Sistema de amortização em que a prestação mensal é constante ao longo do prazo. A componente de juros decresce e a de capital cresce a cada mês. É o método padrão em Portugal para crédito habitação."},
+    {t:"Amortização Antecipada",d:"Reembolso parcial ou total do capital em dívida antes do prazo contratual. Reduz os juros totais pagos e/ou o prazo restante. Penalização: 0,5% do capital reembolsado (taxa variável) ou 2% (taxa fixa)."},
+    {t:"Poupança de Juros",d:"Diferença entre os juros que pagarias durante todo o prazo original e os juros efectivamente pagos com amortizações antecipadas. Quanto mais cedo e mais amortizas, maior a poupança."},
+    {t:"Fator de Rendimento",d:"Coeficiente que os bancos aplicam ao rendimento declarado consoante o tipo de vínculo laboral: efectivo 100%, a prazo 90%, part-time 80%, recibo verde 70%, pensão 100%. Determina o rendimento considerado para o cálculo do DSTI."},
+    {t:"Mapa de Responsabilidades",d:"Registo centralizado do Banco de Portugal que lista todos os créditos activos e o comportamento de pagamento de um titular. Os bancos consultam este mapa na análise de crédito. Pode ser consultado gratuitamente pelo próprio titular no site do BdP."},
+    {t:"Antiguidade Laboral",d:"Tempo de trabalho no emprego actual. Factor relevante na avaliação bancária: abaixo de 2 anos em regime de recibo verde é geralmente penalizante; com vínculos efectivos, 1 ano costuma ser suficiente."},
+    {t:"Prontidão de Crédito",d:"Avaliação informal do grau de preparação de um candidato antes de submeter uma proposta formal de crédito habitação a um banco. Considera DSTI, estabilidade laboral, historial de crédito, poupança disponível e adequação da idade ao prazo pretendido."},
   ];
   // Apresentação por ordem alfabética (locale pt — trata acentos correctamente)
   TERMOS.sort(function(a,b){return a.t.localeCompare(b.t,"pt");});
