@@ -207,7 +207,14 @@ async function loadStatsAdmin() {
 
 function showMoreLocations(btn) {
   document.querySelectorAll('.loc-extra').forEach(tr => { tr.style.display = ''; });
-  btn.closest('div').remove();
+  btn.textContent = 'Ver menos';
+  btn.onclick = function() { showLessLocations(btn); };
+}
+
+function showLessLocations(btn) {
+  document.querySelectorAll('.loc-extra').forEach(tr => { tr.style.display = 'none'; });
+  btn.textContent = 'Ver mais';
+  btn.onclick = function() { showMoreLocations(btn); };
 }
 
 function _setExcludeStatus(msg, type) {
