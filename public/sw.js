@@ -1,4 +1,4 @@
-const CACHE = "simulador-v162";
+const CACHE = "simulador-v163";
 
 /** URLs exactas referenciadas nos HTML (incl. query ?v=). */
 const PRECACHE = [
@@ -9,6 +9,9 @@ const PRECACHE = [
   "/transferencia.html",
   "/comparacao.html",
   "/imi.html",
+  "/rentabilidade.html",
+  "/custos-compra.html",
+  "/stress-euribor.html",
   "/privacidade.html",
   "/manifest.json",
   "/favicon.png",
@@ -17,8 +20,8 @@ const PRECACHE = [
   "/js/vendor/recharts-polyfill.js?v=3",
   "/js/shared/sim-shared-constants.js?v=2",
   "/js/shared/inversa-bootstrap.js?v=6",
-  "/js/shared/page-header.js?v=29",
-  "/js/core/calc.js?v=1",
+  "/js/shared/page-header.js?v=40",
+  "/js/core/calc.js?v=3",
   "/js/core/constants.js?v=1",
   "/js/core/styles.js?v=1",
   "/js/components/slider-input.js?v=1",
@@ -40,9 +43,9 @@ const PRECACHE = [
   "/js/views/view-seguros.js?v=2",
   "/js/views/view-custos.js?v=2",
   "/js/views/view-viabilidade.js?v=2",
-  "/js/views/view-cenarios.js?v=3",
+  "/js/views/view-cenarios.js?v=4",
   "/js/views/view-amortizacao.js?v=1",
-  "/js/pages/app.js?v=82",
+  "/js/pages/app.js?v=83",
   "/js/pages/index-mount.js?v=5",
   "/js/pages/historico-page.js?v=13",
   "/js/pages/historico-mount.js?v=6",
@@ -54,6 +57,10 @@ const PRECACHE = [
   "/js/pages/comparacao-mount.js?v=2",
   "/js/pages/imi-page.js?v=3",
   "/js/pages/imi-mount.js?v=1",
+  "/js/pages/custos-compra-page.js?v=3",
+  "/js/pages/custos-compra-mount.js?v=1",
+  "/js/pages/stress-euribor-page.js?v=1",
+  "/js/pages/stress-euribor-mount.js?v=1",
 ];
 
 self.addEventListener("install", (e) => {
