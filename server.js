@@ -26,6 +26,7 @@ const mimeTypes = {
   ".webmanifest": "application/manifest+json",
   ".woff2": "font/woff2",
   ".woff": "font/woff",
+  ".xml": "application/xml; charset=utf-8",
 };
 
 const cacheControlHeaders = {
