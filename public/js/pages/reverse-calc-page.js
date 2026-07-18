@@ -13,7 +13,7 @@ function ReverseCalcPage({onBack,onSimulate,onOpenComments,onOpenGlossario,onOpe
   const[c2,setC2]=useState("efetivo");
   const[dep,setDep]=useState(0);
   const[out,setOut]=useState(0);
-  const[dsti,setDsti]=useState(33);
+  const[dsti,setDsti]=useState(35);
   const[pz,setPz]=useState(30);
   const[tt,setTt]=useState("variavel");
   const[eRef,setERef]=useState("12m");
@@ -34,7 +34,7 @@ function ReverseCalcPage({onBack,onSimulate,onOpenComments,onOpenGlossario,onOpe
   const maxLTV=mJ?jovemLTV:0.8;
   const valMax=capMax/maxLTV;
   const entMin=valMax-capMax;
-  const tanS=tan+2;
+  const tanS=tan+1.5; // choque BdP: +1,5 p.p. (Recomendação Macroprudencial)
   const rS=tanS/100/12;
   const capS=rS>0?pMax*(1-Math.pow(1+rS,-n))/rS:pMax*n;
   const pzList=[15,20,25,30,35,40];
@@ -98,7 +98,7 @@ function ReverseCalcPage({onBack,onSimulate,onOpenComments,onOpenGlossario,onOpe
           React.createElement("div",{style:{marginTop:10}},
             React.createElement("div",{style:lbS},"TAXA DE ESFORÇO MÁXIMA (DSTI)"),
             React.createElement(SliderInput,{min:10,max:50,step:1,value:dsti,onChange:setDsti,color:"#0d9488",suffix:"%",formatFn:v=>v.toString()}),
-            React.createElement("div",{style:{fontSize:10,color:dsti>40?R:dsti>33?"#b45309":"#0d9488",marginTop:2}},dsti<=33?"✓ BdP recomenda ≤33%":dsti<=40?"⚠️ Acima da recomendação BdP (33%)":"⚠️ Muito elevado — aprovação improvável acima de 40%")
+            React.createElement("div",{style:{fontSize:10,color:dsti>40?R:dsti>35?"#b45309":"#0d9488",marginTop:2}},dsti<=35?"✓ Referência prudente ≤35% (limite BdP: 45%)":dsti<=40?"⚠️ Acima da referência prudente (35%)":"⚠️ Muito elevado — acima de 40% a aprovação é improvável (limite BdP: 45%)")
           ),
           React.createElement("div",{style:{marginTop:12,padding:"8px 10px",background:"rgba(37,99,235,0.07)",border:"1px solid rgba(37,99,235,0.2)",borderRadius:8}},
             React.createElement("div",{style:{fontSize:10,color:"#374151",fontFamily:"monospace",letterSpacing:1,marginBottom:4}},"RENDIMENTO CONSIDERADO"),
@@ -154,7 +154,7 @@ function ReverseCalcPage({onBack,onSimulate,onOpenComments,onOpenGlossario,onOpe
           React.createElement("div",{style:{marginBottom:10}},
             React.createElement("div",{style:lbS},"PRAZO"),
             React.createElement(SliderInput,{min:5,max:40,step:1,value:pz,onChange:setPz,color:Au,suffix:" anos",formatFn:v=>v.toString()}),
-            React.createElement("div",{style:{fontSize:10,color:"#4b5563",marginTop:2}},"BdP: máx. 40a (idade ≤ 30 anos)")
+            React.createElement("div",{style:{fontSize:10,color:"#4b5563",marginTop:2}},"BdP: máx. 40a (idade ≤ 35 anos) · 35a acima (Recom. 1/2026)")
           ),
           React.createElement("div",{style:{background:"rgba(37,99,235,0.06)",border:"1px solid rgba(37,99,235,0.25)",borderRadius:9,padding:14,marginTop:4}},
             React.createElement("div",{style:{fontSize:10,color:Au,fontFamily:"monospace",letterSpacing:2,marginBottom:12}},"RESULTADO — QUANTO POSSO PEDIR?"),
@@ -176,7 +176,7 @@ function ReverseCalcPage({onBack,onSimulate,onOpenComments,onOpenGlossario,onOpe
       ),
       capMax>0&&React.createElement("div",{style:{background:"rgba(249,115,22,0.06)",border:"1px solid rgba(249,115,22,0.25)",borderRadius:9,padding:"10px 14px",marginBottom:10,display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}},
         React.createElement("div",null,
-          React.createElement("div",{style:{fontSize:10,color:"#f97316",fontFamily:"monospace",letterSpacing:1}},"⚡ STRESS TEST (TAN +2%)"),
+          React.createElement("div",{style:{fontSize:10,color:"#f97316",fontFamily:"monospace",letterSpacing:1}},"⚡ STRESS TEST BdP (TAN +1,5 p.p.)"),
           React.createElement("div",{style:{fontSize:12,color:"#374151",marginTop:3}},"Se a taxa subir para "+tanS.toFixed(3).replace(".",",")+"% ainda consegues pagar "+fE(pMax)+"/mês → capital máximo:")
         ),
         React.createElement("div",null,
@@ -229,7 +229,7 @@ function ReverseCalcPage({onBack,onSimulate,onOpenComments,onOpenGlossario,onOpe
           React.createElement("div",{style:{fontSize:11,color:"#4b5563",lineHeight:1.7}},"Os valores apresentados são estimativas com base em spreads e comissões publicadas. As condições efectivas dependem da análise de risco de cada banco. Consulte sempre a Ficha de Informação Normalizada Europeia (FINE) antes de contratar.")
         ),
         React.createElement("div",{style:{marginTop:6,padding:"10px 14px",background:"rgba(255,255,255,1)",border:"1px solid rgba(37,99,235,0.25)",borderRadius:9,fontFamily:"sans-serif"}},
-          React.createElement("div",{style:{fontSize:11,color:"#374151",lineHeight:1.7}},"🔄 Euribor via BCE · Cache 8h. 📊 Spread: LTV + finalidade + cert. energético. 🧮 TAEG: Directiva 2014/17/UE. 💰 MTIC = total pago. 🛡️ Seg. vida sobre capital médio. 🏠 IS HPP: €0 (art. 7º CIS). 📅 Prazo: BdP Aviso 4/2022.")
+          React.createElement("div",{style:{fontSize:11,color:"#374151",lineHeight:1.7}},"🔄 Euribor via BCE · Cache 25h. 📊 Spread: LTV + finalidade + cert. energético. 🧮 TAEG: Directiva 2014/17/UE. 💰 MTIC = total pago. 🛡️ Seg. vida sobre capital médio. 🏠 IS s/ juros HPP: €0 (art. 7.º CIS). 📅 Prazo: BdP Recomendação 1/2026.")
         )
       )
     ),window.PageFooter&&React.createElement(window.PageFooter,null),window.CookieBanner&&React.createElement(window.CookieBanner,null)

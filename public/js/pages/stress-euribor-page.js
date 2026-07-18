@@ -64,7 +64,8 @@
     },[capital,spread,prazo,idx]);
 
     var eurObj=EUR[idx]||{};
-    var eurAtual=typeof eurObj.valor==='number'?eurObj.valor:2.5;
+    var eurFallback=((window._SIM_SHARED||{}).FALLBACK_EUR||{})[idx];
+    var eurAtual=typeof eurObj.valor==='number'?eurObj.valor:(eurFallback?eurFallback.valor:2.5);
     var eurLabel=eurObj.data||'';
 
     var cenarios=DELTAS.map(function(d){

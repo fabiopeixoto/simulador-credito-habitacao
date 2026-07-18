@@ -211,7 +211,7 @@ function ProcessoModal(props){
                 h("span",{style:{fontSize:11,fontWeight:700,color:Au,fontFamily:"monospace"}},r[1])
               );
             }),
-            h("div",{style:{fontSize:11,color:"#166534",marginTop:8,fontFamily:"sans-serif"}},"✓ Jovens ≤35 anos: isenção de IMT para VPT ≤ €316.772 (1ª habitação).")
+            h("div",{style:{fontSize:11,color:"#166534",marginTop:8,fontFamily:"sans-serif"}},"✓ Jovens ≤35 anos: isenção de IMT até €330.539 (2026, 1ª habitação).")
           )
         )
       )

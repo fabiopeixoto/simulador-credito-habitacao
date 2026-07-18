@@ -36,7 +36,8 @@
     {min:145470, max:198347,   rate:'5%'},
     {min:198347, max:330539,   rate:'7%'},
     {min:330539, max:660982,   rate:'8%'},
-    {min:660982, max:Infinity, rate:'6% (taxa fixa)'},
+    {min:660982, max:1150853,  rate:'6% (taxa fixa)'},
+    {min:1150853,max:Infinity, rate:'7,5% (taxa fixa)'},
   ];
   var SEGUNDA_BRACKETS=[
     {min:0,      max:106346,   rate:'1%'},
@@ -44,7 +45,8 @@
     {min:145470, max:198347,   rate:'5%'},
     {min:198347, max:330539,   rate:'7%'},
     {min:330539, max:633931,   rate:'8%'},
-    {min:633931, max:Infinity, rate:'6% (taxa fixa)'},
+    {min:633931, max:1150853,  rate:'6% (taxa fixa)'},
+    {min:1150853,max:Infinity, rate:'7,5% (taxa fixa)'},
   ];
 
   function getActiveBracketIndex(valor,finalidade){
@@ -91,9 +93,17 @@
     var entrada=comGarantia?0:valor-emprestimo;
 
     var imt=Math.round(calcIMT(valor,isJovem,finalidade==='hpp'?'hpp':'segunda'));
-    var isEscritura=isJovem?0:Math.round(valor*0.008);           // DL 44/2024: isento Crédito Jovem
-    var isCredito=(financiamento&&finalidade!=='hpp')?Math.round(emprestimo*0.006):0; // Art.7.º CIS: isento HPP
-    // Taxas bancárias típicas (isentas no Crédito Jovem)
+    // IS verba 1.1 (escritura): isenção jovem (art. 7.º-A CIS) total até 330.539€,
+    // parcial até 660.982€ (paga sobre o excedente), sem benefício acima
+    var isEscrituraNormal=Math.round(valor*0.008);
+    var isEscritura=isJovem
+      ?(valor<=330539?0:valor<=660982?Math.round((valor-330539)*0.008):isEscrituraNormal)
+      :isEscrituraNormal;
+    // IS verba 17.1 (0,6% sobre o capital, prazo ≥5 anos): paga-se sempre, incluindo
+    // HPP e Crédito Jovem — só os juros estão isentos em HPP (art. 7.º CIS)
+    var isCredito=financiamento?Math.round(emprestimo*0.006):0;
+    // Taxas bancárias típicas — melhor cenário no Crédito Jovem: nem todos os
+    // bancos isentam dossier/avaliação para jovens (flags por banco em /api/banks)
     var DOSSIER_NORMAL=300;
     var AVAL_NORMAL=230;
     var taxasDossier=isJovem?0:DOSSIER_NORMAL;
@@ -107,7 +117,7 @@
     var imtSemJovem=Math.round(calcIMT(valor,false,finalidade==='hpp'?'hpp':'segunda'));
     var entradaSemGarantia=valor-Math.round(valor*ltv/100);
     var poupancaIMT=imtSemJovem-imt;
-    var poupancaIS=isJovem?Math.round(valor*0.008):0;
+    var poupancaIS=isJovem?isEscrituraNormal-isEscritura:0;
     var poupancaEntrada=comGarantia?entradaSemGarantia:0;
     var poupancaTaxasBancarias=isJovem?(DOSSIER_NORMAL+AVAL_NORMAL):0;
     var poupancaTotal=poupancaIMT+poupancaIS+poupancaEntrada+poupancaTaxasBancarias;
@@ -119,11 +129,12 @@
         ?{label:'Entrada (coberta pela garantia pública)',valor:0,cor:'#059669',isento:true}
         :{label:'Entrada / Valor a pagar',valor:entrada,cor:'#2563eb'},
       {label:'IMT',valor:imt,cor:'#dc2626',isento:imt===0&&isJovem},
-      {label:'Imposto de Selo — escritura (0,8%)',valor:isEscritura,cor:'#d97706',isento:isJovem},
+      {label:'Imposto de Selo — escritura (0,8%)',valor:isEscritura,cor:'#d97706',isento:isJovem&&isEscritura===0},
     ];
-    if(financiamento)componentes.push({label:'Imposto de Selo — crédito (0,6%)',valor:isCredito,cor:'#7c3aed',isento:finalidade==='hpp'});
+    if(financiamento)componentes.push({label:'Imposto de Selo — crédito (0,6%)',valor:isCredito,cor:'#7c3aed'});
     componentes.push({label:'Notário / Registo',valor:custosNotario,cor:'#059669'});
     if(taxasBancarias>0)componentes.push({label:'Taxas bancárias (dossier + avaliação)',valor:taxasBancarias,cor:'#6b7280'});
+    else if(isJovem)componentes.push({label:'Taxas bancárias — melhor cenário (nem todos os bancos isentam jovens)',valor:0,cor:'#6b7280',isento:true});
 
     var brackets=finalidade==='hpp'?HPP_BRACKETS:SEGUNDA_BRACKETS;
     var activeBracket=getActiveBracketIndex(valor,finalidade);
@@ -249,7 +260,7 @@
               h('span',{style:{fontSize:15,fontWeight:700,color:'#15803d',fontFamily:'monospace'}},fmtEur(poupancaEntrada))
             ),
             poupancaTaxasBancarias>0&&h('div',{style:{display:'flex',justifyContent:'space-between'}},
-              h('span',{style:{fontSize:13,color:'#166534',fontFamily:'sans-serif'}},'Taxas bancárias (dossier + avaliação)'),
+              h('span',{style:{fontSize:13,color:'#166534',fontFamily:'sans-serif'}},'Taxas bancárias (melhor cenário — depende do banco)'),
               h('span',{style:{fontSize:15,fontWeight:700,color:'#15803d',fontFamily:'monospace'}},fmtEur(poupancaTaxasBancarias))
             )
           ),

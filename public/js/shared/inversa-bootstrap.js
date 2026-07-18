@@ -18,9 +18,9 @@
     "12m": [Au, "rgba(37,99,235,0.18)"],
   };
   var FALLBACK_EUR = shared.FALLBACK_EUR || {
-    "3m": { valor: 2.209, data: "maio 2026" },
-    "6m": { valor: 2.541, data: "maio 2026" },
-    "12m": { valor: 2.86, data: "maio 2026" },
+    "3m": { valor: 2.339, data: "junho 2026" },
+    "6m": { valor: 2.596, data: "junho 2026" },
+    "12m": { valor: 2.798, data: "junho 2026" },
   };
   var CONTRATO_FACTOR = shared.CONTRATO_FACTOR || {
     efetivo: 1.0,
@@ -40,7 +40,7 @@
     BCP:   [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
     ACTVO: [{max:70,add:0},{max:80,add:0},{max:90,add:0},{max:100,add:0.10}],
     BPI:   [{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
-    MNTPO: [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
+    MNTPO: [{max:70,add:0},{max:80,add:0},{max:90,add:0},{max:100,add:0}],
     SANTR: [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
     NB:    [{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
     CGD:   [{max:70,add:0},{max:80,add:0},{max:90,add:0.05},{max:100,add:0.10}],
