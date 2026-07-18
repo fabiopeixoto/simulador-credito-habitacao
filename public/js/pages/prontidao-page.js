@@ -80,7 +80,7 @@
       var rendDesc=numTitulares===2
         ?'T1: '+fE(Math.round(rendimento*cf))+' + T2: '+fE(rend2c)+' = '+fE(rendConsiderado)
         :fE(rendConsiderado);
-      var dsti_desc='DSTI de '+dstiComCredito.toFixed(0)+'% (BdP recomenda ≤35%). Rendimento considerado: '+rendDesc+'/mês.';
+      var dsti_desc='DSTI de '+dstiComCredito.toFixed(0)+'% (referência prudente ≤35%; limite BdP: 45%). Rendimento considerado: '+rendDesc+'/mês.';
       var dsti_acao=dsti_status==='vermelho'?'Reduz a prestação (capital menor ou prazo maior) ou liquida outros créditos antes de pedir habitação.':
                     dsti_status==='amarelo'?'Estás no limite. O banco pode aprovar, mas considera reduzir o capital pedido.':null;
 
@@ -132,11 +132,11 @@
                :'Faltam ~'+fE(Math.round(poupancaNecessaria-poupanca))+'. Poupa mais antes de avançar ou activa o modo Crédito Jovem acima (se tens ≤35 anos) para reduzir a entrada.'
       ):poupa_status==='amarelo'?'Tens a entrada, mas os custos de transacção (~5%) podem deixar pouca margem. Recomenda-se uma reserva adicional.':null;
 
-      // 5 — Idade e prazo BdP
-      var prazoMaxBdP=idade<=30?40:idade<=35?37:35;
+      // 5 — Idade e prazo BdP (Recomendação Macroprudencial n.º 1/2026, desde 01/08/2026)
+      var prazoMaxBdP=idade<=35?40:35;
       var idadeNoFim=idade+prazo;
       var age_status=(idadeNoFim<=75&&prazo<=prazoMaxBdP)?'verde':(idadeNoFim<=80)?'amarelo':'vermelho';
-      var age_desc='Com '+idade+' anos e crédito a '+prazo+' anos, terminas com '+idadeNoFim+' anos. BdP (Aviso 4/2022): prazo máx. '+prazoMaxBdP+' anos para a tua faixa etária.';
+      var age_desc='Com '+idade+' anos e crédito a '+prazo+' anos, terminas com '+idadeNoFim+' anos. BdP (Recomendação 1/2026): prazo máx. '+prazoMaxBdP+' anos para a tua faixa etária.';
       var age_acao=age_status==='vermelho'?'Reduz o prazo pedido ou o capital para cumprir os limites regulatórios do Banco de Portugal.':
                    age_status==='amarelo'?'Estás no limite. O banco pode aceitar, mas há risco de recusa ou condições mais restritivas.':null;
 

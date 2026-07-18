@@ -98,7 +98,8 @@ function calcIMT(v,j,finalidade) {
     if(v<=198347) return v*0.05-5427.56;
     if(v<=330539) return v*0.07-9394.50;
     if(v<=633931) return v*0.08-12699.89;
-    return v*0.06;
+    if(v<=1150853) return v*0.06;
+    return v*0.075;
   }
   // Tabela I 2026: HPP
   // IMT Jovem (OE 2026, continente): isenção total até 330.539€; entre 330.539€ e 660.982€ taxa 8% só sobre o excedente; acima do teto parcial aplica-se a tabela normal (sem benefício)
@@ -111,7 +112,8 @@ function calcIMT(v,j,finalidade) {
   if(v<=198347) return v*0.05-6491.02;
   if(v<=330539) return v*0.07-10457.96;
   if(v<=660982) return v*0.08-13763.35;
-  return v*0.06;
+  if(v<=1150853) return v*0.06;
+  return v*0.075;
 }
 
 // ── Amortização antecipada ────────────────────────────────────────────────

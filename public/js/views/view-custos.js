@@ -13,7 +13,10 @@ function ViewCustos(props){
   const {bancoCustos,setBancoCustos,melhor,bankData,BANKS,modoJovem,finalidade,valorImovel,capital,pctR,entrada}=props;
   // Custos detalhados (derivados apenas desta vista)
   const imt=calcIMT(valorImovel,modoJovem,finalidade);
-  const isEsc=modoJovem&&finalidade==="hpp"?0:valorImovel*0.008;
+  // IS verba 1.1: isenção jovem (art. 7.º-A CIS) total até 330.539€, parcial até 660.982€
+  const isEsc=modoJovem&&finalidade==="hpp"
+    ?(valorImovel<=330539?0:valorImovel<=660982?(valorImovel-330539)*0.008:valorImovel*0.008)
+    :valorImovel*0.008;
   const isCred=capital*0.006;
   // IS escritura sobre a prestação (0,6% do capital em vigor — já incluído no isCred)
   const registoHipoteca=modoJovem&&finalidade==="hpp"?0:Math.round(capital*0.0008+150); // emolumentos
@@ -41,7 +44,7 @@ function ViewCustos(props){
                 {k:"entrada",  l:"Entrada necessária",                    v:entrada,      c:entrada===0?G:Au, note:entrada===0?"100% financiado (garantia Estado)":null},
                 {k:"sep1",     l:null},
                 {k:"imt",      l:"IMT",                                   v:imt,          c:imt===0?G:R,  note:modoJovem&&finalidade==="hpp"&&imt===0?"Isento ≤35a (HPP ≤330.539€)":modoJovem&&finalidade==="hpp"&&imt>0&&valorImovel<=660982?"IMT parcial OE2026: 8% sobre (valor − 330.539€)":imt===0?"Isento":finalidade!=="hpp"?"Taxa progressiva 1-8% (Portaria 352/2024)":null},
-                {k:"isesc",    l:"Imp. Selo escritura (0,8%)",            v:isEsc,        c:isEsc===0?G:undefined, note:modoJovem&&isEsc===0?"✅ Isento ≤35a":null},
+                {k:"isesc",    l:"Imp. Selo escritura (0,8%)",            v:isEsc,        c:isEsc===0?G:undefined, note:modoJovem&&isEsc===0?"✅ Isento ≤35a (até 330.539€)":modoJovem&&finalidade==="hpp"&&valorImovel<=660982&&isEsc>0?"Isenção parcial: 0,8% sobre (valor − 330.539€)":null},
                 {k:"iscred",   l:"Imp. Selo crédito (0,6%)",             v:isCred,       c:undefined, note:modoJovem?"ℹ️ Não isento (só IS escritura é isento ≤35a)":null},
                 {k:"sep2",     l:null},
                 {k:"dossier",  l:"Comissão de dossier",                  v:comDossier,   c:comDossier===0?G:"#374151", note:comDossier===0?"✅ Banco isenta (jovem/promoção)":null},

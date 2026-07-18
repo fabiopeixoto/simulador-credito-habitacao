@@ -321,9 +321,9 @@ var MUNICIPIOS=[
 
 var MUN_DEFAULT=MUNICIPIOS.filter(function(m){return m.label==="Lisboa";})[0]||MUNICIPIOS[0];
 
-var IAS_2025=522.50;
-var LIMIAR_ISENCAO_PERMANENTE_VPT=IAS_2025*14*10; // 73.150€ — Art. 46/48 EBF: 10×14×IAS
-var LIMIAR_ISENCAO_PERMANENTE_REND=IAS_2025*14*2.3;
+var IAS_2026=537.13;
+var LIMIAR_ISENCAO_PERMANENTE_VPT=IAS_2026*14*10; // 75.198,20€ — Art. 46/48 EBF: 10×14×IAS
+var LIMIAR_ISENCAO_PERMANENTE_REND=IAS_2026*14*2.3;
 
 function calcIMI(vpt, tipo, finalidade, taxaMunicipal, rendimento, nDep, anosPosse){
   var taxa=tipo==="rustico"?0.008:taxaMunicipal;
@@ -618,7 +618,7 @@ function IMIPage(props){
                 {titulo:"Isenção temporária (Art. 46 EBF)",desc:"VPT ≤ €125.000 · Duração: 3 anos (6 se ≥3 dependentes) · Requer registo de residência fiscal no imóvel",cor:Sky},
                 {titulo:"Isenção temporária VPT ≤ €250.000 (Art. 46 EBF)",desc:"VPT entre €125.000 e €250.000 · Duração: 3 anos (6 se ≥3 dependentes)",cor:Sky},
                 {titulo:"Isenção permanente (Art. 48 EBF)",desc:"VPT ≤ "+fE(LIMIAR_ISENCAO_PERMANENTE_VPT)+" e rendimento do agregado ≤ "+fE(Math.round(LIMIAR_ISENCAO_PERMANENTE_REND))+" · Soma de todos os imóveis urbanos habitacionais",cor:G},
-                {titulo:"Jovens ≤35 anos — IMT (compra)",desc:"Isenção de IMT na compra (não no IMI anual) para VPT ≤ €316.772. O IMI anual segue as regras normais.",cor:"#7c3aed"},
+                {titulo:"Jovens ≤35 anos — IMT (compra)",desc:"Isenção de IMT na compra (não no IMI anual) até €330.539 (2026). O IMI anual segue as regras normais.",cor:"#7c3aed"},
               ].map(function(item,i){
                 return h("div",{key:i,style:{padding:"9px 0",borderBottom:i<3?"1px solid rgba(0,0,0,0.05)":"none"}},
                   h("div",{style:{fontSize:12,fontWeight:700,color:item.cor,marginBottom:2,fontFamily:"'Inter',system-ui,sans-serif"}},item.titulo),
