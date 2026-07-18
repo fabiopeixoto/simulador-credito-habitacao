@@ -2,7 +2,7 @@
 
 Data da auditoria: 2026-07-18. Âmbito: todos os valores financeiros hardcoded no site (taxas, impostos, regras regulatórias, comissões, defaults), verificados (a) contra fontes oficiais/atuais de 2026 e (b) quanto à consistência interna entre páginas.
 
-> **Estado (2026-07-18):** correções aplicadas nos commits seguintes deste PR — itens 1.1–1.5, 2.1–2.2 e 3.1–3.7. Ficam por executar: 2.3 (revalidação manual dos 13 preçários, por decisão do utilizador) e 3.8 (consolidação de constantes num módulo partilhado, recomendação futura).
+> **Estado (2026-07-18):** correções aplicadas nos commits seguintes deste PR — itens 1.1–1.5, 2.1–2.2 e 3.1–3.7. Excluídos por decisão do utilizador: 2.3 (revalidação dos 13 preçários bancários — **não implementar**) e 3.8 (consolidação de constantes num módulo partilhado — apenas recomendação futura).
 
 Legenda de severidade:
 - 🔴 **Errado** — o valor produz resultados incorretos para o utilizador hoje.
