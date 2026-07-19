@@ -11,24 +11,28 @@ const IS_MOBILE=!!(window._SIM_SHARED&&window._SIM_SHARED.isMobileDevice);
 function ViewCustos(props){
   const {fE,thS,tdB,rbg,G,R,Au,BANK_DOMAINS,calcIMT}=window._SIM||{};
   const {bancoCustos,setBancoCustos,melhor,bankData,BANKS,modoJovem,finalidade,valorImovel,capital,pctR,entrada}=props;
-  // Custos detalhados (derivados apenas desta vista)
+  // Custos detalhados (derivados apenas desta vista) — constantes lidas de
+  // window._SIM.CONST no momento da chamada (atualizáveis pela API/admin)
+  const FISCAL=(window._SIM.CONST||{}).fiscal||{};
+  const CUSTOS=(window._SIM.CONST||{}).custos||{};
+  const IS=FISCAL.is||{};
   const imt=calcIMT(valorImovel,modoJovem,finalidade);
-  // IS verba 1.1: isenção jovem (art. 7.º-A CIS) total até 330.539€, parcial até 660.982€
+  // IS verba 1.1: isenção jovem (art. 7.º-A CIS) total até jovemIsencaoTotal, parcial até jovemIsencaoParcial
+  const isEscN=valorImovel*(IS.escritura??0.008);
   const isEsc=modoJovem&&finalidade==="hpp"
-    ?(valorImovel<=330539?0:valorImovel<=660982?(valorImovel-330539)*0.008:valorImovel*0.008)
-    :valorImovel*0.008;
-  const isCred=capital*0.006;
-  // IS escritura sobre a prestação (0,6% do capital em vigor — já incluído no isCred)
-  const registoHipoteca=modoJovem&&finalidade==="hpp"?0:Math.round(capital*0.0008+150); // emolumentos
+    ?(valorImovel<=(IS.jovemIsencaoTotal??330539)?0:valorImovel<=(IS.jovemIsencaoParcial??660982)?(valorImovel-(IS.jovemIsencaoTotal??330539))*(IS.escritura??0.008):isEscN)
+    :isEscN;
+  const isCred=capital*(IS.credito??0.006);
+  const registoHipoteca=modoJovem&&finalidade==="hpp"?0:Math.round(capital*(CUSTOS.registoRate??0.0008)+(CUSTOS.registoBase??150)); // emolumentos
   // Banco seleccionado para custos (usa o melhor como default)
   const bancoSCustos = bancoCustos || (melhor?.s) || "CA";
   const bdCustos=bankData?.[bancoSCustos]||{};
-  const comB={dossier:bdCustos.dossier??300,avaliacao:bdCustos.avaliacao??230,minutas:bdCustos.minutas??0,jovemIsenta:bdCustos.jovemIsenta??false,jovemIsentaAval:bdCustos.jovemIsentaAval??false};
+  const comB={dossier:bdCustos.dossier??CUSTOS.dossierDefault??300,avaliacao:bdCustos.avaliacao??CUSTOS.avaliacaoDefault??230,minutas:bdCustos.minutas??0,jovemIsenta:bdCustos.jovemIsenta??false,jovemIsentaAval:bdCustos.jovemIsentaAval??false};
   const comDossier=modoJovem&&comB.jovemIsenta?0:comB.dossier;
   const comAval=modoJovem&&comB.jovemIsentaAval?0:comB.avaliacao;
   const comMinutas=comB.minutas||0;
-  const dpa=200;
-  const notario=750;
+  const dpa=CUSTOS.dpa??200;
+  const notario=CUSTOS.notario??750;
   const totalCustos=imt+isEsc+isCred+comDossier+comAval+comMinutas+dpa+registoHipoteca;
   const bancoNomeCustos=bankData?.[bancoSCustos]?.name||"—";
   return (
@@ -43,8 +47,8 @@ function ViewCustos(props){
                 {k:"capital",  l:"Capital Emprestado",                    v:capital,      note:"LTV "+pctR+"%"},
                 {k:"entrada",  l:"Entrada necessária",                    v:entrada,      c:entrada===0?G:Au, note:entrada===0?"100% financiado (garantia Estado)":null},
                 {k:"sep1",     l:null},
-                {k:"imt",      l:"IMT",                                   v:imt,          c:imt===0?G:R,  note:modoJovem&&finalidade==="hpp"&&imt===0?"Isento ≤35a (HPP ≤330.539€)":modoJovem&&finalidade==="hpp"&&imt>0&&valorImovel<=660982?"IMT parcial OE2026: 8% sobre (valor − 330.539€)":imt===0?"Isento":finalidade!=="hpp"?"Taxa progressiva 1-8% (Portaria 352/2024)":null},
-                {k:"isesc",    l:"Imp. Selo escritura (0,8%)",            v:isEsc,        c:isEsc===0?G:undefined, note:modoJovem&&isEsc===0?"✅ Isento ≤35a (até 330.539€)":modoJovem&&finalidade==="hpp"&&valorImovel<=660982&&isEsc>0?"Isenção parcial: 0,8% sobre (valor − 330.539€)":null},
+                {k:"imt",      l:"IMT",                                   v:imt,          c:imt===0?G:R,  note:modoJovem&&finalidade==="hpp"&&imt===0?"Isento ≤35a (HPP ≤"+fE((FISCAL.imt||{}).jovemIsencaoTotal??330539)+")":modoJovem&&finalidade==="hpp"&&imt>0&&valorImovel<=((FISCAL.imt||{}).jovemIsencaoParcial??660982)?"IMT parcial: "+Math.round(((FISCAL.imt||{}).jovemTaxaExcedente??0.08)*100)+"% sobre (valor − "+fE((FISCAL.imt||{}).jovemIsencaoTotal??330539)+")":imt===0?"Isento":finalidade!=="hpp"?"Taxa progressiva 1-8%":null},
+                {k:"isesc",    l:"Imp. Selo escritura (0,8%)",            v:isEsc,        c:isEsc===0?G:undefined, note:modoJovem&&isEsc===0?"✅ Isento ≤35a (até "+fE(IS.jovemIsencaoTotal??330539)+")":modoJovem&&finalidade==="hpp"&&valorImovel<=(IS.jovemIsencaoParcial??660982)&&isEsc>0?"Isenção parcial sobre o excedente de "+fE(IS.jovemIsencaoTotal??330539):null},
                 {k:"iscred",   l:"Imp. Selo crédito (0,6%)",             v:isCred,       c:undefined, note:modoJovem?"ℹ️ Não isento (só IS escritura é isento ≤35a)":null},
                 {k:"sep2",     l:null},
                 {k:"dossier",  l:"Comissão de dossier",                  v:comDossier,   c:comDossier===0?G:"#374151", note:comDossier===0?"✅ Banco isenta (jovem/promoção)":null},
@@ -68,7 +72,7 @@ function ViewCustos(props){
                       React.createElement("th", {key: h, style: {...thS,textAlign:"center"}}, h.toUpperCase())
                     )))), React.createElement("tbody", null, BANKS.filter(b=>modoJovem?b.jOk:true).map((b,i)=>{
                       const lim={min:bankData[b.s]?.capMin??0,max:bankData[b.s]?.capMax??9999999};
-                      const com2={dossier:bankData[b.s]?.dossier??300,avaliacao:bankData[b.s]?.avaliacao??230};
+                      const com2={dossier:bankData[b.s]?.dossier??CUSTOS.dossierDefault??300,avaliacao:bankData[b.s]?.avaliacao??CUSTOS.avaliacaoDefault??230};
                       const capOk=capital>=(lim.min||0)&&capital<=(lim.max||9999999);
                       const isSelected=b.s===bancoSCustos;
                       const isBest=melhor&&b.s===melhor.s;

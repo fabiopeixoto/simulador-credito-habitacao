@@ -15,7 +15,7 @@ const {
   G,R,Au,N,Sky,BANK_DOMAINS,
 } = window._SIM;
 
-const CACHE_KEY   = "credito_cache_v14";
+const CACHE_KEY   = "credito_cache_v15";
 const CACHE_H     = 8;
 const HIST_KEY    = 'simulador-hist-v1';
 const HIST_MAX  = 5;
@@ -118,6 +118,7 @@ function App(props){
       try{
         const cached=JSON.parse(localStorage.getItem(CACHE_KEY)||"null");
         if(cached&&cached.ts&&cached.ts<=Date.now()&&(Date.now()-cached.ts)/3600000<CACHE_H){
+          if(cached.constants&&window._SIM_SHARED&&window._SIM_SHARED.applyApiConstants)window._SIM_SHARED.applyApiConstants({constants:cached.constants});
           setEUR(cached.eur);
           const cbd=cached.bd||{};
           const normBd={};
@@ -176,9 +177,11 @@ function App(props){
     });
     // Actualizar LTV_BRACKETS em-lugar com dados da API (fallback permanece em window._SIM.LTV_BRACKETS)
     (raw.banks||[]).forEach(b=>{if(b.ltvBrackets&&Array.isArray(b.ltvBrackets))window._SIM.LTV_BRACKETS[b.code]=b.ltvBrackets;});
+    // Constantes fiscais/regulatórias da BD → sobrepõem os defaults em-place
+    if(window._SIM_SHARED&&window._SIM_SHARED.applyApiConstants)window._SIM_SHARED.applyApiConstants(raw);
     setBankData(newBD);
     if(Object.keys(spreadsMap).length>0) statusMsg+=" · "+nSpr+"/"+Object.keys(newBD).length+" actualizado ✓";
-    try{localStorage.setItem(CACHE_KEY,JSON.stringify({eur:newEUR,bd:newBD,ts:Date.now()}));}catch(_){}
+    try{localStorage.setItem(CACHE_KEY,JSON.stringify({eur:newEUR,bd:newBD,constants:raw.constants||null,ts:Date.now()}));}catch(_){}
     setMsg(statusMsg);
   }catch(err){setStatus("error");setMsg("Erro: "+err.message.slice(0,80));}
   },[]);
@@ -191,12 +194,14 @@ function App(props){
   useEffect(()=>{try{const sp=new URLSearchParams(window.location.search);if(sp.get("comments")==="1"){setShowComments(true);sp.delete("comments");const q=sp.toString();const nu=q?"?"+q:"";window.history.replaceState({},"",window.location.pathname+nu+(window.location.hash||""));}}catch(_){}},[]);
   
   // ── Derivados ────────────────────────────────────────────────────────────
+  const CONST=window._SIM.CONST||{};
+  const REGRAS=CONST.regras||{};
   const is2=titulares===2;
-  const maxPctFin=modoJovem&&finalidade==="hpp"?100:FINALIDADE_MAX_LTV[finalidade]||90;
+  const maxPctFin=modoJovem&&finalidade==="hpp"?(REGRAS.finalidadeMaxLtv?.jovemHpp??100):FINALIDADE_MAX_LTV[finalidade]||90;
   const pctR=Math.min(pct,maxPctFin);
   // Valor de referência para LTV = min(aquisição, avaliação) — se avaliação definida
   const valorRef=valorAvaliacao>0?Math.min(valorImovel,valorAvaliacao):valorImovel;
-  const valorLim=Math.min(valorRef,modoJovem?450000:valorRef);
+  const valorLim=Math.min(valorRef,modoJovem?(REGRAS.garantiaPublicaCap??450000):valorRef);
   const capital=Math.round(valorLim*pctR/100);
   const entrada=valorImovel-capital; // entrada em relação ao preço de compra
   // LTV real = capital / valorRef (pode diferir do pct se avaliação < aquisição)
@@ -209,23 +214,24 @@ function App(props){
   // Rendimento ajustado por tipo de contrato e dependentes
   const rendAdj1=Math.round(rend1*(CONTRATO_FACTOR[tipoC1]||1));
   const rendAdj2=is2?Math.round(rend2*(CONTRATO_FACTOR[tipoC2]||1)):0;
-  // Cada dependente reduz a capacidade em ~€400/mês (encargo estimado BdP)
-  const rendT=Math.max(0, rendAdj1+rendAdj2-(dependentes*400));
+  // Cada dependente reduz a capacidade por dependente (encargo estimado BdP)
+  const rendT=Math.max(0, rendAdj1+rendAdj2-(dependentes*(REGRAS.encargoDependente??400)));
 
   // Prazo — dupla regra: BdP (Recomendação Macroprudencial n.º 1/2026, desde 01/08/2026)
-  // + prática bancária de terminar até aos ~75 anos
+  // + prática bancária de terminar até aos ~idadeFimMax anos
   const idadeMax=is2?Math.max(idade1,idade2):idade1;
-  const prazoMaxBdP = idadeMax<=35 ? 40 : 35;
-  const prazoMax75  = Math.max(10,75-idadeMax);
+  const idadeCorte=REGRAS.idadeCorteJovem??35;
+  const prazoMaxBdP = idadeMax<=idadeCorte ? (REGRAS.prazoMaxJovem??40) : (REGRAS.prazoMaxNormal??35);
+  const prazoMax75  = Math.max(10,(REGRAS.idadeFimMax??75)-idadeMax);
   const prazoMax    = Math.min(prazoMaxBdP,prazoMax75);
   const prazoR      = Math.min(prazo,prazoMax);
   let prazoLimLabel;
   if (prazoMax75 <= prazoMaxBdP) {
-    prazoLimLabel = "Limite 75a: "+idadeMax+"a + "+prazoMax+"a";
-  } else if (idadeMax <= 35) {
-    prazoLimLabel = "BdP (≤35a): máx. 40a";
+    prazoLimLabel = "Limite "+(REGRAS.idadeFimMax??75)+"a: "+idadeMax+"a + "+prazoMax+"a";
+  } else if (idadeMax <= idadeCorte) {
+    prazoLimLabel = "BdP (≤"+idadeCorte+"a): máx. "+prazoMaxBdP+"a";
   } else {
-    prazoLimLabel = "BdP (>35a): máx. 35a";
+    prazoLimLabel = "BdP (>"+idadeCorte+"a): máx. "+prazoMaxBdP+"a";
   }
 
   // Seguro de protecção ao crédito (opcional): ~€12/mês p/ €100k
@@ -333,7 +339,7 @@ function App(props){
 
         // DSTI
         const efC=rendT>0?(ptC+outros)/rendT*100:0;
-        const pSt=calcP(capital,tanC+1.5,prazoCalc);
+        const pSt=calcP(capital,tanC+(REGRAS.stressAddon??1.5),prazoCalc);
         const efSt=rendT>0?((pSt+seg.tot+isM+segProtMensal+contaM)+outros)/rendT*100:0;
 
         // TAEG e MTIC — encargo mensal TAEG inclui prestação + seguros + IS + conta
@@ -342,8 +348,8 @@ function App(props){
         const comB2={dossier:bd2.dossier??300,avaliacao:bd2.avaliacao??230,minutas:bd2.minutas??0,jovemIsenta:bd2.jovemIsenta??false,jovemIsentaAval:bd2.jovemIsentaAval??false};
         const comD2=modoJovem&&comB2.jovemIsenta?0:comB2.dossier;
         const comA2=modoJovem&&comB2.jovemIsentaAval?0:(comB2.avaliacao||0);
-        const isCredTAEG=Math.round(capital*0.006);
-        const regHTAEG=(modoJovem&&finalidade==="hpp")?0:Math.round(capital*0.0008+150);
+        const isCredTAEG=Math.round(capital*((CONST.fiscal?.is?.credito)??0.006));
+        const regHTAEG=(modoJovem&&finalidade==="hpp")?0:Math.round(capital*((CONST.custos?.registoRate)??0.0008)+((CONST.custos?.registoBase)??150));
         const comInic=comD2+comA2+(comB2.minutas||0)+200+isCredTAEG+regHTAEG;
         const encargoTAEG=pC+seg.tot+isM+segProtMensal+contaM;
         const taeg=carencia>0
@@ -399,7 +405,8 @@ function App(props){
       const contaM_cen=cRow.contaM||0;
       const p2=calcP(capital,t2,prazoR),pt2=p2+cRow.seg.tot+isJurosMedioMensal(capital,t2,prazoR,finalidade)+segProtMensal+contaM_cen;
       const ef=rendT>0?(pt2+outros)/rendT*100:0;
-      const st=calcP(capital,t2+1.5,prazoR)+cRow.seg.tot+isJurosMedioMensal(capital,t2+1.5,prazoR,finalidade)+segProtMensal+contaM_cen;
+      const stAdd=REGRAS.stressAddon??1.5;
+      const st=calcP(capital,t2+stAdd,prazoR)+cRow.seg.tot+isJurosMedioMensal(capital,t2+stAdd,prazoR,finalidade)+segProtMensal+contaM_cen;
       return{label:d===0?"Atual":d>0?("+"+d+"%"):(d+"%"),delta:d,eur:e2,tan:t2,p:Math.round(p2),pt:Math.round(pt2),ef,st:Math.round(st),efSt:rendT>0?(st+outros)/rendT*100:0};
     });
   },[melhor,resultados,bancoCen,capital,prazoR,rendT,outros,tipoTaxa,segProtMensal]);
@@ -481,7 +488,7 @@ function App(props){
 
   return React.createElement(React.Fragment,null,
     React.createElement("div", {style: {fontFamily:"'Inter',system-ui,sans-serif",background:N,minHeight:"100vh",color:"#111827"}}, window.HeaderBar&&React.createElement(window.HeaderBar,{EUR,status,msg,ts,shared,saved,histSaved,showHist,setShowHist,setShowComments,setShowGlossario,setShowProcesso,loadRates,commentTotal,handleShare,handleSave}),window.NoticeBanner&&React.createElement(window.NoticeBanner,null), React.createElement("div", {style: {maxWidth:1440,margin:"0 auto",padding:"10px 14px"}}, React.createElement("div", {style: {display:"flex",borderRadius:9,overflow:"hidden",border:"1px solid rgba(0,0,0,0.07)",marginBottom:10}}, [{id:false,icon:"🏦",label:"Crédito Normal",c:Au},{id:true,icon:"🎓",label:"Crédito Jovem ≤35 anos",c:G}].map(({id,icon,label,c})=>(
-            React.createElement("button", {key: String(id), onClick: ()=>{setModoJovem(id);if(!id)setPct(Math.min(pct,90));}, style: {flex:1,padding:"10px 9px",border:"none",background:modoJovem===id?c:"rgba(255,255,255,1)",borderBottom:"3px solid "+(modoJovem===id?c:"transparent"),color:modoJovem===id?"#fff":"#374151",fontSize:13,fontFamily:"sans-serif",cursor:modoJovem===id?"default":"pointer",fontWeight:modoJovem===id?700:600,transition:"background 0.15s,color 0.15s"}}, icon+" "+label)
+            React.createElement("button", {key: String(id), onClick: ()=>{setModoJovem(id);if(!id)setPct(Math.min(pct,FINALIDADE_MAX_LTV[finalidade]||90));}, style: {flex:1,padding:"10px 9px",border:"none",background:modoJovem===id?c:"rgba(255,255,255,1)",borderBottom:"3px solid "+(modoJovem===id?c:"transparent"),color:modoJovem===id?"#fff":"#374151",fontSize:13,fontFamily:"sans-serif",cursor:modoJovem===id?"default":"pointer",fontWeight:modoJovem===id?700:600,transition:"background 0.15s,color 0.15s"}}, icon+" "+label)
           ))), window.ParamsPanel&&React.createElement(window.ParamsPanel,{valorImovel,setValorImovel,valorAvaliacao,setValorAvaliacao,setPct,prazo,setPrazo,tipoTaxa,setTipoTaxa,modoJovem,finalidade,setFinalidade,certA,setCertA,titulares,setTitulares,idade1,setIdade1,rend1,setRend1,tipoC1,setTipoC1,idade2,setIdade2,rend2,setRend2,tipoC2,setTipoC2,dependentes,setDependentes,outros,setOutros,carencia,setCarencia,segProtecao,setSegProtecao,paramsOpen,setParamsOpen,showParams,titularesOpen,setTitularesOpen,showTitulares,is2,maxPctFin,pctR,capital,entrada,ltvReal,avalAbaixo,rendT,prazoMax,prazoR,prazoLimLabel}), showHist&&histSaved.length>0&&window.HistModal&&React.createElement(window.HistModal,{histSaved,onClose:()=>setShowHist(false),onDelete:(i)=>{const n=histSaved.filter((_,j)=>j!==i);setHistSaved(n);try{localStorage.setItem(HIST_KEY,JSON.stringify(n));}catch(_){}}}),
 
           React.createElement("div", {style: {marginBottom:10}}, React.createElement("div", {style: {display:"flex",flexWrap:"wrap",borderRadius:9,overflow:"hidden",border:"1px solid rgba(0,0,0,0.07)",background:IS_MOBILE?"rgba(0,0,0,0.06)":"rgba(255,255,255,1)",rowGap:IS_MOBILE?1:0}}, NAV.map(({id,icon,label})=>(

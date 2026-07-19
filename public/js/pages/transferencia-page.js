@@ -78,7 +78,8 @@
     var ltv=valorImovel>0?Math.round(capital/valorImovel*100*10)/10:0;
     var remainingMonths=prazoRestante*12;
     var prestacaoAtual=calcP(capital,taxaAtual,prazoRestante);
-    var penaltyRate=tipoTaxaAtual==="fixa"?0.02:0.005;
+    var REGRAS=((window._SIM||{}).CONST||{}).regras||{};
+    var penaltyRate=tipoTaxaAtual==="fixa"?(REGRAS.amortPenaltyFixa!=null?REGRAS.amortPenaltyFixa:0.02):(REGRAS.amortPenaltyVar!=null?REGRAS.amortPenaltyVar:0.005);
     var penaltyCost=Math.round(capital*penaltyRate);
 
     var resultados=useMemo(function(){
@@ -186,7 +187,7 @@
               h("div",{style:fieldS},
                 h("div",{style:labelS},"Tipo de taxa atual (afeta penalização)"),
                 h("div",{style:{display:"flex",gap:6}},
-                  h(TipoBtn,{active:tipoTaxaAtual==="variavel",label:"Variável / Mista (0,5%)",onClick:function(){setTipoTaxaAtual("variavel");}}),
+                  h(TipoBtn,{active:tipoTaxaAtual==="variavel",label:"Variável / Mista ("+((REGRAS.amortPenaltyVar!=null?REGRAS.amortPenaltyVar:0.005)*100).toFixed(1).replace('.',',')+"%)",onClick:function(){setTipoTaxaAtual("variavel");}}),
                   h(TipoBtn,{active:tipoTaxaAtual==="fixa",label:"Fixa (2%)",onClick:function(){setTipoTaxaAtual("fixa");}})
                 )
               )

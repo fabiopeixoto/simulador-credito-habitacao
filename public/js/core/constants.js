@@ -8,16 +8,12 @@
 "use strict";
 
 // ── Spread adicional por finalidade ──────────────────────────────────────
-const FINALIDADE_ADDON = {
-  hpp:    0,     // Habitação Própria Permanente
-  hab2:   0.20,  // Segunda habitação (típico: +0,10% a +0,30%)
-  arrendamento: 0.30,
-};
-const FINALIDADE_MAX_LTV = {
-  hpp:    90,    // HPP: máx 90% (ou 100% jovem)
-  hab2:   80,    // 2.ª habitação: máx 80%
-  arrendamento: 80,
-};
+// Inicializados a partir de _SIM_CONST.regras (fonte: sim-defaults.js) e
+// mutados EM-PLACE por applyApiConstants quando a API responde — app.js
+// destructura estas referências no arranque, nunca reatribuir os objetos.
+const _regras = ((window._SIM_CONST||{}).regras)||{};
+const FINALIDADE_ADDON = _regras.finalidadeAddon || { hpp: 0, hab2: 0.20, arrendamento: 0.30 };
+const FINALIDADE_MAX_LTV = _regras.finalidadeMaxLtv || { hpp: 90, hab2: 80, arrendamento: 80, jovemHpp: 100 };
 
 // Tabs do simulador principal
 const NAV=[{id:"comp",icon:"📋",label:"Comparação"},{id:"seg",icon:"🛡️",label:"Seguros"},{id:"cust",icon:"💰",label:"Custos"},{id:"viab",icon:"📊",label:"Viabilidade"},{id:"cen",icon:"⚡",label:"Cenários"},{id:"amort",icon:"🔄",label:"Amortização"}];

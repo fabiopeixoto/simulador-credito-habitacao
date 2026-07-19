@@ -93,9 +93,11 @@
     var calc=useMemo(function(){
       // Custos iniciais de compra
       var imt=calcIMT(valorImovel,0,"hpp");
-      var isAquisicao=valorImovel*0.008;   // IS sobre aquisição (verba 1.1)
-      var isCredito=capital*0.006;          // IS sobre o crédito (verba 17.1)
-      var custosFixos=1500;                 // escritura + registo + dossier/avaliação (estimativa)
+      var CONSTC=(window._SIM||{}).CONST||{};
+      var ISC=(CONSTC.fiscal||{}).is||{};
+      var isAquisicao=valorImovel*(ISC.escritura!=null?ISC.escritura:0.008);   // IS sobre aquisição (verba 1.1)
+      var isCredito=capital*(ISC.credito!=null?ISC.credito:0.006);          // IS sobre o crédito (verba 17.1)
+      var custosFixos=((CONSTC.custos||{}).custosFixosEstimativa)!=null?CONSTC.custos.custosFixosEstimativa:1500;                 // escritura + registo + dossier/avaliação (estimativa)
       var custosIniciais=imt+isAquisicao+isCredito+custosFixos;
 
       var prestacaoMensal=calcP(capital,tan,prazo);

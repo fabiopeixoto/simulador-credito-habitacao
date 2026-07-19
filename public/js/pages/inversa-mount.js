@@ -99,6 +99,7 @@
       fetch("/api/banks")
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (raw) {
+      if(raw&&window._SIM_SHARED&&window._SIM_SHARED.applyApiConstants)window._SIM_SHARED.applyApiConstants(raw);
           if (!alive || !raw) return;
           try { setEUR(mergeEurFromApi(raw)); } catch (_) {}
         })

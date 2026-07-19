@@ -752,6 +752,7 @@ async function loadBanks() {
     await loadStatsAdmin();
     await loadCommentsAdmin();
     await checkPendingSpreads();
+    loadConstants(data.constants || null);
   } catch (e) {
     setStatus('Erro: ' + e.message, 'error');
     setAdminUnlocked(false);
@@ -1088,3 +1089,98 @@ document.addEventListener('keydown', e => {
     if (el) el.addEventListener('change', refresh);
   });
 })();
+
+// ── Constantes do simulador (kv_store const:*) ─────────────────────────────
+const CONSTANT_GROUP_META = [
+  { group: 'fiscal',           key: 'fiscal',           label: '🏛️ Fiscal — IMT, IS, IAS, IMI' },
+  { group: 'regras',           key: 'regras',           label: '📏 Regras BdP e programas (prazos, stress, DSTI, LTV, garantia, penalizações)' },
+  { group: 'custos',           key: 'custos',           label: '💶 Custos por defeito (dossier, avaliação, registo, DPA, notário)' },
+  { group: 'vida',             key: 'vida',             label: '🛡️ Seguro de vida — curva por idade' },
+  { group: 'euribor_fallback', key: 'euriborFallback',  label: '📉 Euribor de fallback' },
+  { group: 'imi_municipios',   key: null,               label: '🗺️ Taxas IMI municipais (302 entradas)' },
+];
+
+function setConstantsStatus(msg, type) {
+  const el = document.getElementById('constantsStatus');
+  if (!el) return;
+  el.textContent = msg;
+  el.className = 'status ' + (type || '');
+}
+
+async function loadConstants(fromPayload) {
+  const list = document.getElementById('constantsList');
+  if (!list) return;
+  try {
+    let constants = fromPayload;
+    if (!constants) {
+      const r = await fetch('/api/banks');
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      constants = (await r.json()).constants || {};
+    }
+    const rm = await fetch('/api/banks?municipios=1');
+    const mun = rm.ok ? await rm.json() : null;
+    const sources = (constants.meta && constants.meta.sources) || {};
+    list.innerHTML = CONSTANT_GROUP_META.map(({ group, key, label }) => {
+      const data = group === 'imi_municipios'
+        ? (mun ? { municipios: mun.municipios } : null)
+        : (key ? constants[key] : null);
+      const source = group === 'imi_municipios' ? (mun && mun.source) || 'seed' : sources[group] || 'seed';
+      const badge = source === 'manual'
+        ? '<span style="background:rgba(59,130,246,0.15);color:#2563eb;border-radius:4px;padding:1px 7px;font-size:11px;font-weight:700;">Manual</span>'
+        : '<span style="background:rgba(100,116,139,0.15);color:#64748b;border-radius:4px;padding:1px 7px;font-size:11px;font-weight:700;">Canónico (seed)</span>';
+      return '<details style="margin-bottom:10px;border:1px solid var(--border,#e2e8f0);border-radius:8px;padding:10px 12px;background:var(--card,#fff);">' +
+        '<summary style="cursor:pointer;font-size:13px;font-weight:700;">' + label + ' ' + badge + '</summary>' +
+        '<textarea id="const_' + group + '" spellcheck="false" style="width:100%;min-height:180px;margin-top:8px;font-family:monospace;font-size:11px;line-height:1.5;border:1px solid var(--border,#cbd5e1);border-radius:6px;padding:8px;">' +
+        (data ? JSON.stringify(data, null, 2).replace(/&/g, '&amp;').replace(/</g, '&lt;') : '—') +
+        '</textarea>' +
+        '<div style="display:flex;gap:8px;margin-top:6px;">' +
+        '<button type="button" class="btn-sm btn-save" onclick="saveConstant(\'' + group + '\')">Guardar</button>' +
+        '<button type="button" class="btn-sm btn-history" onclick="resetConstant(\'' + group + '\')">Repor seed</button>' +
+        '</div></details>';
+    }).join('');
+    setConstantsStatus('Constantes carregadas', 'ok');
+  } catch (e) {
+    setConstantsStatus('Erro a carregar constantes: ' + e.message, 'error');
+  }
+}
+
+async function postConstant(group, payload, okMsg) {
+  const r = await fetch('/api/banks', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-admin-token': getToken().trim() },
+    body: JSON.stringify({ constants: { [group]: payload } }),
+  });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    throw new Error(err.error || 'HTTP ' + r.status);
+  }
+  setConstantsStatus(okMsg, 'ok');
+  await loadConstants(null);
+}
+
+async function saveConstant(group) {
+  const ta = document.getElementById('const_' + group);
+  if (!ta) return;
+  let parsed;
+  try {
+    parsed = JSON.parse(ta.value);
+  } catch (e) {
+    setConstantsStatus('JSON inválido em ' + group + ': ' + e.message, 'error');
+    return;
+  }
+  // No grupo de municípios o textarea mostra {municipios:[...]} — enviar tal e qual
+  try {
+    await postConstant(group, parsed, 'Grupo «' + group + '» guardado (manual).');
+  } catch (e) {
+    setConstantsStatus('Erro ao guardar ' + group + ': ' + e.message, 'error');
+  }
+}
+
+async function resetConstant(group) {
+  if (!confirm('Repor o grupo «' + group + '» para os valores do código (seed)? A edição manual é descartada.')) return;
+  try {
+    await postConstant(group, null, 'Grupo «' + group + '» reposto ao seed.');
+  } catch (e) {
+    setConstantsStatus('Erro ao repor ' + group + ': ' + e.message, 'error');
+  }
+}

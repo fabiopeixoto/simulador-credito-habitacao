@@ -52,6 +52,7 @@
     return h(React.Fragment,null,
       h(window.IMIPage,{
         EUR:EUR,
+        municipios:props.municipios||null,
         commentCount:commentTotal,
         onOpenComments:function(){setShowComments(true);},
         onOpenGlossario:function(){setShowGlossario(true);},
@@ -74,11 +75,16 @@
   var el=document.getElementById("root");
   if(!el)return;
 
-  fetch("/api/banks")
-    .then(function(r){return r.ok?r.json():null;})
-    .then(function(raw){
+  Promise.all([
+    fetch("/api/banks").then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
+    fetch("/api/banks?municipios=1").then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
+  ])
+    .then(function(results){
+      var raw=results[0], mun=results[1];
+      if(raw&&window._SIM_SHARED&&window._SIM_SHARED.applyApiConstants)window._SIM_SHARED.applyApiConstants(raw);
       var initialEUR=raw?mergeEurFromApi(raw):null;
-      ReactDOM.createRoot(el).render(h(IMIRoot,{initialEUR:initialEUR}));
+      var municipios=(mun&&Array.isArray(mun.municipios)&&mun.municipios.length)?mun.municipios:null;
+      ReactDOM.createRoot(el).render(h(IMIRoot,{initialEUR:initialEUR,municipios:municipios}));
     })
     .catch(function(){
       ReactDOM.createRoot(el).render(h(IMIRoot,{initialEUR:null}));

@@ -73,14 +73,17 @@
       var prestacaoHabitacao=Math.round(calcP(capital,tanN,prazo));
       var totalEncargos=outrosEncargos+prestacaoHabitacao;
       var dstiComCredito=rendConsiderado>0?totalEncargos/rendConsiderado*100:0;
-      var prestacaoMaxima=Math.max(0,rendConsiderado*0.35-outrosEncargos);
+      var REGRAS=((window._SIM||{}).CONST||{}).regras||{};
+      var dstiP=REGRAS.dstiPrudente!=null?REGRAS.dstiPrudente:35;
+      var dstiA=REGRAS.dstiAmarelo!=null?REGRAS.dstiAmarelo:40;
+      var prestacaoMaxima=Math.max(0,rendConsiderado*dstiP/100-outrosEncargos);
 
       // 1 — DSTI
-      var dsti_status=dstiComCredito<=35?'verde':dstiComCredito<=40?'amarelo':'vermelho';
+      var dsti_status=dstiComCredito<=dstiP?'verde':dstiComCredito<=dstiA?'amarelo':'vermelho';
       var rendDesc=numTitulares===2
         ?'T1: '+fE(Math.round(rendimento*cf))+' + T2: '+fE(rend2c)+' = '+fE(rendConsiderado)
         :fE(rendConsiderado);
-      var dsti_desc='DSTI de '+dstiComCredito.toFixed(0)+'% (referência prudente ≤35%; limite BdP: 45%). Rendimento considerado: '+rendDesc+'/mês.';
+      var dsti_desc='DSTI de '+dstiComCredito.toFixed(0)+'% (referência prudente ≤'+dstiP+'%; limite BdP: '+(REGRAS.dstiLimite!=null?REGRAS.dstiLimite:45)+'%). Rendimento considerado: '+rendDesc+'/mês.';
       var dsti_acao=dsti_status==='vermelho'?'Reduz a prestação (capital menor ou prazo maior) ou liquida outros créditos antes de pedir habitação.':
                     dsti_status==='amarelo'?'Estás no limite. O banco pode aprovar, mas considera reduzir o capital pedido.':null;
 
@@ -133,9 +136,10 @@
       ):poupa_status==='amarelo'?'Tens a entrada, mas os custos de transacção (~5%) podem deixar pouca margem. Recomenda-se uma reserva adicional.':null;
 
       // 5 — Idade e prazo BdP (Recomendação Macroprudencial n.º 1/2026, desde 01/08/2026)
-      var prazoMaxBdP=idade<=35?40:35;
+      var prazoMaxBdP=idade<=(REGRAS.idadeCorteJovem!=null?REGRAS.idadeCorteJovem:35)?(REGRAS.prazoMaxJovem!=null?REGRAS.prazoMaxJovem:40):(REGRAS.prazoMaxNormal!=null?REGRAS.prazoMaxNormal:35);
       var idadeNoFim=idade+prazo;
-      var age_status=(idadeNoFim<=75&&prazo<=prazoMaxBdP)?'verde':(idadeNoFim<=80)?'amarelo':'vermelho';
+      var idadeFim=REGRAS.idadeFimMax!=null?REGRAS.idadeFimMax:75;
+      var age_status=(idadeNoFim<=idadeFim&&prazo<=prazoMaxBdP)?'verde':(idadeNoFim<=idadeFim+5)?'amarelo':'vermelho';
       var age_desc='Com '+idade+' anos e crédito a '+prazo+' anos, terminas com '+idadeNoFim+' anos. BdP (Recomendação 1/2026): prazo máx. '+prazoMaxBdP+' anos para a tua faixa etária.';
       var age_acao=age_status==='vermelho'?'Reduz o prazo pedido ou o capital para cumprir os limites regulatórios do Banco de Portugal.':
                    age_status==='amarelo'?'Estás no limite. O banco pode aceitar, mas há risco de recusa ou condições mais restritivas.':null;

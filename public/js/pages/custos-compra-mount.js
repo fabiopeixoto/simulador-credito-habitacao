@@ -73,6 +73,7 @@
   fetch("/api/banks")
     .then(function(r){return r.ok?r.json():null;})
     .then(function(raw){
+      if(raw&&window._SIM_SHARED&&window._SIM_SHARED.applyApiConstants)window._SIM_SHARED.applyApiConstants(raw);
       var initialEUR=raw?mergeEurFromApi(raw):null;
       ReactDOM.createRoot(el).render(h(CustosCompraRoot,{initialEUR:initialEUR}));
     })

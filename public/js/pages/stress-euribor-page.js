@@ -30,6 +30,7 @@
   }
 
   var DELTAS=[0,0.5,1,1.5,2,3];
+  function getRegras(){return ((window._SIM||{}).CONST||{}).regras||{};}
 
   function barColor(d){
     if(d===0)return '#16a34a';
@@ -148,14 +149,15 @@
                   h('th',{style:Object.assign({},thS,{textAlign:'right'})},'TAN'),
                   h('th',{style:Object.assign({},thS,{textAlign:'right'})},'Prestação'),
                   h('th',{style:Object.assign({},thS,{textAlign:'right'})},'Δ / mês'),
-                  h('th',{style:Object.assign({},thS,{textAlign:'right'})},isMobile?'Rend. mín.':'Rendimento mín. (DSTI 35%)')
+                  h('th',{style:Object.assign({},thS,{textAlign:'right'})},isMobile?'Rend. mín.':'Rendimento mín. (DSTI '+(getRegras().dstiPrudente!=null?getRegras().dstiPrudente:35)+'%)')
                 )
               ),
               h('tbody',null,
                 cenarios.map(function(c){
-                  var isBdP=c.delta===1.5;
+                  var stressAdd=getRegras().stressAddon!=null?getRegras().stressAddon:1.5;
+                  var isBdP=c.delta===stressAdd;
                   var delta=c.prestacao-prestacaoBase;
-                  var rendMin=Math.round(c.prestacao/0.35);
+                  var rendMin=Math.round(c.prestacao/((getRegras().dstiPrudente!=null?getRegras().dstiPrudente:35)/100));
                   var barPct=prestacaoMax>prestacaoBase?(c.prestacao-prestacaoBase)/(prestacaoMax-prestacaoBase)*100:0;
                   if(c.delta===0)barPct=0;
                   var rowBg=isBdP?'#eff6ff':'transparent';
