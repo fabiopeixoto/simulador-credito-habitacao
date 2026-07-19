@@ -59,6 +59,22 @@
 
 <div id="banksGrid" class="grid"></div>
 
+<section class="comments-admin" aria-label="Constantes do simulador">
+  <h2>⚙️ Constantes do simulador</h2>
+  <p style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.45;">
+    Valores fiscais e regulatórios usados pelos simuladores (tabelas IMT, IS, IAS, regras BdP,
+    custos por defeito, curva do seguro de vida, Euribor de fallback e taxas IMI municipais).
+    Editar aqui altera o site sem deploy. <strong>Guardar</strong> marca o grupo como
+    <em>manual</em> (o seed do código deixa de o sobrepor em arranques futuros);
+    <strong>Repor seed</strong> volta aos valores do código.
+  </p>
+  <div class="comments-admin-toolbar">
+    <button type="button" class="btn-sm btn-history" onclick="loadConstants()">Actualizar constantes</button>
+    <span id="constantsStatus" class="status"></span>
+  </div>
+  <div id="constantsList"></div>
+</section>
+
 <section class="comments-admin" aria-label="Moderação de comentários">
   <h2>💬 Comentários da comunidade</h2>
   <p style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.45;">Comentários públicos do simulador. Apagar remove o comentário principal e todas as respostas associadas.</p>
@@ -181,6 +197,6 @@
   </div>
 </div>
 
-<script src="/admin.js?v=18"></script>
+<script src="/admin.js?v=19"></script>
 </body>
 </html>

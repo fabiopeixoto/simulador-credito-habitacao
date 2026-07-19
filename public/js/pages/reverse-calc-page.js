@@ -22,9 +22,13 @@ function ReverseCalcPage({onBack,onSimulate,onOpenComments,onOpenGlossario,onOpe
   const[jovemLTV,setJovemLTV]=useState(0.9);
   const is2=tit===2;
   const CF=CONTRATO_FACTOR;
+  const REGRAS=((window._SIM||{}).CONST||{}).regras||{};
+  const stressAdd=REGRAS.stressAddon??1.5;
+  const dstiP=REGRAS.dstiPrudente??35, dstiA=REGRAS.dstiAmarelo??40, dstiL=REGRAS.dstiLimite??45;
   const ra1=Math.round(r1*(CF[c1]||1));
   const ra2=is2?Math.round(r2*(CF[c2]||1)):0;
-  const rendT=Math.max(0,ra1+ra2-dep*400);
+  const encDep=REGRAS.encargoDependente??400;
+  const rendT=Math.max(0,ra1+ra2-dep*encDep);
   const pMax=Math.max(0,rendT*dsti/100-out);
   const ev=(EUR[eRef]||FALLBACK_EUR[eRef]).valor;
   const tan=tt==="fixa"?tf:Math.max(0.1,ev+spr);
@@ -34,7 +38,7 @@ function ReverseCalcPage({onBack,onSimulate,onOpenComments,onOpenGlossario,onOpe
   const maxLTV=mJ?jovemLTV:0.8;
   const valMax=capMax/maxLTV;
   const entMin=valMax-capMax;
-  const tanS=tan+1.5; // choque BdP: +1,5 p.p. (Recomendação Macroprudencial)
+  const tanS=tan+stressAdd; // choque BdP (Recomendação Macroprudencial)
   const rS=tanS/100/12;
   const capS=rS>0?pMax*(1-Math.pow(1+rS,-n))/rS:pMax*n;
   const pzList=[15,20,25,30,35,40];
@@ -86,9 +90,9 @@ function ReverseCalcPage({onBack,onSimulate,onOpenComments,onOpenGlossario,onOpe
             )
           ),
           React.createElement("div",{style:{paddingTop:8,borderTop:"1px solid rgba(0,0,0,0.06)"}},
-            React.createElement("div",{style:lbS},"DEPENDENTES (−€400/dep.)"),
+            React.createElement("div",{style:lbS},"DEPENDENTES (−€"+encDep+"/dep.)"),
             React.createElement(SliderInput,{min:0,max:10,step:1,value:dep,onChange:setDep,color:"#f97316",suffix:" dep.",formatFn:v=>v.toString()}),
-            dep>0&&React.createElement("div",{style:{fontSize:10,color:"#f97316",marginTop:2}},"-"+fE(dep*400)+"/mês no DSTI")
+            dep>0&&React.createElement("div",{style:{fontSize:10,color:"#f97316",marginTop:2}},"-"+fE(dep*encDep)+"/mês no DSTI")
           ),
           React.createElement("div",{style:{marginTop:10}},
             React.createElement("div",{style:lbS},"OUTROS ENCARGOS MENSAIS"),
@@ -98,13 +102,13 @@ function ReverseCalcPage({onBack,onSimulate,onOpenComments,onOpenGlossario,onOpe
           React.createElement("div",{style:{marginTop:10}},
             React.createElement("div",{style:lbS},"TAXA DE ESFORÇO MÁXIMA (DSTI)"),
             React.createElement(SliderInput,{min:10,max:50,step:1,value:dsti,onChange:setDsti,color:"#0d9488",suffix:"%",formatFn:v=>v.toString()}),
-            React.createElement("div",{style:{fontSize:10,color:dsti>40?R:dsti>35?"#b45309":"#0d9488",marginTop:2}},dsti<=35?"✓ Referência prudente ≤35% (limite BdP: 45%)":dsti<=40?"⚠️ Acima da referência prudente (35%)":"⚠️ Muito elevado — acima de 40% a aprovação é improvável (limite BdP: 45%)")
+            React.createElement("div",{style:{fontSize:10,color:dsti>dstiA?R:dsti>dstiP?"#b45309":"#0d9488",marginTop:2}},dsti<=dstiP?"✓ Referência prudente ≤"+dstiP+"% (limite BdP: "+dstiL+"%)":dsti<=dstiA?"⚠️ Acima da referência prudente ("+dstiP+"%)":"⚠️ Muito elevado — acima de "+dstiA+"% a aprovação é improvável (limite BdP: "+dstiL+"%)")
           ),
           React.createElement("div",{style:{marginTop:12,padding:"8px 10px",background:"rgba(37,99,235,0.07)",border:"1px solid rgba(37,99,235,0.2)",borderRadius:8}},
             React.createElement("div",{style:{fontSize:10,color:"#374151",fontFamily:"monospace",letterSpacing:1,marginBottom:4}},"RENDIMENTO CONSIDERADO"),
             React.createElement("div",{style:{fontSize:18,fontWeight:700,color:Au}},fE(rendT)+"/mês"),
             (is2||dep>0)&&React.createElement("div",{style:{fontSize:10,color:"#4b5563",marginTop:2}},
-              "T1 "+fE(ra1)+(ra1!==r1?" ("+Math.round((CF[c1]||1)*100)+"%)":"")+(is2?" + T2 "+fE(ra2)+(ra2!==r2?" ("+Math.round((CF[c2]||1)*100)+"%)":""):"")+( dep>0?" − dep. "+fE(dep*400):"")
+              "T1 "+fE(ra1)+(ra1!==r1?" ("+Math.round((CF[c1]||1)*100)+"%)":"")+(is2?" + T2 "+fE(ra2)+(ra2!==r2?" ("+Math.round((CF[c2]||1)*100)+"%)":""):"")+( dep>0?" − dep. "+fE(dep*encDep):"")
             )
           ),
           React.createElement("div",{style:{marginTop:8,padding:"8px 10px",background:"rgba(37,99,235,0.06)",border:"1px solid rgba(37,99,235,0.2)",borderRadius:8}},
@@ -176,7 +180,7 @@ function ReverseCalcPage({onBack,onSimulate,onOpenComments,onOpenGlossario,onOpe
       ),
       capMax>0&&React.createElement("div",{style:{background:"rgba(249,115,22,0.06)",border:"1px solid rgba(249,115,22,0.25)",borderRadius:9,padding:"10px 14px",marginBottom:10,display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}},
         React.createElement("div",null,
-          React.createElement("div",{style:{fontSize:10,color:"#f97316",fontFamily:"monospace",letterSpacing:1}},"⚡ STRESS TEST BdP (TAN +1,5 p.p.)"),
+          React.createElement("div",{style:{fontSize:10,color:"#f97316",fontFamily:"monospace",letterSpacing:1}},"⚡ STRESS TEST BdP (TAN +"+stressAdd.toFixed(1).replace(".",",")+" p.p.)"),
           React.createElement("div",{style:{fontSize:12,color:"#374151",marginTop:3}},"Se a taxa subir para "+tanS.toFixed(3).replace(".",",")+"% ainda consegues pagar "+fE(pMax)+"/mês → capital máximo:")
         ),
         React.createElement("div",null,

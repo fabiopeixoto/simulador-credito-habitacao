@@ -17,11 +17,9 @@
     "6m": [Sky, "rgba(2,132,199,0.18)"],
     "12m": [Au, "rgba(37,99,235,0.18)"],
   };
-  var FALLBACK_EUR = shared.FALLBACK_EUR || {
-    "3m": { valor: 2.339, data: "junho 2026" },
-    "6m": { valor: 2.596, data: "junho 2026" },
-    "12m": { valor: 2.798, data: "junho 2026" },
-  };
+  var FALLBACK_EUR = shared.FALLBACK_EUR ||
+    (window._SIM_DEFAULTS && window._SIM_DEFAULTS.euriborFallback) ||
+    { "3m": { valor: 2.5, data: "" }, "6m": { valor: 2.6, data: "" }, "12m": { valor: 2.8, data: "" } };
   var CONTRATO_FACTOR = shared.CONTRATO_FACTOR || {
     efetivo: 1.0,
     termo: 0.9,

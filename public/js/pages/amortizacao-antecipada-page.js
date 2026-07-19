@@ -76,7 +76,11 @@
 
     var mesesPoupados=res.comExtra.poupados;
     var jurosPoupados=res.comExtra.economia;
-    var penalizacaoAnual=extra*0.005;
+    var REGRAS=((window._SIM||{}).CONST||{}).regras||{};
+    var penVar=REGRAS.amortPenaltyVar!=null?REGRAS.amortPenaltyVar:0.005;
+    var penVarPct=(penVar*100).toFixed(1).replace('.',',')+'%';
+    var penFixaPct=(((REGRAS.amortPenaltyFixa!=null?REGRAS.amortPenaltyFixa:0.02))*100).toFixed(0)+'%';
+    var penalizacaoAnual=extra*penVar;
 
     var card={background:'#fff',borderRadius:11,padding:isMobile?'14px 12px':'18px 20px',marginBottom:12};
     var secTitleS={fontSize:11,letterSpacing:3,color:Au,fontFamily:'monospace',marginBottom:12,textTransform:'uppercase'};
@@ -147,7 +151,7 @@
           h('div',{style:{flex:'1 1 150px',background:'rgba(249,115,22,0.06)',border:'1px solid rgba(249,115,22,0.2)',borderRadius:11,padding:'14px 16px'}},
             h('div',{style:{fontSize:11,color:'#374151',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.5px',marginBottom:4}},'Penalização estimada'),
             h('div',{style:{fontSize:isMobile?21:27,fontWeight:800,color:'#f97316'}},extra>0?fE(penalizacaoAnual)+'/ano':'—'),
-            h('div',{style:{fontSize:11,color:'#6b7280',marginTop:2}},extra>0?'0,5% do valor (taxa variável)':'—')
+            h('div',{style:{fontSize:11,color:'#6b7280',marginTop:2}},extra>0?penVarPct+' do valor (taxa variável)':'—')
           )
         ),
 
@@ -210,15 +214,15 @@
         h('div',{style:Object.assign({},card,{background:'#eff6ff',border:'1px solid #bfdbfe'})},
           h('p',{style:{fontSize:13,fontWeight:700,color:'#1e40af',marginBottom:8,fontFamily:'sans-serif'}},'ℹ️ O que saber sobre amortizações antecipadas'),
           h('ul',{style:{fontSize:13,color:'#1d4ed8',fontFamily:'sans-serif',lineHeight:1.85,margin:0,paddingLeft:18}},
-            h('li',null,'Taxa variável: penalização de ',h('strong',null,'0,5%'),' do capital amortizado (DL 74-A/2017).'),
-            h('li',null,'Taxa fixa: penalização de ',h('strong',null,'2%'),' — verifica se a poupança de juros justifica o custo antes de avançar.'),
+            h('li',null,'Taxa variável: penalização de ',h('strong',null,penVarPct),' do capital amortizado (DL 74-A/2017).'),
+            h('li',null,'Taxa fixa: penalização de ',h('strong',null,penFixaPct),' — verifica se a poupança de juros justifica o custo antes de avançar.'),
             h('li',null,'Amortizar reduz o ',h('strong',null,'prazo'),' (poupas mais juros) ou a ',h('strong',null,'prestação'),' (mais folga mensal) — negocia com o banco.'),
             h('li',null,'O banco tem de ser notificado com antecedência — confirma o prazo no teu contrato.')
           )
         ),
 
         h('p',{style:{fontSize:11,color:'#111827',textAlign:'center',padding:'4px 10px 20px',fontFamily:'sans-serif',lineHeight:1.65}},
-          'Simulação baseada no método francês (prestação constante). A penalização de 0,5% aplica-se à taxa variável; confirma o valor exacto no teu contrato de crédito.'
+          'Simulação baseada no método francês (prestação constante). A penalização de '+penVarPct+' aplica-se à taxa variável; confirma o valor exacto no teu contrato de crédito.'
         ),
 
         h(window.PageFooter,null)

@@ -70,10 +70,12 @@ function isJurosMedioMensal(capital, tanA, anos, finalidade) {
 }
 
 // ── Seguro de vida sobre capital médio em dívida ─────────────────────────
+// Lê window._SIM.CONST.vida no momento da chamada — a API pode atualizar as
+// bandas em runtime (ver applyApiConstants em sim-shared-constants.js).
 function vidaR(a){
-  if(a<=25)return 0.0012; if(a<=30)return 0.0015; if(a<=35)return 0.0020;
-  if(a<=40)return 0.0028; if(a<=45)return 0.0040; if(a<=50)return 0.0060;
-  if(a<=55)return 0.0090; if(a<=60)return 0.0130; return 0.0180;
+  const bands=((window._SIM||{}).CONST||{}).vida||[];
+  for(const b of bands){ if(b.max===null||a<=b.max) return b.taxa; }
+  return 0.0180;
 }
 // Prémio mensal do seguro de vida — escalado pelo capital inicial e idade do titular.
 // Usa capital inicial (não médio) para corresponder ao prémio da 1.ª prestação,
@@ -89,31 +91,22 @@ function sTot(g,a1,a2,is2,cap,val,anos) {
   return {v1,v2,vTot:v1+v2,m,tot:v1+v2+m};
 }
 
-// IMT — tabelas OE 2026 (escalões atualizados, valores 2026)
+// IMT — escalões lidos de window._SIM.CONST.fiscal.imt no momento da chamada
+// (data-driven: IMT = v*rate − ded por escalão; a API pode atualizar em runtime).
+// IMT Jovem: isenção total até jovemIsencaoTotal; até jovemIsencaoParcial paga
+// jovemTaxaExcedente só sobre o excedente; acima aplica-se a tabela normal.
 function calcIMT(v,j,finalidade) {
-  if(finalidade!=="hpp"){
-    // Tabela II 2026: 2ª habitação e arrendamento (progressiva 1%→8%, flat 6% acima)
-    if(v<=106346) return v*0.01;
-    if(v<=145470) return v*0.02-1063.46;
-    if(v<=198347) return v*0.05-5427.56;
-    if(v<=330539) return v*0.07-9394.50;
-    if(v<=633931) return v*0.08-12699.89;
-    if(v<=1150853) return v*0.06;
-    return v*0.075;
+  const fiscal=(((window._SIM||{}).CONST||{}).fiscal)||{};
+  const imt=fiscal.imt||{};
+  const tabela=(finalidade==="hpp"?imt.hpp:imt.outros)||[];
+  if(finalidade==="hpp"&&j){
+    if(v<=imt.jovemIsencaoTotal)return 0;
+    if(v<=imt.jovemIsencaoParcial)return(v-imt.jovemIsencaoTotal)*imt.jovemTaxaExcedente;
   }
-  // Tabela I 2026: HPP
-  // IMT Jovem (OE 2026, continente): isenção total até 330.539€; entre 330.539€ e 660.982€ taxa 8% só sobre o excedente; acima do teto parcial aplica-se a tabela normal (sem benefício)
-  if(j){
-    if(v<=330539)return 0;
-    if(v<=660982)return(v-330539)*0.08;
+  for(const b of tabela){
+    if(b.max===null||v<=b.max) return Math.max(0,v*b.rate-b.ded);
   }
-  if(v<=106346) return 0;
-  if(v<=145470) return v*0.02-2126.92;
-  if(v<=198347) return v*0.05-6491.02;
-  if(v<=330539) return v*0.07-10457.96;
-  if(v<=660982) return v*0.08-13763.35;
-  if(v<=1150853) return v*0.06;
-  return v*0.075;
+  return 0;
 }
 
 // ── Amortização antecipada ────────────────────────────────────────────────
@@ -151,5 +144,7 @@ window._SIM = Object.assign(window._SIM||{}, {
   fE,fE2,fP,fP1,margemVsOficial,
   calcP,calcTAEG,calcTAEGWithCarencia,calcMTIC,isJurosMedioMensal,vidaR,sVida,sTot,calcIMT,
   simA,amChart,prestacaoCarencia,getLTVAddon,
+  // Constantes em vigor (defaults do código, sobrepostas pela API em runtime)
+  CONST: window._SIM_CONST || {},
 });
 })();

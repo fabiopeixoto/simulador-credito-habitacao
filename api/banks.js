@@ -1,6 +1,10 @@
 const path = require("path");
 const { openSqliteDb } = require(path.join(__dirname, "..", "lib", "open-sqlite.js"));
 
+// Constantes fiscais/regulatórias — mesmo ficheiro que serve de fallback no browser
+const SIM_DEFAULTS = require(path.join(__dirname, "..", "public", "js", "shared", "sim-defaults.js"));
+const IMI_MUNICIPIOS_DEFAULTS = require(path.join(__dirname, "..", "public", "js", "shared", "imi-municipios-defaults.js"));
+
 // ── SQLite ────────────────────────────────────────────────────────────────
 const dbDir = path.join(__dirname, "..", "data");
 const dbPath = path.join(dbDir, "banks.sqlite");
@@ -317,6 +321,183 @@ function reconcileLtvBracketsToDb() {
   }
 }
 reconcileLtvBracketsToDb();
+
+// ── Constantes fiscais/regulatórias (kv_store, chave "const:<grupo>") ─────
+// Valor guardado: {"data":{...},"source":"seed"|"manual"}. Edições manuais do
+// admin nunca são sobrepostas pelo reconcile (mesma semântica do preferSource).
+const CONSTANT_GROUPS = ["fiscal", "regras", "custos", "vida", "euribor_fallback", "imi_municipios"];
+
+const SEED_CONSTANTS = {
+  fiscal: SIM_DEFAULTS.fiscal,
+  regras: SIM_DEFAULTS.regras,
+  custos: SIM_DEFAULTS.custos,
+  vida: SIM_DEFAULTS.vida,
+  euribor_fallback: SIM_DEFAULTS.euriborFallback,
+  imi_municipios: IMI_MUNICIPIOS_DEFAULTS.imi_municipios,
+};
+
+function isFin(v, lo, hi) { return typeof v === "number" && Number.isFinite(v) && v >= lo && v <= hi; }
+
+function validateImtTable(t) {
+  if (!Array.isArray(t) || t.length < 3 || t.length > 10) return "tabela IMT: 3-10 escalões";
+  let prev = 0;
+  for (let i = 0; i < t.length; i++) {
+    const b = t[i];
+    if (!b || typeof b !== "object") return "escalão IMT inválido";
+    const last = i === t.length - 1;
+    if (last) { if (b.max !== null) return "último escalão IMT deve ter max:null"; }
+    else {
+      if (!isFin(b.max, 1, 1e8) || b.max <= prev) return "max IMT deve ser crescente";
+      prev = b.max;
+    }
+    if (!isFin(b.rate, 0, 0.15)) return "rate IMT fora de gama [0, 0.15]";
+    if (!isFin(b.ded, 0, 1e6)) return "ded IMT fora de gama";
+  }
+  return null;
+}
+
+/** Devolve null se válido, ou uma mensagem de erro. */
+function validateConstant(group, d) {
+  if (d == null || typeof d !== "object") return "payload em falta";
+  switch (group) {
+    case "fiscal": {
+      if (!d.imt || typeof d.imt !== "object") return "fiscal.imt em falta";
+      const e1 = validateImtTable(d.imt.hpp); if (e1) return "imt.hpp: " + e1;
+      const e2 = validateImtTable(d.imt.outros); if (e2) return "imt.outros: " + e2;
+      if (!isFin(d.imt.jovemIsencaoTotal, 1, 1e7) || !isFin(d.imt.jovemIsencaoParcial, 1, 1e7) ||
+          d.imt.jovemIsencaoParcial <= d.imt.jovemIsencaoTotal) return "limiares IMT jovem inválidos";
+      if (!isFin(d.imt.jovemTaxaExcedente, 0, 0.15)) return "jovemTaxaExcedente fora de gama";
+      if (!d.is || !isFin(d.is.escritura, 0, 0.05) || !isFin(d.is.credito, 0, 0.05)) return "taxas IS fora de gama [0, 0.05]";
+      if (!isFin(d.is.jovemIsencaoTotal, 1, 1e7) || !isFin(d.is.jovemIsencaoParcial, 1, 1e7)) return "limiares IS jovem inválidos";
+      if (!isFin(d.ias, 300, 2000)) return "ias fora de gama [300, 2000]";
+      if (!d.imi || !isFin(d.imi.taxaRustico, 0, 0.02)) return "imi.taxaRustico fora de gama";
+      if (!isFin(d.imi.isencaoPermVptMult, 1, 1000) || !isFin(d.imi.isencaoPermRendMult, 1, 1000)) return "multiplicadores IMI inválidos";
+      const t = d.imi.isencaoTemp;
+      if (!t || !isFin(t.vpt1, 1, 1e7) || !isFin(t.vpt2, 1, 1e7) || t.vpt2 < t.vpt1 ||
+          !isFin(t.anosBase, 1, 10) || !isFin(t.anosDep3, 1, 10)) return "imi.isencaoTemp inválido";
+      return null;
+    }
+    case "regras": {
+      if (!isFin(d.prazoMaxJovem, 10, 50) || !isFin(d.prazoMaxNormal, 10, 50)) return "prazos fora de gama [10, 50]";
+      if (!isFin(d.idadeCorteJovem, 18, 60) || !isFin(d.idadeFimMax, 50, 100)) return "idades fora de gama";
+      if (!isFin(d.stressAddon, 0, 5)) return "stressAddon fora de gama [0, 5]";
+      if (!isFin(d.dstiPrudente, 10, 100) || !isFin(d.dstiAmarelo, 10, 100) || !isFin(d.dstiLimite, 10, 100) ||
+          !(d.dstiPrudente <= d.dstiAmarelo && d.dstiAmarelo <= d.dstiLimite)) return "DSTI: exige prudente ≤ amarelo ≤ limite em [10, 100]";
+      if (!isFin(d.encargoDependente, 0, 5000)) return "encargoDependente fora de gama";
+      if (!d.finalidadeAddon || !d.finalidadeMaxLtv) return "finalidadeAddon/finalidadeMaxLtv em falta";
+      for (const v of Object.values(d.finalidadeAddon)) if (!isFin(v, 0, 2)) return "finalidadeAddon fora de gama [0, 2]";
+      for (const v of Object.values(d.finalidadeMaxLtv)) if (!isFin(v, 50, 100)) return "finalidadeMaxLtv fora de gama [50, 100]";
+      if (!isFin(d.garantiaPublicaCap, 0, 2e6)) return "garantiaPublicaCap fora de gama";
+      if (!isFin(d.amortPenaltyVar, 0, 0.1) || !isFin(d.amortPenaltyFixa, 0, 0.1)) return "penalizações fora de gama [0, 0.1]";
+      return null;
+    }
+    case "custos": {
+      for (const k of ["dossierDefault", "avaliacaoDefault", "dpa", "notario", "custosFixosEstimativa", "registoBase"])
+        if (!isFin(d[k], 0, 5000)) return k + " fora de gama [0, 5000]";
+      if (!isFin(d.registoRate, 0, 0.01)) return "registoRate fora de gama [0, 0.01]";
+      return null;
+    }
+    case "vida": {
+      if (!Array.isArray(d) || d.length < 2 || d.length > 15) return "vida: 2-15 bandas";
+      let prev = 0, prevTaxa = 0;
+      for (let i = 0; i < d.length; i++) {
+        const b = d[i], last = i === d.length - 1;
+        if (!b || typeof b !== "object") return "banda vida inválida";
+        if (last) { if (b.max !== null) return "última banda deve ter max:null"; }
+        else { if (!isFin(b.max, 18, 100) || b.max <= prev) return "max vida deve ser crescente"; prev = b.max; }
+        if (!isFin(b.taxa, 0.0001, 0.1) || b.taxa < prevTaxa) return "taxa vida deve ser não-decrescente em [0.0001, 0.1]";
+        prevTaxa = b.taxa;
+      }
+      return null;
+    }
+    case "euribor_fallback": {
+      const keys = Object.keys(d);
+      if (keys.length !== 3 || !["3m", "6m", "12m"].every((k) => keys.includes(k))) return "exige exactamente 3m/6m/12m";
+      for (const k of ["3m", "6m", "12m"]) {
+        const e = d[k];
+        if (!e || !isFin(e.valor, -2, 15)) return k + ".valor fora de gama [-2, 15]";
+        if (typeof e.data !== "string" || !e.data.trim() || e.data.length > 40) return k + ".data inválida";
+      }
+      return null;
+    }
+    case "imi_municipios": {
+      const m = d.municipios;
+      if (!Array.isArray(m) || m.length < 250 || m.length > 400) return "municipios: 250-400 entradas";
+      let nulls = 0;
+      for (const e of m) {
+        if (!e || typeof e.label !== "string" || !e.label.trim() || e.label.length > 60) return "label de município inválido";
+        if (e.taxa === null) { nulls++; continue; }
+        if (!isFin(e.taxa, 0.001, 0.01)) return "taxa de " + e.label + " fora de gama [0.001, 0.01]";
+      }
+      if (nulls > 1) return "só é permitida uma entrada com taxa:null";
+      return null;
+    }
+    default:
+      return "grupo desconhecido";
+  }
+}
+
+function getConstant(group) {
+  if (!sqliteDb || !CONSTANT_GROUPS.includes(group)) return null;
+  try {
+    const row = sqliteDb.prepare("SELECT value, updated_at FROM kv_store WHERE key = ?").get("const:" + group);
+    if (!row) return { data: SEED_CONSTANTS[group], source: "seed", updated_at: 0 };
+    const parsed = JSON.parse(row.value);
+    return { data: parsed.data, source: parsed.source || "seed", updated_at: row.updated_at || 0 };
+  } catch (_) {
+    return { data: SEED_CONSTANTS[group], source: "seed", updated_at: 0 };
+  }
+}
+
+function setConstant(group, data, source) {
+  if (!sqliteDb || !CONSTANT_GROUPS.includes(group)) return false;
+  try {
+    sqliteDb.prepare(`
+      INSERT INTO kv_store(key, value, updated_at) VALUES (?, ?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+    `).run("const:" + group, JSON.stringify({ data, source: source || "manual" }), Date.now());
+    return true;
+  } catch (e) {
+    console.error("banks.js: setConstant(" + group + "):", e.message);
+    return false;
+  }
+}
+
+/** Envelope de constantes para o GET (exclui imi_municipios — servido à parte). */
+function getAllConstants() {
+  const out = { meta: { sources: {}, updatedAt: 0 } };
+  const keyMap = { fiscal: "fiscal", regras: "regras", custos: "custos", vida: "vida", euribor_fallback: "euriborFallback" };
+  for (const [group, outKey] of Object.entries(keyMap)) {
+    const row = getConstant(group);
+    out[outKey] = row.data;
+    out.meta.sources[group] = row.source;
+    if (row.updated_at > out.meta.updatedAt) out.meta.updatedAt = row.updated_at;
+  }
+  return out;
+}
+
+/** Em cada arranque: semeia/actualiza kv_store a partir de sim-defaults.js.
+ *  source:"manual" (edição admin) nunca é sobreposto — repor via POST {constants:{grupo:null}}. */
+function reconcileConstantsToDb() {
+  if (!sqliteDb) return;
+  try {
+    const sel = sqliteDb.prepare("SELECT value FROM kv_store WHERE key = ?");
+    for (const group of CONSTANT_GROUPS) {
+      const seed = SEED_CONSTANTS[group];
+      const seedErr = validateConstant(group, seed);
+      if (seedErr) { console.error("banks.js: seed inválido para const:" + group + " — " + seedErr); continue; }
+      const row = sel.get("const:" + group);
+      if (!row) { setConstant(group, seed, "seed"); continue; }
+      let parsed = null;
+      try { parsed = JSON.parse(row.value); } catch (_) {}
+      if (parsed && parsed.source === "manual") continue;
+      if (!parsed || JSON.stringify(parsed.data) !== JSON.stringify(seed)) setConstant(group, seed, "seed");
+    }
+  } catch (e) {
+    console.error("banks.js: reconcileConstantsToDb:", e.message);
+  }
+}
+reconcileConstantsToDb();
 
 /** Em cada arranque: alinha metadados canónicos na tabela `banks` a `SEED_BANKS` quando divergem (deploy sem POST manual). Corrige instalações antigas em que `INSERT OR IGNORE` deixou `refs`, `tipos`, etc. desactualizados (ex. CA só «12m», CTT/Montepio sem 3m/6m). Não altera `sort_order` nem `active`. Insere bancos novos do seed que ainda não existam na BD. */
 function reconcileSeedBankMetadataToDb() {
@@ -728,11 +909,32 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ history });
     }
 
+    // ?municipios=1 — taxas IMI municipais (só a página IMI as pede; ETag próprio)
+    if (req.query && req.query.municipios) {
+      const mun = getConstant("imi_municipios");
+      const munEtag = `"mun-${mun.updated_at}"`;
+      if (req.headers["if-none-match"] === munEtag) {
+        res.writeHead(304);
+        return res.end();
+      }
+      res.setHeader("ETag", munEtag);
+      return res.status(200).json({
+        municipios: mun.data.municipios,
+        source: mun.source,
+        updatedAt: mun.updated_at,
+      });
+    }
+
     const maxSpreadAt = sqliteDb.prepare("SELECT MAX(fetched_at) AS mx FROM spreads").get()?.mx || 0;
     const eurRow = sqliteDb.prepare("SELECT updated_at FROM kv_store WHERE key = 'euribor'").get();
     const eurUpdatedAt = eurRow?.updated_at || 0;
     const maxBankAt = sqliteDb.prepare("SELECT MAX(updated_at) AS mx FROM banks").get()?.mx || 0;
-    const etag = `"banks-${maxSpreadAt}-${eurUpdatedAt}-${maxBankAt}"`;
+    // Constantes: exclui imi_municipios para que editar a tabela grande não
+    // invalide o cache de todas as páginas
+    const maxConstAt = sqliteDb.prepare(
+      "SELECT MAX(updated_at) AS mx FROM kv_store WHERE key LIKE 'const:%' AND key != 'const:imi_municipios'"
+    ).get()?.mx || 0;
+    const etag = `"banks-${maxSpreadAt}-${eurUpdatedAt}-${maxBankAt}-${maxConstAt}"`;
     if (req.headers["if-none-match"] === etag) {
       res.writeHead(304);
       return res.end();
@@ -750,7 +952,11 @@ module.exports = async function handler(req, res) {
     // refresh do admin (POST /api/spreads), não no carregamento público.
     const euriborData = getEuribor();
 
-    return res.status(200).json({ banks: result, euribor: euriborData || null });
+    return res.status(200).json({
+      banks: result,
+      euribor: euriborData || null,
+      constants: getAllConstants(),
+    });
   }
 
   // POST/PUT/DELETE require admin token
@@ -762,7 +968,24 @@ module.exports = async function handler(req, res) {
 
   // POST /api/banks — criar/actualizar banco
   if (req.method === "POST") {
-    const { bank, spreads: spreadsData } = req.body || {};
+    const { bank, spreads: spreadsData, constants: constantsData } = req.body || {};
+
+    // {constants:{<grupo>: <data>|null}} — null = repor seed
+    if (constantsData && typeof constantsData === "object") {
+      for (const [group, data] of Object.entries(constantsData)) {
+        if (!CONSTANT_GROUPS.includes(group)) {
+          return res.status(400).json({ error: "Grupo de constantes desconhecido: " + group });
+        }
+        if (data === null) {
+          setConstant(group, SEED_CONSTANTS[group], "seed");
+          continue;
+        }
+        const err = validateConstant(group, data);
+        if (err) return res.status(400).json({ error: "const:" + group + " — " + err });
+        setConstant(group, data, "manual");
+      }
+      if (!bank && !spreadsData) return res.status(200).json({ ok: true });
+    }
 
     if (bank) {
       if (!bank.code || !bank.name) {
@@ -808,3 +1031,6 @@ module.exports.getLatestSpreads = getLatestSpreads;
 module.exports.getAllBanks = getAllBanks;
 module.exports.setEuribor = setEuribor;
 module.exports.getEuribor = getEuribor;
+module.exports.getConstant = getConstant;
+module.exports.setConstant = setConstant;
+module.exports.getAllConstants = getAllConstants;

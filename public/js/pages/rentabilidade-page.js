@@ -102,7 +102,7 @@
 
       var prestacaoMensal=pctFin>0?calcP(capitalEmprestado,tan,prazo):0;
       var imtTotal=calcIMT(valorImovel,0,false);
-      var isTotal=valorImovel*0.008;
+      var isTotal=valorImovel*(((((window._SIM||{}).CONST||{}).fiscal||{}).is||{}).escritura!=null?window._SIM.CONST.fiscal.is.escritura:0.008);
       var outrosIniciais=valorImovel*(outrosIniciaisPct/100);
       var totalInvestido=capitalProprio+imtTotal+isTotal+outrosIniciais;
 

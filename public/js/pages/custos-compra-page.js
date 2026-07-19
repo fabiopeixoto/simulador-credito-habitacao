@@ -30,27 +30,24 @@
     }catch(_){}
   }
 
-  var HPP_BRACKETS=[
-    {min:0,      max:106346,   rate:'Isento'},
-    {min:106346, max:145470,   rate:'2%'},
-    {min:145470, max:198347,   rate:'5%'},
-    {min:198347, max:330539,   rate:'7%'},
-    {min:330539, max:660982,   rate:'8%'},
-    {min:660982, max:1150853,  rate:'6% (taxa fixa)'},
-    {min:1150853,max:Infinity, rate:'7,5% (taxa fixa)'},
-  ];
-  var SEGUNDA_BRACKETS=[
-    {min:0,      max:106346,   rate:'1%'},
-    {min:106346, max:145470,   rate:'2%'},
-    {min:145470, max:198347,   rate:'5%'},
-    {min:198347, max:330539,   rate:'7%'},
-    {min:330539, max:633931,   rate:'8%'},
-    {min:633931, max:1150853,  rate:'6% (taxa fixa)'},
-    {min:1150853,max:Infinity, rate:'7,5% (taxa fixa)'},
-  ];
+  // Tabela visual derivada de window._SIM.CONST.fiscal.imt (lida no momento da
+  // chamada — mesma fonte que o calcIMT, atualizável pela API/admin)
+  function fmtPct(r){var p=r*100;return (p%1===0?p.toFixed(0):p.toFixed(1).replace('.',','))+'%';}
+  function getDisplayBrackets(finalidade){
+    var imt=(((window._SIM||{}).CONST||{}).fiscal||{}).imt||{};
+    var tabela=(finalidade==='hpp'?imt.hpp:imt.outros)||[];
+    var out=[],min=0;
+    for(var i=0;i<tabela.length;i++){
+      var b=tabela[i];
+      var isFlat=b.ded===0&&b.rate>0&&min>0;
+      out.push({min:min,max:b.max===null?Infinity:b.max,rate:b.rate===0?'Isento':fmtPct(b.rate)+(isFlat?' (taxa fixa)':'')});
+      min=b.max;
+    }
+    return out;
+  }
 
   function getActiveBracketIndex(valor,finalidade){
-    var brackets=finalidade==='hpp'?HPP_BRACKETS:SEGUNDA_BRACKETS;
+    var brackets=getDisplayBrackets(finalidade);
     for(var i=0;i<brackets.length;i++){
       if(valor>brackets[i].min&&valor<=brackets[i].max)return i;
     }
@@ -95,17 +92,23 @@
     var imt=Math.round(calcIMT(valor,isJovem,finalidade==='hpp'?'hpp':'segunda'));
     // IS verba 1.1 (escritura): isenção jovem (art. 7.º-A CIS) total até 330.539€,
     // parcial até 660.982€ (paga sobre o excedente), sem benefício acima
-    var isEscrituraNormal=Math.round(valor*0.008);
+    var CONST=(window._SIM||{}).CONST||{};
+    var IS=(CONST.fiscal||{}).is||{};
+    var CUSTOS=CONST.custos||{};
+    var jIsTotal=IS.jovemIsencaoTotal!=null?IS.jovemIsencaoTotal:330539;
+    var jIsParcial=IS.jovemIsencaoParcial!=null?IS.jovemIsencaoParcial:660982;
+    var gCap=((CONST.regras||{}).garantiaPublicaCap)!=null?CONST.regras.garantiaPublicaCap:450000;
+    var isEscrituraNormal=Math.round(valor*(IS.escritura!=null?IS.escritura:0.008));
     var isEscritura=isJovem
-      ?(valor<=330539?0:valor<=660982?Math.round((valor-330539)*0.008):isEscrituraNormal)
+      ?(valor<=jIsTotal?0:valor<=jIsParcial?Math.round((valor-jIsTotal)*(IS.escritura!=null?IS.escritura:0.008)):isEscrituraNormal)
       :isEscrituraNormal;
     // IS verba 17.1 (0,6% sobre o capital, prazo ≥5 anos): paga-se sempre, incluindo
     // HPP e Crédito Jovem — só os juros estão isentos em HPP (art. 7.º CIS)
-    var isCredito=financiamento?Math.round(emprestimo*0.006):0;
+    var isCredito=financiamento?Math.round(emprestimo*(IS.credito!=null?IS.credito:0.006)):0;
     // Taxas bancárias típicas — melhor cenário no Crédito Jovem: nem todos os
     // bancos isentam dossier/avaliação para jovens (flags por banco em /api/banks)
-    var DOSSIER_NORMAL=300;
-    var AVAL_NORMAL=230;
+    var DOSSIER_NORMAL=CUSTOS.dossierDefault!=null?CUSTOS.dossierDefault:300;
+    var AVAL_NORMAL=CUSTOS.avaliacaoDefault!=null?CUSTOS.avaliacaoDefault:230;
     var taxasDossier=isJovem?0:DOSSIER_NORMAL;
     var taxasAvaliacao=isJovem?0:AVAL_NORMAL;
     var taxasBancarias=taxasDossier+taxasAvaliacao;
@@ -122,7 +125,7 @@
     var poupancaTaxasBancarias=isJovem?(DOSSIER_NORMAL+AVAL_NORMAL):0;
     var poupancaTotal=poupancaIMT+poupancaIS+poupancaEntrada+poupancaTaxasBancarias;
 
-    var acimaCap=valor>450000;
+    var acimaCap=valor>gCap;
 
     var componentes=[
       comGarantia
@@ -136,7 +139,7 @@
     if(taxasBancarias>0)componentes.push({label:'Taxas bancárias (dossier + avaliação)',valor:taxasBancarias,cor:'#6b7280'});
     else if(isJovem)componentes.push({label:'Taxas bancárias — melhor cenário (nem todos os bancos isentam jovens)',valor:0,cor:'#6b7280',isento:true});
 
-    var brackets=finalidade==='hpp'?HPP_BRACKETS:SEGUNDA_BRACKETS;
+    var brackets=getDisplayBrackets(finalidade);
     var activeBracket=getActiveBracketIndex(valor,finalidade);
 
     var card={background:'#fff',borderRadius:11,padding:isMobile?'16px 14px':'20px 24px',marginBottom:12};
@@ -195,7 +198,7 @@
             isJovem&&h('div',{style:{marginTop:10,paddingLeft:28}},
               // IMT exempt note
               h('p',{style:{fontSize:12,color:'#15803d',fontFamily:'sans-serif',marginBottom:8,lineHeight:1.5}},
-                '✓ IMT isento até €330 539  ·  Taxas de dossier e avaliação tipicamente isentas'
+                '✓ IMT isento até '+fmtEur(jIsTotal)+'  ·  Taxas de dossier e avaliação tipicamente isentas'
               ),
               // Garantia pública
               financiamento&&chk('garantia',garantia,function(e){setGarantia(e.target.checked);},
@@ -205,7 +208,7 @@
                 '✓ O Estado garante os 10% de entrada — só precisas dos impostos e custos'
               ),
               acimaCap&&h('p',{style:{fontSize:12,color:'#b45309',fontFamily:'sans-serif',marginTop:6,lineHeight:1.5}},
-                '⚠️ Imóvel acima de €450 000 — a garantia pública pode não cobrir a totalidade'
+                '⚠️ Imóvel acima de '+fmtEur(gCap)+' — a garantia pública pode não cobrir a totalidade'
               )
             )
           ),
@@ -319,9 +322,9 @@
           isJovem&&h('div',{style:{marginTop:12,padding:'10px 14px',background:'#eff6ff',borderRadius:8,border:'1px solid #bfdbfe'}},
             h('p',{style:{fontSize:13,color:'#1e40af',fontWeight:700,fontFamily:'sans-serif',margin:'0 0 3px'}},'Crédito Jovem — Benefício IMT (OE 2026)'),
             h('p',{style:{fontSize:12,color:'#1d4ed8',fontFamily:'sans-serif',margin:0,lineHeight:1.55}},
-              'Isenção total até €330 539  ·  ',
-              'Entre €330 539 e €660 982: 8% sobre o excedente  ·  ',
-              'Acima de €660 982: tabela normal'
+              'Isenção total até '+fmtEur(jIsTotal)+'  ·  ',
+              'Entre '+fmtEur(jIsTotal)+' e '+fmtEur(jIsParcial)+': 8% sobre o excedente  ·  ',
+              'Acima de '+fmtEur(jIsParcial)+': tabela normal'
             )
           ),
 
