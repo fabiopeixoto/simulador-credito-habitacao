@@ -1,4 +1,4 @@
-const CACHE = "simulador-v166";
+const CACHE = "simulador-v167";
 
 /** URLs exactas referenciadas nos HTML (incl. query ?v=). */
 const PRECACHE = [
@@ -12,7 +12,10 @@ const PRECACHE = [
   "/rentabilidade.html",
   "/custos-compra.html",
   "/stress-euribor.html",
+  "/prontidao.html",
+  "/amortizacao-antecipada.html",
   "/privacidade.html",
+  "/aviso-legal.html",
   "/manifest.json",
   "/favicon.png",
   "/images/logo.png",
@@ -63,6 +66,12 @@ const PRECACHE = [
   "/js/pages/custos-compra-mount.js?v=2",
   "/js/pages/stress-euribor-page.js?v=3",
   "/js/pages/stress-euribor-mount.js?v=2",
+  "/js/pages/prontidao-page.js?v=12",
+  "/js/pages/prontidao-mount.js?v=2",
+  "/js/pages/amortizacao-antecipada-page.js?v=4",
+  "/js/pages/amortizacao-antecipada-mount.js?v=2",
+  "/js/pages/rentabilidade-page.js?v=2",
+  "/js/pages/rentabilidade-mount.js?v=2",
 ];
 
 self.addEventListener("install", (e) => {
