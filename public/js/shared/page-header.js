@@ -190,7 +190,11 @@
 
 
   function CookieBanner(){
-    var _s=React.useState(false); // sempre visível em cada carregamento de página
+    // Consentimento independente por página — cada página tem a sua própria chave
+    var consentKey='STORAGE_CONSENT:'+(typeof window!=='undefined'&&window.location?window.location.pathname:'/');
+    var _s=React.useState(function(){
+      try{return localStorage.getItem(consentKey)==='accepted';}catch(_){return false;}
+    });
     var hidden=_s[0],setHidden=_s[1];
     var _m=React.useState(typeof window!=='undefined'&&window.innerWidth<640);
     var isMobileC=_m[0];var setIsMobileC=_m[1];
@@ -202,9 +206,14 @@
     if(hidden)return null;
     function recusar(){
       try{
+        localStorage.removeItem(consentKey);
         localStorage.removeItem('SIMULATION_HISTORY_v2');
         localStorage.removeItem('processo_checked');
       }catch(_){}
+      setHidden(true);
+    }
+    function aceitar(){
+      try{localStorage.setItem(consentKey,'accepted');}catch(_){}
       setHidden(true);
     }
     var fs=isMobileC?11:13;
@@ -220,7 +229,7 @@
           style:{background:"#fff",color:"#374151",border:"1px solid #d1d5db",borderRadius:6,padding:bpad,fontSize:fs,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}
         },"Recusar"),
         h("button",{
-          onClick:function(){setHidden(true);},
+          onClick:aceitar,
           style:{background:"#2563eb",color:"#fff",border:"none",borderRadius:6,padding:bpad,fontSize:fs,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}
         },"Aceitar")
       )
