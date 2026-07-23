@@ -71,6 +71,21 @@ O BdP reviu a recomendação em julho de 2026; aplica-se a avaliações de solva
 - **Onde:** `api/banks.js:180-193` (`contaNota` "FINE mai.2026", "PRE-FC fev.2026") e URLs de preçários com datas nos nomes (`api/spreads.js:92-120`).
 - **Estado:** a CGD servida pela API (sCom 0,65 / sSem 1,35 / dossier 226,20 / avaliação 239,20) bate certo com a seed; não foi possível verificar os PDF dos bancos a partir deste ambiente (bloqueio de proxy). **Recomendação:** correr o health-check `auditUrls` existente e revalidar os 13 preçários manualmente (têm 2–5 meses).
 
+#### Revalidação parcial de spreads — 2026-07-23
+Revalidação dos spreads `sCom`/`sSem` (a pedido do utilizador). As FINE oficiais continuam inacessíveis a partir deste ambiente (bloqueio de proxy nos domínios dos bancos e dos agregadores — 403), pelo que a verificação usou **pesquisa web** (páginas públicas dos bancos + comparadores idealista/ComparaJá). Fontes secundárias e indicativas — **confirmar sempre na FINE**.
+
+**Correções aplicadas:**
+- **Novo Banco:** `sCom` 0,75 → **0,80**, `sSem` 1,70 → **1,50**. Fonte: exemplo representativo (com efeito das vendas 0,80% / sem efeito 1,50%, €150k/30a, jun.2026).
+- **ActivoBank:** `sSem` 1,50 → **1,25**. Fonte: ficha de CH ActivoBank (spread base 1,25%; `sCom` 0,75% mantido, confirmado).
+
+**Confirmados corretos (sem alteração):** Millennium BCP (0,70/1,25), Santander (0,80/1,90 + promo 0,50%/3a), BPI (0,75/1,50), Abanca (mín. 0,70).
+
+**Divergências não corrigidas (evidência ambígua ou insuficiente — pendente de FINE):**
+- **CGD:** material de jul.2026 cita 0,85% para o regime geral, mas em contexto de taxa fixa (4,75% = 3,90% + 0,85%); não confirma que o **mínimo variável** mudou de 0,65%. Não alterado.
+- **Banco Montepio:** `sSem` 1,50 na BD vs exemplo FINE a 2,30% (máximo do intervalo); sem valor "sem produtos" fiável. Não alterado.
+- **Banco CTT** (0,75/1,35) e **Crédito Agrícola** (0,75/1,60): diferenças de ±0,05 pp vs comparadores atribuídas a arredondamento; mantidos os valores curados da FINE mai.2026.
+- **UCI, BNI Europa, máximo Abanca:** sem dados públicos claros para o mesmo campo. Não alterados.
+
 ---
 
 ## 3. 🟡 Inconsistente entre páginas / frágil
