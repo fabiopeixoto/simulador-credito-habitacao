@@ -12,6 +12,7 @@ const banksHandler = require(path.join(__dirname, "api", "banks.js"));
 const statsHandler = require(path.join(__dirname, "api", "stats.js"));
 const euriborHistoryHandler = require(path.join(__dirname, "api", "euribor-history.js"));
 const faviconHandler = require(path.join(__dirname, "api", "favicon.js"));
+const ratingHandler = require(path.join(__dirname, "api", "rating.js"));
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
@@ -187,6 +188,14 @@ const server = http.createServer(async (req, res) => {
       return runApiHandler(req, res, requestUrl, statsHandler);
     }
 
+    if (pathname === "/api/rating") {
+      if (!["GET", "POST", "DELETE", "OPTIONS"].includes(req.method)) {
+        res.writeHead(405, { Allow: "GET, POST, DELETE, OPTIONS", "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({ error: "Método não suportado" }));
+      }
+      return runApiHandler(req, res, requestUrl, ratingHandler);
+    }
+
     let filePath = pathname === "/" ? "/index.html" : pathname;
     filePath = decodeURIComponent(filePath);
     const normalizedPath = path.normalize(filePath).replace(/^([/\\]+|\.\.\/?)+/, "");
@@ -224,6 +233,38 @@ const server = http.createServer(async (req, res) => {
       "Content-Type": contentType,
       "Cache-Control": getCacheControl(pathname, ext),
     };
+
+    // Homepage: injecta aggregateRating REAL no JSON-LD (só a partir do limiar de
+    // votos; abaixo disso o HTML fica inalterado). A homepage já é `no-cache`, por
+    // isso a injecção por-request não colide com caching. Lê para buffer +
+    // substituição por string exacta + compressão (em vez do stream directo).
+    if (req.method === "GET" && (pathname === "/" || normalizedPath === "index.html")) {
+      let html = await fs.promises.readFile(fullPath, "utf8");
+      try {
+        const agg = ratingHandler.getAggregateRating && ratingHandler.getAggregateRating();
+        if (agg) {
+          const anchor = '"priceCurrency":"EUR"}}</script>';
+          const inject = '"priceCurrency":"EUR"},"aggregateRating":{"@type":"AggregateRating","ratingValue":"' +
+            agg.ratingValue + '","ratingCount":"' + agg.ratingCount + '","bestRating":"5","worstRating":"1"}}</script>';
+          if (html.includes(anchor)) html = html.replace(anchor, inject);
+        }
+      } catch (_) {}
+      const buf = Buffer.from(html, "utf8");
+      const comp = getCompression(req, contentType);
+      if (comp === "br") {
+        headers["Content-Encoding"] = "br";
+        headers["Vary"] = "Accept-Encoding";
+        res.writeHead(200, headers);
+        return res.end(zlib.brotliCompressSync(buf));
+      } else if (comp === "gzip") {
+        headers["Content-Encoding"] = "gzip";
+        headers["Vary"] = "Accept-Encoding";
+        res.writeHead(200, headers);
+        return res.end(zlib.gzipSync(buf));
+      }
+      res.writeHead(200, headers);
+      return res.end(buf);
+    }
 
     const stream = fs.createReadStream(fullPath);
     const compression = getCompression(req, contentType);

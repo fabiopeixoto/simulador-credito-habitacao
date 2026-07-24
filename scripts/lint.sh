@@ -25,6 +25,7 @@ for f in \
   public/js/components/ref-badge.js \
   public/js/components/hist-modal.js \
   public/js/components/comments-modal.js \
+  public/js/components/rating-widget.js \
   public/js/components/glossario-modal.js \
   public/js/components/bank-detail-modal.js \
   public/js/components/comp-table-mobile.js \
@@ -52,6 +53,7 @@ for f in \
   api/banks.js \
   api/spreads.js \
   api/comments.js \
+  api/rating.js \
   api/stats.js \
   api/euribor.js \
   api/euribor-history.js
