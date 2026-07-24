@@ -237,7 +237,20 @@
   }
 
   function PageFooter(){
+    var _r=React.useState(null); var rating=_r[0]; var setRating=_r[1];
+    React.useEffect(function(){
+      var ok=true;
+      fetch("/api/rating").then(function(r){return r.ok?r.json():null;}).then(function(d){ if(ok&&d&&d.count>0&&d.average!=null) setRating(d); }).catch(function(){});
+      return function(){ ok=false; };
+    },[]);
+    var avgTxt=rating?(Math.round(rating.average*10)/10).toFixed(1).replace(".",","):"";
     return h("footer",{style:{textAlign:"center",padding:"18px 16px 28px",fontSize:12,color:"#6b7280",fontFamily:"'Inter',system-ui,sans-serif"}},
+      rating&&h("div",{style:{marginBottom:8,fontSize:13,color:"#374151"}},
+        h("span",{style:{color:"#c9a84c",fontSize:15,verticalAlign:"-1px"}},"★"),
+        " ",
+        h("strong",{style:{color:"#111827"}},avgTxt),
+        " / 5 · "+rating.count+" "+(rating.count===1?"avaliação":"avaliações")
+      ),
       "© 2026 simhabitacao.pt · ",
       h("a",{href:"https://www.instagram.com/simulador.habitacao/",target:"_blank",rel:"noopener noreferrer","aria-label":"Instagram",title:"Segue-nos no Instagram",style:{display:"inline-flex",alignItems:"center",verticalAlign:"middle"}},
         h("svg",{width:16,height:16,viewBox:"0 0 24 24","aria-hidden":"true"},
