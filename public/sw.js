@@ -1,4 +1,4 @@
-const CACHE = "simulador-v174";
+const CACHE = "simulador-v175";
 
 /** URLs exactas referenciadas nos HTML (incl. query ?v=). */
 const PRECACHE = [
@@ -28,7 +28,7 @@ const PRECACHE = [
   "/js/shared/imi-municipios-defaults.js?v=1",
   "/js/shared/sim-shared-constants.js?v=3",
   "/js/shared/inversa-bootstrap.js?v=7",
-  "/js/shared/page-header.js?v=54",
+  "/js/shared/page-header.js?v=55",
   "/js/core/calc.js?v=4",
   "/js/core/constants.js?v=2",
   "/js/core/styles.js?v=1",
@@ -36,7 +36,7 @@ const PRECACHE = [
   "/js/components/ref-badge.js?v=1",
   "/js/components/hist-modal.js?v=1",
   "/js/components/comments-modal.js?v=9",
-  "/js/components/rating-widget.js?v=3",
+  "/js/components/rating-widget.js?v=4",
   "/js/components/glossario-modal.js?v=10",
   "/js/components/processo-modal.js?v=1",
   "/js/components/bank-detail-modal.js?v=4",
