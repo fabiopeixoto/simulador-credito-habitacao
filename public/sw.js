@@ -1,4 +1,4 @@
-const CACHE = "simulador-v170";
+const CACHE = "simulador-v171";
 
 /** URLs exactas referenciadas nos HTML (incl. query ?v=). */
 const PRECACHE = [
@@ -36,6 +36,7 @@ const PRECACHE = [
   "/js/components/ref-badge.js?v=1",
   "/js/components/hist-modal.js?v=1",
   "/js/components/comments-modal.js?v=9",
+  "/js/components/rating-widget.js?v=1",
   "/js/components/glossario-modal.js?v=10",
   "/js/components/processo-modal.js?v=1",
   "/js/components/bank-detail-modal.js?v=4",
@@ -53,7 +54,7 @@ const PRECACHE = [
   "/js/views/view-viabilidade.js?v=2",
   "/js/views/view-cenarios.js?v=4",
   "/js/views/view-amortizacao.js?v=1",
-  "/js/pages/app.js?v=84",
+  "/js/pages/app.js?v=85",
   "/js/pages/index-mount.js?v=5",
   "/js/pages/historico-page.js?v=13",
   "/js/pages/historico-mount.js?v=6",
