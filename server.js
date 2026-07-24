@@ -32,7 +32,6 @@ const mimeTypes = {
 const cacheControlHeaders = {
   "/sw.js": "no-cache",
   "/manifest.json": "max-age=86400",
-  "/og-image.svg": "max-age=31536000, immutable",
 };
 
 function getCacheControl(pathname, ext) {
