@@ -39,7 +39,8 @@
     }, []);
 
     function dismiss() {
-      markDone();
+      // Fechar sem votar NÃO marca como concluído: reaparece no próximo
+      // carregamento da página. Só votar (submit → markDone) o esconde de vez.
       setVisible(false);
     }
 
