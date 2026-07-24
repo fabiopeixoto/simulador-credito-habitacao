@@ -7,6 +7,6 @@
   <rect x="400" y="250" width="80" height="170" fill="#0d1b2a"/>
   <text x="640" y="220" font-family="Georgia,serif" font-size="62" font-weight="bold" fill="#ffffff">Simulador Crédito</text>
   <text x="640" y="300" font-family="Georgia,serif" font-size="62" font-weight="bold" fill="#ffffff">Habitação Portugal</text>
-  <text x="640" y="380" font-family="sans-serif" font-size="34" fill="#c9a84c">Compare 13 bancos · Euribor em tempo real</text>
-  <text x="640" y="450" font-family="sans-serif" font-size="28" fill="#7dd3fc">Grátis · Actualizado diariamente</text>
+  <text x="640" y="380" font-family="sans-serif" font-size="27" fill="#c9a84c">Compare 13 bancos · Euribor em tempo real</text>
+  <text x="640" y="450" font-family="sans-serif" font-size="26" fill="#7dd3fc">Grátis · Actualizado diariamente</text>
 </svg>

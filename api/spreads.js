@@ -1,5 +1,13 @@
 const path  = require("path");
-const { GoogleGenAI } = require("@google/genai");
+// @google/genai só é carregado quando a extração (fluxo de admin) corre de facto.
+// Assim, `require("api/spreads.js")` não rebenta em ambientes sem o SDK instalado
+// (testes/ferramentas que só usam as funções puras); o simulador público nunca
+// chega a instanciar o cliente.
+let _GoogleGenAI = null;
+function getGoogleGenAI() {
+  if (!_GoogleGenAI) _GoogleGenAI = require("@google/genai").GoogleGenAI;
+  return _GoogleGenAI;
+}
 const { openSqliteDb } = require(path.join(__dirname, "..", "lib", "open-sqlite.js"));
 const { fetchEuribor } = require("./euribor.js");
 
@@ -272,7 +280,7 @@ function buildPrompt(codes) {
 // mudam quando o banco publica nova versão. Faz pedidos baratos (prompt mínimo)
 // repartidos pelo limite de URLs por chamada; não escreve em cache nem live.
 async function auditUrls(apiKey, { model = GEMINI_MODEL } = {}) {
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new (getGoogleGenAI())({ apiKey });
   // Um URL pode servir vários bancos (ex.: BCP e ACTVO partilham SECCAO_18.pdf),
   // por isso guardamos a lista de códigos por URL.
   const urlCodes = {};
@@ -659,7 +667,7 @@ function startRefresh(apiKey, kvSlot, today) {
 
   (async () => {
     try {
-      const ai = SPREADS_MOCK ? null : new GoogleGenAI({ apiKey });
+      const ai = SPREADS_MOCK ? null : new (getGoogleGenAI())({ apiKey });
       const batches = buildBatches();
       console.log(`spreads.js: a chamar Gemini (${GEMINI_MODEL}) com URL context — ${batches.length} lote(s)...`);
       // responseSchema é incompatível com tools (URL context); o JSON é instruído

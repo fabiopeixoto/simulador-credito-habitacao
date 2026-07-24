@@ -3,15 +3,13 @@ const path = require("path");
 
 const cacheDir = path.join(__dirname, "..", "data", "favicons");
 
-// Allowlist of known bank domains to prevent SSRF abuse
+// Allowlist of bank domains to prevent SSRF abuse. Deve espelhar BANK_DOMAINS
+// em public/js/shared/inversa-bootstrap.js — os únicos domínios que o frontend
+// pede a /api/favicon.
 const ALLOWED_DOMAINS = new Set([
-  "cgd.pt", "novobanco.pt", "millenniumbcp.pt", "bpi.pt", "santander.pt",
-  "abanca.com", "ucb.pt", "bbva.es", "deutsche-bank.pt",
-  "bnpparibas.pt", "caixabank.es", "bankinter.pt", "itau.com.br", "ing.pt",
-  "eurobic.pt", "bison.bank", "atlantico.pt", "bi.pt",
-  // bancos activos no simulador
-  "creditoagricola.pt", "ctt.pt", "activobank.pt", "bancomontepio.pt",
-  "uci.es", "bnieuropa.pt",
+  "creditoagricola.pt", "ctt.pt", "bankinter.pt", "abanca.com",
+  "millenniumbcp.pt", "activobank.pt", "bpi.pt", "bancomontepio.pt",
+  "santander.pt", "novobanco.pt", "cgd.pt", "uci.es", "bnieuropa.pt",
 ]);
 
 function safeDomain(raw) {
