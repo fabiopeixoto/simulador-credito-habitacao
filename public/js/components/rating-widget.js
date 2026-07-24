@@ -34,8 +34,26 @@
 
     useEffect(function () {
       if (alreadyDone()) return;
-      var t = setTimeout(function () { setVisible(true); }, SHOW_DELAY_MS);
-      return function () { clearTimeout(t); };
+      // O banner de cookies (position:fixed, z-index alto) tapa o post-it no fundo
+      // do ecrã. Só arrancamos o temporizador quando os cookies já foram tratados:
+      // se o consentimento já foi dado, arranca já; senão, espera pelo evento
+      // 'sim:consent' que o CookieBanner dispara ao aceitar/recusar.
+      var timer = null, onConsent = null;
+      function start() { timer = setTimeout(function () { setVisible(true); }, SHOW_DELAY_MS); }
+      function consentGiven() {
+        try { return localStorage.getItem("STORAGE_CONSENT:" + window.location.pathname) === "accepted"; }
+        catch (_) { return true; } // fail-open: se localStorage falhar, mostra
+      }
+      if (consentGiven()) {
+        start();
+      } else {
+        onConsent = function () { window.removeEventListener("sim:consent", onConsent); onConsent = null; start(); };
+        window.addEventListener("sim:consent", onConsent);
+      }
+      return function () {
+        if (timer) clearTimeout(timer);
+        if (onConsent) window.removeEventListener("sim:consent", onConsent);
+      };
     }, []);
 
     function dismiss() {

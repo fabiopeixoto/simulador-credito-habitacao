@@ -211,10 +211,12 @@
         localStorage.removeItem('processo_checked');
       }catch(_){}
       setHidden(true);
+      try{window.dispatchEvent(new Event('sim:consent'));}catch(_){}
     }
     function aceitar(){
       try{localStorage.setItem(consentKey,'accepted');}catch(_){}
       setHidden(true);
+      try{window.dispatchEvent(new Event('sim:consent'));}catch(_){}
     }
     var fs=isMobileC?11:13;
     var bpad=isMobileC?"4px 10px":"6px 16px";
